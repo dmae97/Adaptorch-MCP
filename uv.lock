@@ -15,7 +15,7 @@ members = [
 [[package]]
 name = "adaptorch"
 version = "0.1.0"
-source = { directory = "../" }
+source = { git = "https://github.com/dmae97/adaptorch.git#ffbd12c9cd90c1ed6932a2be6a4515d4ca235ada" }
 dependencies = [
     { name = "httpx" },
 ]
@@ -27,38 +27,6 @@ api = [
     { name = "pydantic-settings" },
     { name = "uvicorn", extra = ["standard"] },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = ">=1.1.0" },
-    { name = "alembic", marker = "extra == 'worker'", specifier = ">=1.13" },
-    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
-    { name = "cryptography", marker = "extra == 'auth'", specifier = ">=42" },
-    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.112" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "matplotlib", marker = "extra == 'dev'", specifier = ">=3.10" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "nodriver", marker = "extra == 'gmail'", specifier = ">=0.38" },
-    { name = "opentelemetry-exporter-otlp", marker = "extra == 'obs'", specifier = ">=1.27" },
-    { name = "opentelemetry-sdk", marker = "extra == 'obs'", specifier = ">=1.27" },
-    { name = "orjson", marker = "extra == 'api'", specifier = ">=3.10" },
-    { name = "prometheus-client", marker = "extra == 'obs'", specifier = ">=0.20" },
-    { name = "psycopg", extras = ["binary"], marker = "extra == 'worker'", specifier = ">=3.2" },
-    { name = "pydantic-settings", marker = "extra == 'api'", specifier = ">=2.4" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
-    { name = "pytest-asyncio", marker = "extra == 'test-api'", specifier = ">=0.23" },
-    { name = "python-jose", extras = ["cryptography"], marker = "extra == 'auth'", specifier = ">=3.3" },
-    { name = "redis", marker = "extra == 'worker'", specifier = ">=5.0" },
-    { name = "respx", marker = "extra == 'test-api'", specifier = ">=0.21" },
-    { name = "rq", marker = "extra == 'worker'", specifier = ">=1.16" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
-    { name = "schemathesis", marker = "extra == 'test-api'", specifier = ">=3.30" },
-    { name = "sqlalchemy", marker = "extra == 'worker'", specifier = ">=2.0" },
-    { name = "structlog", marker = "extra == 'obs'", specifier = ">=24.1" },
-    { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.30" },
-]
-provides-extras = ["dev", "api", "worker", "obs", "auth", "gmail", "test-api", "mcp", "a2a"]
 
 [[package]]
 name = "adaptorch-mcp"
@@ -78,7 +46,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adaptorch", extras = ["api"], directory = "../" },
+    { name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
