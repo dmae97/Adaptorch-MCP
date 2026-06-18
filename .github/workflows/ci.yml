@@ -22,7 +22,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install workspace
-        run: uv sync --all-packages --extra dev
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
+          uv sync --all-packages --extra dev
       - name: Lint
         run: uv run ruff check packages/adaptorch-mcp
       - name: Typecheck
