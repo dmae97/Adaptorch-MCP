@@ -22,10 +22,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install workspace
-        env:
-          GIT_CONFIG_COUNT: 1
-          GIT_CONFIG_KEY_0: submodule.recurse
-          GIT_CONFIG_VALUE_0: 'false'
         run: uv sync --all-packages --extra dev
       - name: Lint
         run: uv run ruff check packages/adaptorch-mcp

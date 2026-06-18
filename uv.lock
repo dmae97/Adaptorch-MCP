@@ -15,7 +15,7 @@ members = [
 [[package]]
 name = "adaptorch"
 version = "0.1.0"
-source = { git = "https://github.com/dmae97/adaptorch.git#ffbd12c9cd90c1ed6932a2be6a4515d4ca235ada" }
+source = { git = "https://github.com/dmae97/adaptorch.git#5b674a42ddbf27c656ba9ed18bc79fd48a59cd07" }
 dependencies = [
     { name = "httpx" },
 ]
