@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="520" viewBox="0 0 1280 520" role="img" aria-labelledby="title desc">
+  <title id="title">AdaptOrch MCP hero</title>
+  <desc id="desc">A dark GitHub README hero for AdaptOrch MCP showing Claude Code, AdaptOrch routing, and evidence artifacts connected through an MCP bridge.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08111f"/>
+      <stop offset="0.52" stop-color="#0d1628"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="18%" cy="16%" r="55%">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="86%" cy="68%" r="58%">
+      <stop offset="0" stop-color="#a78bfa" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#172033"/>
+      <stop offset="1" stop-color="#0d1320"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.45" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity="0.36"/>
+    </filter>
+    <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse">
+      <path d="M 42 0 L 0 0 0 42" fill="none" stroke="#e5e7eb" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+    <style>
+      .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace}
+      .sans{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+      .muted{fill:#94a3b8}.text{fill:#f8fafc}.cyan{fill:#67e8f9}.violet{fill:#c4b5fd}.green{fill:#86efac}
+      .line{stroke:#7dd3fc;stroke-opacity:.72;stroke-width:2.5;fill:none}.dash{stroke-dasharray:8 9}
+    </style>
+  </defs>
+  <rect width="1280" height="520" rx="34" fill="url(#bg)"/>
+  <rect width="1280" height="520" rx="34" fill="url(#glowA)"/>
+  <rect width="1280" height="520" rx="34" fill="url(#glowB)"/>
+  <rect width="1280" height="520" rx="34" fill="url(#grid)"/>
+
+  <g transform="translate(72 72)">
+    <rect x="0" y="0" width="112" height="34" rx="17" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".38"/>
+    <circle cx="22" cy="17" r="6" fill="#22d3ee"/>
+    <text x="40" y="22" class="mono cyan" font-size="13" letter-spacing="1.6">MCP BRIDGE</text>
+
+    <text x="0" y="104" class="sans text" font-size="62" font-weight="780" letter-spacing="-2.4">AdaptOrch MCP</text>
+    <text x="0" y="148" class="sans muted" font-size="22">Claude Code에 라우팅·합성·증거 회수 루프를 붙이는 공개 MCP 패키지</text>
+    <text x="0" y="184" class="mono" font-size="16" fill="#bae6fd">adaptorch.ai.kr · uvx adaptorch-mcp · route → run → evidence</text>
+
+    <g transform="translate(0 236)">
+      <rect width="154" height="42" rx="21" fill="url(#accent)"/>
+      <text x="26" y="27" class="sans" font-size="15" font-weight="750" fill="#06111f">Start routing</text>
+      <rect x="170" width="178" height="42" rx="21" fill="#0f172a" stroke="#334155"/>
+      <text x="195" y="27" class="sans" font-size="15" fill="#dbeafe">Read the docs</text>
+    </g>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <g transform="translate(654 86)">
+      <rect width="220" height="94" rx="24" fill="url(#card)" stroke="#334155"/>
+      <text x="28" y="38" class="sans text" font-size="18" font-weight="700">Claude Code</text>
+      <text x="28" y="65" class="mono muted" font-size="13">goal + repo context</text>
+    </g>
+    <g transform="translate(934 86)">
+      <rect width="220" height="94" rx="24" fill="url(#card)" stroke="#334155"/>
+      <text x="28" y="38" class="sans text" font-size="18" font-weight="700">AdaptOrch MCP</text>
+      <text x="28" y="65" class="mono muted" font-size="13">tools/resources/prompts</text>
+    </g>
+    <g transform="translate(792 238)">
+      <rect width="220" height="94" rx="24" fill="url(#card)" stroke="#334155"/>
+      <text x="28" y="38" class="sans text" font-size="18" font-weight="700">Topology Router</text>
+      <text x="28" y="65" class="mono muted" font-size="13">singleton · dag · ensemble</text>
+    </g>
+    <g transform="translate(654 390)">
+      <rect width="220" height="94" rx="24" fill="url(#card)" stroke="#334155"/>
+      <text x="28" y="38" class="sans text" font-size="18" font-weight="700">Runs</text>
+      <text x="28" y="65" class="mono muted" font-size="13">status · traces · metrics</text>
+    </g>
+    <g transform="translate(934 390)">
+      <rect width="220" height="94" rx="24" fill="url(#card)" stroke="#334155"/>
+      <text x="28" y="38" class="sans text" font-size="18" font-weight="700">Evidence</text>
+      <text x="28" y="65" class="mono muted" font-size="13">artifacts back to chat</text>
+    </g>
+  </g>
+
+  <path class="line" d="M874 133 C900 133 908 133 934 133"/>
+  <path class="line" d="M1044 180 C1044 220 1016 246 1012 278"/>
+  <path class="line" d="M792 286 C740 294 712 332 734 390"/>
+  <path class="line" d="M1012 332 C1034 360 1050 374 1046 390"/>
+  <path class="line dash" d="M874 437 C900 437 908 437 934 437"/>
+
+  <g transform="translate(1112 32)">
+    <circle r="5" fill="#86efac"/>
+    <text x="14" y="5" class="mono green" font-size="12">public-ready</text>
+  </g>
+</svg>

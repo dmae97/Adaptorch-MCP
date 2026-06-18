@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adaptorch-mcp"
+version = "0.1.0"
+description = "Installable MCP bridge for AdaptOrch"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "AdaptOrch maintainers" }]
+keywords = ["mcp", "model-context-protocol", "adaptorch", "agent-orchestration"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+dependencies = [
+  "adaptorch[api]>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "mypy>=1.10",
+  "pytest>=8.2",
+  "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/dmae97/adaptorch_mcp"
+Repository = "https://github.com/dmae97/adaptorch_mcp"
+Issues = "https://github.com/dmae97/adaptorch_mcp/issues"
+Documentation = "https://github.com/dmae97/adaptorch_mcp#readme"
+
+[project.scripts]
+adaptorch-mcp = "adaptorch_mcp.cli:main"
+adaptorch-mcp-doctor = "adaptorch_mcp.doctor:main"
+adaptorch-mcp-smoke = "adaptorch_mcp.stdio_smoke:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+adaptorch_mcp = ["py.typed"]

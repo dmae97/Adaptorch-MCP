@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="460" viewBox="0 0 1180 460" role="img" aria-labelledby="title desc">
+  <title id="title">AdaptOrch MCP flow diagram</title>
+  <desc id="desc">A GitHub-friendly architecture diagram showing Claude Code calling AdaptOrch MCP tools, routing work through AdaptOrch, and retrieving evidence artifacts.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1120"/><stop offset="1" stop-color="#111827"/></linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#172033"/><stop offset="1" stop-color="#0f172a"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto"><path d="M2 2 L10 6 L2 10 Z" fill="#7dd3fc"/></marker>
+    <style>
+      .sans{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+      .title{fill:#f8fafc;font-size:20px;font-weight:760}.sub{fill:#94a3b8;font-size:13px}.chip{fill:#bae6fd;font-size:12px}.line{stroke:#7dd3fc;stroke-width:2.6;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1180" height="460" rx="28" fill="url(#bg)"/>
+  <g transform="translate(42 40)">
+    <text class="sans" x="0" y="0" fill="#f8fafc" font-size="28" font-weight="800">Route → Run → Evidence</text>
+    <text class="mono" x="0" y="28" fill="#94a3b8" font-size="14">The fastest Claude Code loop for large or ambiguous coding work.</text>
+  </g>
+
+  <g transform="translate(62 110)">
+    <rect width="220" height="122" rx="22" fill="url(#panel)" stroke="#334155"/>
+    <text class="title sans" x="24" y="38">1. Claude Code</text>
+    <text class="sub mono" x="24" y="66">goal, repo context, user intent</text>
+    <rect x="24" y="82" width="126" height="24" rx="12" fill="#0b1220" stroke="#334155"/>
+    <text class="chip mono" x="38" y="99">MCP client</text>
+  </g>
+
+  <g transform="translate(364 110)">
+    <rect width="220" height="122" rx="22" fill="url(#panel)" stroke="#334155"/>
+    <text class="title sans" x="24" y="38">2. Local tools</text>
+    <text class="sub mono" x="24" y="66">route_topology · capabilities</text>
+    <rect x="24" y="82" width="154" height="24" rx="12" fill="#0b1220" stroke="#334155"/>
+    <text class="chip mono" x="38" y="99">no external call</text>
+  </g>
+
+  <g transform="translate(666 110)">
+    <rect width="220" height="122" rx="22" fill="url(#panel)" stroke="#334155"/>
+    <text class="title sans" x="24" y="38">3. AdaptOrch run</text>
+    <text class="sub mono" x="24" y="66">router + synthesis + telemetry</text>
+    <rect x="24" y="82" width="124" height="24" rx="12" fill="#0b1220" stroke="#334155"/>
+    <text class="chip mono" x="38" y="99">adaptorch_run</text>
+  </g>
+
+  <g transform="translate(968 110)">
+    <rect width="150" height="122" rx="22" fill="url(#panel)" stroke="#334155"/>
+    <text class="title sans" x="24" y="38">4. Evidence</text>
+    <text class="sub mono" x="24" y="66">status, traces, artifacts</text>
+    <rect x="24" y="82" width="90" height="24" rx="12" fill="#0b1220" stroke="#334155"/>
+    <text class="chip mono" x="38" y="99">backchat</text>
+  </g>
+
+  <path class="line" d="M286 171 H356"/>
+  <path class="line" d="M588 171 H658"/>
+  <path class="line" d="M890 171 H960"/>
+
+  <g transform="translate(170 300)">
+    <rect width="840" height="78" rx="24" fill="#08111f" stroke="#334155"/>
+    <rect x="22" y="22" width="112" height="34" rx="17" fill="url(#accent)"/>
+    <text x="44" y="44" class="sans" font-size="14" font-weight="780" fill="#06111f">B2C win</text>
+    <text x="156" y="34" class="sans" font-size="18" font-weight="740" fill="#f8fafc">Users feel routing clarity first, then fewer failed long tasks.</text>
+    <text x="156" y="58" class="mono" font-size="13" fill="#94a3b8">Install → doctor → smoke → route_topology → run → get_artifacts</text>
+  </g>
+</svg>

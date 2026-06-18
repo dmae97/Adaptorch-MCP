@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "adaptorch": {
+      "command": "adaptorch-mcp",
+      "args": [
+        "--transport",
+        "stdio",
+        "--base-url",
+        "${ADAPTORCH_CONTROL_PLANE_BASE_URL}"
+      ],
+      "env": {
+        "ADAPTORCH_CONTROL_PLANE_TOKEN": "${ADAPTORCH_CONTROL_PLANE_TOKEN}"
+      },
+      "autoApprove": [
+        "adaptorch_get_run",
+        "adaptorch_get_artifacts",
+        "adaptorch_list_runs",
+        "adaptorch_get_traces",
+        "adaptorch_route_topology",
+        "adaptorch_server_metrics",
+        "adaptorch_capabilities",
+        "adaptorch_plan_catalog"
+      ]
+    }
+  }
+}

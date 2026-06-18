@@ -1,0 +1,34 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - 'adaptorch-mcp-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install workspace
+        run: uv sync --all-packages --extra dev
+      - name: Verify
+        run: |
+          uv run ruff check packages/adaptorch-mcp
+          uv run mypy packages/adaptorch-mcp/src
+          uv run pytest packages/adaptorch-mcp/tests -q
+          uv run adaptorch-mcp-doctor --json
+      - name: Build
+        run: uv run python -m build packages/adaptorch-mcp --outdir dist
+      - name: Publish to PyPI
+        run: uv publish --trusted-publishing always dist/*

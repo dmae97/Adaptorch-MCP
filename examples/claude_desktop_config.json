@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "adaptorch": {
+      "command": "adaptorch-mcp",
+      "args": [
+        "--transport",
+        "stdio",
+        "--base-url",
+        "https://adaptorch.ai.kr"
+      ],
+      "env": {
+        "ADAPTORCH_CONTROL_PLANE_TOKEN": "${ADAPTORCH_CONTROL_PLANE_TOKEN}"
+      }
+    }
+  }
+}
