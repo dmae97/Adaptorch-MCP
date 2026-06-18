@@ -34,6 +34,26 @@ Use it when a coding task is too large, too ambiguous, or too expensive to trust
 Claude Code → AdaptOrch MCP → route topology → run with synthesis → retrieve artifacts
 ```
 
+## Get your API key
+
+AdaptOrch requires authentication. Get your token in two steps:
+
+1. **Sign up** → [adaptorch.ai.kr/app/signup](https://adaptorch.ai.kr/app/signup)
+2. **Create an API key** → Dashboard → API Key Management → generate a key (starts with `ado_`)
+
+Use that key as `ADAPTORCH_CONTROL_PLANE_TOKEN`:
+
+```bash
+export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
+```
+
+| Token | Purpose | Where to get it |
+| --- | --- | --- |
+| `ADAPTORCH_CONTROL_PLANE_TOKEN` | All AdaptOrch API calls (run, status, artifacts) | Dashboard after signup |
+| `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Protect your local HTTP MCP endpoint | You define it (any secure string) |
+
+Free tier (Starter `$0`) includes API key access. See [adaptorch.ai.kr](https://adaptorch.ai.kr) for Pro/Team plans.
+
 ## Research paper
 
 AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:

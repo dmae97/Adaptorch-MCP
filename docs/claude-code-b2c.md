@@ -2,6 +2,16 @@
 
 This package should feel useful to individual Claude Code users before they learn the full AdaptOrch platform. Optimize the first-run path around a small, predictable tool surface.
 
+## Get your API key (first thing)
+
+1. Sign up at [adaptorch.ai.kr/app/signup](https://adaptorch.ai.kr/app/signup)
+2. Dashboard → API Key Management → generate a key (starts with `ado_`)
+3. Free tier (Starter `$0`) includes full API key access
+
+```bash
+export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
+```
+
 ## Recommended default tool surface
 
 Expose all server tools, but document these five first:
