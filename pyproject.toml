@@ -11,7 +11,7 @@ authors = [{ name = "AdaptOrch maintainers" }]
 members = ["packages/adaptorch-mcp"]
 
 [tool.uv.sources]
-adaptorch = { git = "https://github.com/dmae97/adaptorch.git" }
+adaptorch = { path = "..", editable = false }
 
 [tool.ruff]
 line-length = 100

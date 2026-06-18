@@ -1,7 +1,7 @@
 # AdaptOrch MCP
 
 <p align="center">
-  <a href="https://adaptorch.ai.kr"><img src="assets/readme-hero.svg" alt="AdaptOrch MCP — route, run, and retrieve evidence from Claude Code" width="100%"></a>
+  <a href="https://adaptorch.ai.kr"><img src="assets/readme-hero.png" alt="AdaptOrch MCP — route, run, and retrieve evidence from Claude Code" width="100%"></a>
 </p>
 
 <p align="center">
@@ -47,7 +47,34 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
   </a>
 </p>
 
-<p align="center"><sub>Figure preview is sourced from the arXiv HTML version. If GitHub does not render the remote asset, open the HTML paper link above.</sub></p>
+<p align="center"><sub>Figure preview is sourced from the arXiv HTML version.</sub></p>
+
+## Install
+
+### pip
+
+```bash
+pip install adaptorch-mcp
+```
+
+If AdaptOrch core is not yet on PyPI, install it from GitHub first:
+
+```bash
+pip install "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git"
+pip install adaptorch-mcp
+```
+
+### uvx (one-shot, no install)
+
+```bash
+uvx adaptorch-mcp --help
+```
+
+With the adaptorch dependency from GitHub:
+
+```bash
+uvx --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adaptorch-mcp --help
+```
 
 ## Why Claude Code users feel it quickly
 
@@ -62,7 +89,7 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
 ## Architecture
 
 <p align="center">
-  <img src="assets/mcp-flow.svg" alt="AdaptOrch MCP route-run-evidence flow" width="100%">
+  <img src="assets/mcp-flow.png" alt="AdaptOrch MCP route-run-evidence flow" width="100%">
 </p>
 
 ## Packages
@@ -78,22 +105,11 @@ The wrapper intentionally delegates runtime behavior to `adaptorch.mcp_server`. 
 ### Local development
 
 ```bash
+git clone git@github.com:dmae97/Adaptorch-MCP.git
+git clone git@github.com:dmae97/adaptorch.git  # alongside Adaptorch-MCP
+cd Adaptorch-MCP
 uv sync --all-packages --extra dev
 uv run adaptorch-mcp --help
-```
-
-### Install after PyPI release
-
-```bash
-pip install adaptorch-mcp
-uvx adaptorch-mcp --help
-```
-
-If AdaptOrch core is not yet available from your Python package index, install it from GitHub first:
-
-```bash
-pip install "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git"
-pip install -e packages/adaptorch-mcp
 ```
 
 ## stdio MCP
@@ -193,11 +209,9 @@ Read-only tools are safe candidates for MCP auto-approve. Keep `adaptorch_run` a
 
 ## Branding assets
 
-- GitHub SVG hero: `assets/readme-hero.svg`
-- GitHub SVG flow diagram: `assets/mcp-flow.svg`
+- GitHub hero: `assets/readme-hero.png`
+- GitHub flow diagram: `assets/mcp-flow.png`
 - GPT-image-2.0 raster prompt brief: `docs/brand/gpt-image-2-brief.md`
-
-The checked-in README uses SVG so GitHub renders it without external image hosting. Use the GPT-image-2.0 prompt brief if you later want Open Graph or social preview images.
 
 ## Public release checklist
 
