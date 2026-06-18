@@ -47,6 +47,18 @@ def test_cli_delegates_to_adaptorch_mcp_main(monkeypatch: pytest.MonkeyPatch) ->
     assert calls == [["--transport", "stdio", "--base-url", "http://127.0.0.1:8000"]]
 
 
+def test_cli_defaults_to_hosted_control_plane(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _install_fake_adaptorch(monkeypatch)
+    monkeypatch.delenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", raising=False)
+
+    from adaptorch_mcp.cli import main
+
+    result = main(["--transport", "stdio"])
+
+    assert result == 0
+    assert calls == [["--base-url", "https://adaptorch.ai.kr", "--transport", "stdio"]]
+
+
 def test_server_factory_delegates_to_adaptorch_http_app(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _install_fake_adaptorch(monkeypatch)
 
