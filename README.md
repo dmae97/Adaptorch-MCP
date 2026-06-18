@@ -21,7 +21,7 @@
 <p align="center">
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-stdio%20%7C%20HTTP-22d3ee?style=flat-square">
-  <img alt="License Apache 2.0" src="https://img.shields.io/badge/license-Apache--2.0-a78bfa?style=flat-square">
+  <img alt="License Proprietary" src="https://img.shields.io/badge/license-Proprietary-94a3b8?style=flat-square">
   <img alt="Public ready" src="https://img.shields.io/badge/public--ready-yes-86efac?style=flat-square">
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
 </p>
@@ -253,4 +253,4 @@ Never commit `.env`, API keys, bearer tokens, private keys, or MCP client tokens
 
 ## License
 
-Apache-2.0. See `LICENSE` and `NOTICE`.
+Proprietary — Copyright EGG. All rights reserved. See `LICENSE`.

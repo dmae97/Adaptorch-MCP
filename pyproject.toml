@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Public monorepo for the AdaptOrch MCP bridge"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "Apache-2.0"
+license = { text = "Proprietary — Copyright EGG. All rights reserved." }
 authors = [{ name = "AdaptOrch maintainers" }]
 
 [tool.uv.workspace]
