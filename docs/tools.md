@@ -35,4 +35,8 @@ export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
 adaptorch-mcp-smoke --base-url https://adaptorch.ai.kr
 ```
 
-The smoke command checks `initialize`, `tools/list`, and expected core tools without printing token values.
+The smoke command checks `initialize`, `tools/list`, and the expected core tool subset without printing token values. Add repeatable `--expected-tool <name>` flags when validating a specific hosted/core release.
+
+## Auto-approve guidance
+
+For trusted local clients, auto-approve only tools whose outputs are safe for that client. Keep `adaptorch_run` and `adaptorch_cancel_run` manually approved. For shared or production clients, avoid auto-approving run, artifact, and trace readers unless those payloads are already sanitized.

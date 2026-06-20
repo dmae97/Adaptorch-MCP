@@ -54,6 +54,24 @@ export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
 
 Free tier (Starter `$0`) includes API key access. See [adaptorch.ai.kr](https://adaptorch.ai.kr) for Pro/Team plans.
 
+### Accuracy profile (optional)
+
+AdaptOrch MCP delegates to the AdaptOrch engine, so accuracy features are
+activated purely via environment variables (no code change). All default to
+**off** (current behavior); activate a measured-justified profile per deployment:
+
+| Variable | Purpose | Values |
+| --- | --- | --- |
+| `ADAPTORCH_ACCURACY_PROFILE` | Named accuracy preset (base) | `off` (default) \| `balanced` \| `max_accuracy` |
+| `ADAPTORCH_PARTIAL_CREDIT_PREFER_CONFIDENCE` | Per-field override: prefer higher-confidence partial-credit candidate | truthy |
+| `ADAPTORCH_JUDGE_OVERRIDE_MARGIN` | Per-field override: confidence margin gating judge overrides | float |
+| `ADAPTORCH_VERIFICATION_CRITICAL_COMMANDS` | Per-field override: commands treated as verification-critical | comma list |
+| `ADAPTORCH_VERIFICATION_CRITICAL_WEIGHT` | Per-field override: weight applied to critical verification commands | integer or float |
+
+Profiles are opt-in and adopt-only-if-measured-better; per-field variables win
+over the profile. The wrapper does not implement the algorithms itself; it
+forwards environment activation to the AdaptOrch engine's P11–P19 line.
+
 ## Research paper
 
 AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
@@ -165,6 +183,33 @@ print(httpx.get('http://127.0.0.1:8765/mcp/health').json())
 PY
 ```
 
+## CLI and environment reference
+
+| Command | Purpose | Important options |
+| --- | --- | --- |
+| `adaptorch-mcp` | Start the stdio or HTTP MCP server. | `--transport stdio|http`, `--base-url`, `--api-token`, `--timeout-seconds`, `--stdio-framing`, `--http-host`, `--http-port`, `--http-auth-token` |
+| `adaptorch-mcp-doctor` | Print redacted local diagnostics. | `--json`, `--strict` |
+| `adaptorch-mcp-smoke` | Verify stdio `initialize` + `tools/list`. | `--command`, `--base-url`, `--api-token`, `--timeout-seconds`, repeatable `--expected-tool` |
+
+For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this
+order: explicit `--base-url`, then trimmed/validated
+`ADAPTORCH_CONTROL_PLANE_BASE_URL`, then the hosted fallback
+`https://adaptorch.ai.kr`. `adaptorch-mcp-smoke` keeps a local-dev fallback of
+`http://127.0.0.1:8000` when no base URL is configured. Pass `--base-url`
+explicitly in checked-in MCP client configs for reproducible behavior.
+
+| Variable | Purpose | Notes |
+| --- | --- | --- |
+| `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch token. | Required unless `--api-token` is passed. |
+| `ADAPTORCH_CONTROL_PLANE_BASE_URL` | Base URL used when `--base-url` is omitted. | Trimmed and validated as HTTP(S); do not embed credentials. |
+| `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Keep separate from the upstream control-plane token. |
+| `ADAPTORCH_MCP_ALLOWED_ORIGINS` | Comma-separated HTTP origin allowlist. | Use with browser or remote HTTP clients. |
+| `ADAPTORCH_MCP_MAX_PAYLOAD_SIZE_BYTES` | Maximum accepted HTTP request body size. | Keep bounded for public deployments. |
+| `ADAPTORCH_MCP_REQUEST_TIMEOUT_SECONDS` | HTTP request timeout budget. | Applies to HTTP server request handling. |
+| `ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS` | Maximum concurrent SSE subscribers. | Defaults are provided by `adaptorch.mcp_server`. |
+| `ADAPTORCH_MCP_TIMEOUT_SECONDS` | Control-plane client timeout for app-factory usage. | Useful when embedding the ASGI app. |
+| `ADAPTORCH_ACCURACY_PROFILE` | Optional P11–P19 accuracy preset. | `off` by default; `balanced`/`max_accuracy` are opt-in. |
+
 ## Claude Code MCP config
 
 ```json
@@ -192,6 +237,9 @@ More templates:
 - `examples/omk.mcp.json`
 - `examples/mcp-http.env.example`
 
+Checked-in examples use placeholders or environment interpolation. Fill real
+URLs and tokens only in local, uncommitted config files.
+
 ## Diagnostics
 
 Print redacted local diagnostics:
@@ -199,16 +247,20 @@ Print redacted local diagnostics:
 ```bash
 adaptorch-mcp-doctor
 adaptorch-mcp-doctor --json
+adaptorch-mcp-doctor --strict
 ```
 
-Run a stdio smoke test. The token is passed through the child environment, not process arguments.
+Run a stdio smoke test. The token is passed through the child environment, not process arguments. If no base URL is supplied, smoke targets `http://127.0.0.1:8000` for local development.
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
 adaptorch-mcp-smoke --base-url https://adaptorch.ai.kr
 ```
 
-Expected output includes `adaptorch_plan_catalog` and the core AdaptOrch MCP tool surface.
+Expected JSON includes `"ok": true`, `adaptorch_plan_catalog`, and the expected
+core tool subset. Doctor JSON also includes redacted `controlPlane` metadata for
+the resolved base-url source. Add repeatable `--expected-tool <name>` flags when
+validating a specific hosted/core release.
 
 ## Tool surface
 
@@ -225,7 +277,10 @@ Expected output includes `adaptorch_plan_catalog` and the core AdaptOrch MCP too
 | `adaptorch_capabilities` | Read synthesis modes, connectors, and server features. |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
 
-Read-only tools are safe candidates for MCP auto-approve. Keep `adaptorch_run` and `adaptorch_cancel_run` manually approved.
+For trusted local clients, auto-approve only tools whose outputs are safe for
+that client. Keep `adaptorch_run` and `adaptorch_cancel_run` manually approved.
+For shared or production clients, avoid auto-approving run, artifact, and trace
+readers unless those payloads are already sanitized.
 
 ## Branding assets
 

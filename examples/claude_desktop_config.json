@@ -6,7 +6,7 @@
         "--transport",
         "stdio",
         "--base-url",
-        "https://adaptorch.ai.kr"
+        "${ADAPTORCH_CONTROL_PLANE_BASE_URL}"
       ],
       "env": {
         "ADAPTORCH_CONTROL_PLANE_TOKEN": "${ADAPTORCH_CONTROL_PLANE_TOKEN}"

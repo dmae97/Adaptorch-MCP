@@ -24,24 +24,24 @@ Expose all server tools, but document these five first:
 | 4 | `adaptorch_get_artifacts` | Makes evidence and outputs retrievable inside the coding conversation. |
 | 5 | `adaptorch_plan_catalog` | Confirms the install is current and gives users a simple hosted/free-tier mental model. |
 
-Auto-approve read-only tools only:
+Auto-approve only outputs that are safe for the client context. For trusted local clients, these local/read metadata tools are the safest defaults:
 
 ```text
-adaptorch_get_run
-adaptorch_get_artifacts
-adaptorch_list_runs
-adaptorch_get_traces
 adaptorch_route_topology
 adaptorch_server_metrics
 adaptorch_capabilities
 adaptorch_plan_catalog
 ```
 
-Do not auto-approve:
+Keep these manually approved in shared or production clients unless run payloads, artifacts, and traces are already sanitized:
 
 ```text
 adaptorch_run
 adaptorch_cancel_run
+adaptorch_get_run
+adaptorch_get_artifacts
+adaptorch_list_runs
+adaptorch_get_traces
 ```
 
 ## Fastest perceived wins

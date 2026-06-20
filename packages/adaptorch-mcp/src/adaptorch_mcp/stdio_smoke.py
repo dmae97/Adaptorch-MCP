@@ -12,6 +12,8 @@ from typing import IO, Any, cast
 
 from adaptorch_mcp.diagnostics import EXPECTED_CORE_TOOLS
 
+_SMOKE_DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+
 JsonObject = dict[str, Any]
 
 
@@ -175,7 +177,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--base-url",
-        default=os.getenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", "http://127.0.0.1:8000"),
+        default=os.getenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", _SMOKE_DEFAULT_BASE_URL),
         help="AdaptOrch control-plane or gateway URL",
     )
     parser.add_argument(
