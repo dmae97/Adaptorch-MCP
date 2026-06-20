@@ -13,6 +13,8 @@ from typing import IO, Any, cast
 from adaptorch_mcp.diagnostics import EXPECTED_CORE_TOOLS
 
 _SMOKE_DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+_SENSITIVE_ENV_MARKERS = ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "AUTH")
+_REDACTION_LABEL = "[redacted]"
 
 JsonObject = dict[str, Any]
 
@@ -49,6 +51,32 @@ def _read_json_line(stdout: IO[str], *, timeout_seconds: float) -> JsonObject:
     return cast(JsonObject, payload)
 
 
+def _sensitive_env_values(env: Mapping[str, str]) -> tuple[str, ...]:
+    """Return non-empty sensitive env values that must not appear in smoke output."""
+    values: list[str] = []
+    for name, value in env.items():
+        if len(value) < 4:
+            continue
+        if any(marker in name.upper() for marker in _SENSITIVE_ENV_MARKERS):
+            values.append(value)
+    return tuple(dict.fromkeys(values))
+
+
+def _redact_sensitive_text(text: str, sensitive_values: Collection[str]) -> str:
+    redacted = text
+    for value in sensitive_values:
+        redacted = redacted.replace(value, _REDACTION_LABEL)
+    return redacted
+
+
+def _format_jsonrpc_error(error: Any, sensitive_values: Collection[str]) -> str:
+    try:
+        rendered = json.dumps(error, sort_keys=True)
+    except TypeError:
+        rendered = str(error)
+    return _redact_sensitive_text(rendered, sensitive_values)
+
+
 def _shutdown_process(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
@@ -60,12 +88,15 @@ def _shutdown_process(process: subprocess.Popen[str]) -> None:
         process.wait(timeout=2)
 
 
-def _collect_stderr(process: subprocess.Popen[str]) -> str:
+def _collect_stderr(
+    process: subprocess.Popen[str],
+    sensitive_values: Collection[str],
+) -> str:
     stderr = process.stderr
     if stderr is None:
         return ""
     try:
-        return stderr.read()[-4000:]
+        return _redact_sensitive_text(stderr.read()[-4000:], sensitive_values)
     except OSError:
         return ""
 
@@ -83,6 +114,8 @@ def run_stdio_smoke(
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be > 0")
 
+    process_env = dict(env) if env is not None else None
+    sensitive_values = _sensitive_env_values(process_env if process_env is not None else os.environ)
     started_at = time.monotonic()
     process = subprocess.Popen(
         list(command),
@@ -90,7 +123,7 @@ def run_stdio_smoke(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=dict(env) if env is not None else None,
+        env=process_env,
     )
     assert process.stdin is not None
     assert process.stdout is not None
@@ -128,9 +161,11 @@ def run_stdio_smoke(
         initialize = responses[1]
         tools_response = responses[2]
         if "error" in initialize:
-            raise MCPStdioSmokeError(f"initialize failed: {initialize['error']}")
+            error = _format_jsonrpc_error(initialize["error"], sensitive_values)
+            raise MCPStdioSmokeError(f"initialize failed: {error}")
         if "error" in tools_response:
-            raise MCPStdioSmokeError(f"tools/list failed: {tools_response['error']}")
+            error = _format_jsonrpc_error(tools_response["error"], sensitive_values)
+            raise MCPStdioSmokeError(f"tools/list failed: {error}")
 
         result = tools_response.get("result", {})
         tools_raw = result.get("tools", []) if isinstance(result, Mapping) else []
@@ -158,7 +193,7 @@ def run_stdio_smoke(
         }
     except Exception as exc:
         if process.poll() is not None:
-            stderr = _collect_stderr(process)
+            stderr = _collect_stderr(process, sensitive_values)
             if stderr:
                 raise MCPStdioSmokeError(
                     f"MCP process exited with stderr: {stderr}"
@@ -219,7 +254,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             env=env,
         )
     except MCPStdioSmokeError as exc:
-        print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
+        sensitive_values = _sensitive_env_values(env)
+        error = _redact_sensitive_text(str(exc), sensitive_values)
+        print(json.dumps({"ok": False, "error": error}, indent=2, sort_keys=True))
         return 1
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0

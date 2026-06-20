@@ -21,6 +21,8 @@ def _validate_control_plane_base_url(value: str, *, source: str) -> str:
     parsed = urlparse(stripped)
     if parsed.scheme.lower() not in _ALLOWED_CONTROL_PLANE_SCHEMES or not parsed.netloc:
         raise ValueError(f"{source} must be an http(s) URL with a host")
+    if "@" in parsed.netloc:
+        raise ValueError(f"{source} must not include embedded credentials")
     return stripped
 
 
@@ -44,12 +46,19 @@ def _strip_empty_base_url_equals(argv: Sequence[str]) -> list[str]:
     return [arg for arg in argv if arg != "--base-url="]
 
 
+def _explicit_base_url_value(argv: Sequence[str]) -> str | None:
+    """Return the first non-empty explicit base-url value from argv, if present."""
+    for index, arg in enumerate(argv):
+        if arg == "--base-url" and index + 1 < len(argv):
+            return argv[index + 1]
+        if arg.startswith("--base-url=") and arg != "--base-url=":
+            return arg.split("=", 1)[1]
+    return None
+
+
 def _has_base_url_flag(argv: Sequence[str]) -> bool:
     """Return whether argv already carries a non-empty explicit base-url flag."""
-    return any(
-        arg == "--base-url" or (arg.startswith("--base-url=") and arg != "--base-url=")
-        for arg in argv
-    )
+    return _explicit_base_url_value(argv) is not None
 
 
 def _with_hosted_base_url_default(argv: Sequence[str] | None) -> list[str] | None:
@@ -67,7 +76,9 @@ def _with_hosted_base_url_default(argv: Sequence[str] | None) -> list[str] | Non
     """
     raw_forwarded = list(argv) if argv is not None else sys.argv[1:]
     forwarded = _strip_empty_base_url_equals(raw_forwarded)
-    if _has_base_url_flag(forwarded):
+    explicit_base_url = _explicit_base_url_value(forwarded)
+    if explicit_base_url is not None:
+        _validate_control_plane_base_url(explicit_base_url, source="--base-url")
         if argv is None and forwarded == raw_forwarded:
             return None
         return forwarded

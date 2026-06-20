@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import builtins
 import json
+import runpy
 import sys
+import tomllib
 import types
 from collections.abc import Sequence
 from pathlib import Path
@@ -121,7 +124,16 @@ def test_cli_strips_valid_env_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls == [["--base-url", "http://env.example.com", "--transport", "stdio"]]
 
 
-@pytest.mark.parametrize("bad", ["not-a-valid-url", "http://", "://no-host", "ftp://example.com"])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "not-a-valid-url",
+        "http://",
+        "://no-host",
+        "ftp://example.com",
+        "https://user:pass@example.com",
+    ],
+)
 def test_cli_invalid_env_base_url_raises_value_error(
     monkeypatch: pytest.MonkeyPatch,
     bad: str,
@@ -134,6 +146,53 @@ def test_cli_invalid_env_base_url_raises_value_error(
     with pytest.raises(ValueError, match="ADAPTORCH_CONTROL_PLANE_BASE_URL"):
         main(["--transport", "stdio"])
     assert calls == []
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--transport", "stdio", "--base-url", "ftp://example.com"],
+        ["--transport", "stdio", "--base-url=http://"],
+        ["--transport", "stdio", "--base-url", "https://user:pass@example.com"],
+    ],
+)
+def test_cli_invalid_explicit_base_url_raises_value_error(
+    monkeypatch: pytest.MonkeyPatch,
+    argv: list[str],
+) -> None:
+    calls = _install_fake_adaptorch(monkeypatch)
+    monkeypatch.setenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", "http://env.example.com")
+
+    from adaptorch_mcp.cli import main
+
+    with pytest.raises(ValueError, match="--base-url"):
+        main(argv)
+    assert calls == []
+
+
+def test_cli_missing_adaptorch_dependency_returns_helpful_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    real_import = builtins.__import__
+
+    def fake_import(
+        name: str,
+        globals: dict[str, Any] | None = None,
+        locals: dict[str, Any] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> Any:
+        if name == "adaptorch.mcp_server":
+            raise ModuleNotFoundError("No module named 'adaptorch'", name="adaptorch")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    from adaptorch_mcp.cli import main
+
+    assert main(["--transport", "stdio"]) == 2
+    assert "adaptorch-mcp requires AdaptOrch" in capsys.readouterr().err
 
 
 def test_cli_empty_equals_base_url_falls_through_to_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -286,7 +345,66 @@ def test_diagnostics_redacts_base_url_userinfo() -> None:
     rendered = json.dumps(payload) + "\n" + format_diagnostics(payload)
 
     assert "user:pass" not in rendered
-    assert payload["controlPlane"]["envBaseUrl"] == "https://example.com/path"
+    assert payload["controlPlane"]["envBaseUrl"] is None
+    assert payload["controlPlane"]["invalidEnvUrl"] is True
+
+
+def test_expected_core_tools_are_canonical() -> None:
+    from adaptorch_mcp.diagnostics import EXPECTED_CORE_TOOLS
+
+    assert EXPECTED_CORE_TOOLS == (
+        "adaptorch_run",
+        "adaptorch_get_run",
+        "adaptorch_get_artifacts",
+        "adaptorch_list_runs",
+        "adaptorch_get_traces",
+        "adaptorch_cancel_run",
+        "adaptorch_route_topology",
+        "adaptorch_server_metrics",
+        "adaptorch_capabilities",
+        "adaptorch_plan_catalog",
+    )
+
+
+def test_pyproject_registers_console_scripts() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert project["project"]["scripts"] == {
+        "adaptorch-mcp": "adaptorch_mcp.cli:main",
+        "adaptorch-mcp-doctor": "adaptorch_mcp.doctor:main",
+        "adaptorch-mcp-smoke": "adaptorch_mcp.stdio_smoke:main",
+    }
+
+
+def test_doctor_json_and_strict_exit_codes(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from adaptorch_mcp import doctor
+
+    payload = {
+        "ok": True,
+        "environment": {
+            "tokens": {"ADAPTORCH_CONTROL_PLANE_TOKEN": {"set": False, "length": None}},
+        },
+    }
+    monkeypatch.setattr(doctor, "collect_diagnostics", lambda: payload)
+
+    assert doctor.main(["--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["ok"] is True
+    assert doctor.main(["--strict"]) == 1
+
+
+def test_module_entrypoint_delegates_to_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _install_fake_adaptorch(monkeypatch)
+    monkeypatch.delenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", raising=False)
+    monkeypatch.setattr(sys, "argv", ["adaptorch-mcp", "--transport", "stdio"])
+
+    with pytest.raises(SystemExit) as excinfo:
+        runpy.run_module("adaptorch_mcp.__main__", run_name="__main__")
+
+    assert excinfo.value.code == 0
+    assert calls == [["--base-url", "https://adaptorch.ai.kr", "--transport", "stdio"]]
 
 
 def test_stdio_smoke_accepts_expected_tools(tmp_path: Path) -> None:
@@ -341,3 +459,89 @@ def test_stdio_smoke_reports_missing_tool(tmp_path: Path) -> None:
             expected_tools=("adaptorch_run",),
             timeout_seconds=2,
         )
+
+
+def test_stdio_smoke_redacts_sensitive_stderr(tmp_path: Path) -> None:
+    from adaptorch_mcp.stdio_smoke import MCPStdioSmokeError, run_stdio_smoke
+
+    fake_server = tmp_path / "leaky_stderr_server.py"
+    fake_server.write_text(
+        "import os, sys\n"
+        "print(os.environ['ADAPTORCH_CONTROL_PLANE_TOKEN'], file=sys.stderr, flush=True)\n"
+        "raise SystemExit(1)\n",
+        encoding="utf-8",
+    )
+    token = "fake-sensitive-token-12345"
+
+    with pytest.raises(MCPStdioSmokeError) as excinfo:
+        run_stdio_smoke(
+            [sys.executable, str(fake_server)],
+            env={"ADAPTORCH_CONTROL_PLANE_TOKEN": token},
+            timeout_seconds=2,
+        )
+
+    message = str(excinfo.value)
+    assert token not in message
+    assert "[redacted]" in message
+
+
+def test_stdio_smoke_redacts_jsonrpc_error_payload(tmp_path: Path) -> None:
+    from adaptorch_mcp.stdio_smoke import MCPStdioSmokeError, run_stdio_smoke
+
+    fake_server = tmp_path / "leaky_error_server.py"
+    fake_server.write_text(
+        "import json, os, sys\n"
+        "for line in sys.stdin:\n"
+        "    msg = json.loads(line)\n"
+        "    response = {\n"
+        "        'jsonrpc': '2.0',\n"
+        "        'id': msg['id'],\n"
+        "        'error': {'message': os.environ['ADAPTORCH_CONTROL_PLANE_TOKEN']},\n"
+        "    }\n"
+        "    print(json.dumps(response), flush=True)\n",
+        encoding="utf-8",
+    )
+    token = "fake-jsonrpc-token-12345"
+
+    with pytest.raises(MCPStdioSmokeError) as excinfo:
+        run_stdio_smoke(
+            [sys.executable, str(fake_server)],
+            env={"ADAPTORCH_CONTROL_PLANE_TOKEN": token},
+            timeout_seconds=2,
+        )
+
+    message = str(excinfo.value)
+    assert token not in message
+    assert "[redacted]" in message
+
+
+def test_stdio_smoke_main_redacts_failure_output(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from adaptorch_mcp.stdio_smoke import main
+
+    fake_server = tmp_path / "leaky_main_server.py"
+    fake_server.write_text(
+        "import os, sys\n"
+        "print(os.environ['ADAPTORCH_CONTROL_PLANE_TOKEN'], file=sys.stderr, flush=True)\n"
+        "raise SystemExit(1)\n",
+        encoding="utf-8",
+    )
+    token = "fake-main-token-12345"
+
+    result = main(
+        [
+            "--command",
+            f"{sys.executable} {fake_server}",
+            "--api-token",
+            token,
+            "--timeout-seconds",
+            "2",
+        ]
+    )
+
+    assert result == 1
+    rendered = capsys.readouterr().out
+    assert token not in rendered
+    assert "[redacted]" in rendered
