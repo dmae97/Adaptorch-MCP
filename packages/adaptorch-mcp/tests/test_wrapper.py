@@ -59,7 +59,7 @@ def test_cli_defaults_to_hosted_control_plane(monkeypatch: pytest.MonkeyPatch) -
     result = main(["--transport", "stdio"])
 
     assert result == 0
-    assert calls == [["--base-url", "https://adaptorch.ai.kr", "--transport", "stdio"]]
+    assert calls == [["--base-url", "https://adaptorch.com", "--transport", "stdio"]]
 
 
 def test_cli_forwards_env_base_url_when_no_explicit_flag(
@@ -109,7 +109,7 @@ def test_cli_whitespace_only_env_treated_as_unset(monkeypatch: pytest.MonkeyPatc
     result = main(["--transport", "stdio"])
 
     assert result == 0
-    assert calls == [["--base-url", "https://adaptorch.ai.kr", "--transport", "stdio"]]
+    assert calls == [["--base-url", "https://adaptorch.com", "--transport", "stdio"]]
 
 
 def test_cli_strips_valid_env_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -218,7 +218,7 @@ def test_cli_empty_equals_base_url_falls_through_to_hosted(
     result = main(["--transport", "stdio", "--base-url="])
 
     assert result == 0
-    assert calls == [["--base-url", "https://adaptorch.ai.kr", "--transport", "stdio"]]
+    assert calls == [["--base-url", "https://adaptorch.com", "--transport", "stdio"]]
 
 
 def test_cli_argv_none_uses_sys_argv(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -229,7 +229,7 @@ def test_cli_argv_none_uses_sys_argv(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert _with_hosted_base_url_default(None) == [
         "--base-url",
-        "https://adaptorch.ai.kr",
+        "https://adaptorch.com",
         "--transport",
         "stdio",
     ]
@@ -269,7 +269,7 @@ def test_server_factory_delegates_to_adaptorch_http_app(monkeypatch: pytest.Monk
 def test_package_exports_public_contract() -> None:
     import adaptorch_mcp
 
-    assert adaptorch_mcp.__version__ == "0.2.0"
+    assert adaptorch_mcp.__version__ == "0.2.1"
     assert callable(adaptorch_mcp.main)
     assert callable(adaptorch_mcp.collect_diagnostics)
     assert callable(adaptorch_mcp.create_default_mcp_http_app)
@@ -281,7 +281,7 @@ def test_diagnostics_redacts_token_values() -> None:
     payload = collect_diagnostics(
         {
             "ADAPTORCH_CONTROL_PLANE_TOKEN": "secret-token-value",
-            "ADAPTORCH_CONTROL_PLANE_BASE_URL": "https://adaptorch.ai.kr",
+            "ADAPTORCH_CONTROL_PLANE_BASE_URL": "https://adaptorch.com",
         }
     )
     rendered = json.dumps(payload) + "\n" + format_diagnostics(payload)
@@ -304,7 +304,7 @@ def test_diagnostics_reports_control_plane_for_valid_env() -> None:
     )
 
     control_plane = payload["controlPlane"]
-    assert control_plane["defaultBaseUrl"] == "https://adaptorch.ai.kr"
+    assert control_plane["defaultBaseUrl"] == "https://adaptorch.com"
     assert control_plane["envBaseUrl"] == "http://env.example.com"
     assert control_plane["resolvedBaseUrl"] == "http://env.example.com"
     assert control_plane["resolvedSource"] == "env"
@@ -319,7 +319,7 @@ def test_diagnostics_reports_control_plane_hosted_when_env_unset_or_whitespace()
     for env in (None, {"ADAPTORCH_CONTROL_PLANE_BASE_URL": "   "}):
         payload = collect_diagnostics(env)
         control_plane = payload["controlPlane"]
-        assert control_plane["resolvedBaseUrl"] == "https://adaptorch.ai.kr"
+        assert control_plane["resolvedBaseUrl"] == "https://adaptorch.com"
         assert control_plane["resolvedSource"] == "hosted-default"
         assert control_plane["envBaseUrl"] is None
         assert control_plane["invalidEnvUrl"] is False
@@ -332,7 +332,7 @@ def test_diagnostics_flags_invalid_env_url_without_raising() -> None:
     control_plane = payload["controlPlane"]
 
     assert control_plane["invalidEnvUrl"] is True
-    assert control_plane["resolvedBaseUrl"] == "https://adaptorch.ai.kr"
+    assert control_plane["resolvedBaseUrl"] == "https://adaptorch.com"
     assert control_plane["resolvedSource"] == "hosted-default"
 
 
@@ -404,7 +404,7 @@ def test_module_entrypoint_delegates_to_cli(monkeypatch: pytest.MonkeyPatch) -> 
         runpy.run_module("adaptorch_mcp.__main__", run_name="__main__")
 
     assert excinfo.value.code == 0
-    assert calls == [["--base-url", "https://adaptorch.ai.kr", "--transport", "stdio"]]
+    assert calls == [["--base-url", "https://adaptorch.com", "--transport", "stdio"]]
 
 
 def test_stdio_smoke_accepts_expected_tools(tmp_path: Path) -> None:

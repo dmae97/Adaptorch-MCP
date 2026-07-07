@@ -1,12 +1,12 @@
 # B2C Claude Code Experience Notes
 
-This package should feel useful to individual Claude Code users before they learn the full AdaptOrch platform. Optimize the first-run path around a small, predictable tool surface.
+This package should feel useful to individual Claude Code users before they learn the broader AdaptOrch platform. Optimize the first-run path around a small, predictable tool surface.
 
 ## Get your API key (first thing)
 
-1. Sign up at [adaptorch.ai.kr/app/signup](https://adaptorch.ai.kr/app/signup)
+1. Sign up at [adaptorch.com/app/signup](https://adaptorch.com/app/signup)
 2. Dashboard → API Key Management → generate a key (starts with `ado_`)
-3. Free tier (Starter `$0`) includes full API key access
+3. Starter `$0` includes API key access, 1,000 calls/month, and shadow mode
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
@@ -62,14 +62,14 @@ For actual MCP use:
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-uvx adaptorch-mcp --transport stdio --base-url https://adaptorch.ai.kr
+uvx adaptorch-mcp --transport stdio --base-url https://adaptorch.com
 ```
 
 For verification:
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-uvx --with "adaptorch[api]" adaptorch-mcp-smoke --base-url https://adaptorch.ai.kr
+uvx --with "adaptorch[api]" adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 ## Product message

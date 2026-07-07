@@ -2,7 +2,7 @@
 
 Installable Python wrapper for the AdaptOrch MCP server.
 
-The package intentionally delegates runtime behavior to `adaptorch.mcp_server`, so MCP tools, transports, safety checks, and P11–P19 accuracy activation stay aligned with AdaptOrch core.
+The package intentionally delegates runtime behavior to `adaptorch.mcp_server`, so MCP tools, transports, safety checks, prompts, and optional algorithm controls stay aligned with AdaptOrch core.
 
 ## Install
 
@@ -37,7 +37,7 @@ Use stdio for Claude Code, Claude Desktop, and other local MCP hosts.
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-adaptorch-mcp --transport stdio --base-url https://adaptorch.ai.kr
+adaptorch-mcp --transport stdio --base-url https://adaptorch.com
 ```
 
 ## Run HTTP MCP
@@ -50,7 +50,7 @@ export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<client-facing-mcp-token>"
 
 adaptorch-mcp \
   --transport http \
-  --base-url https://adaptorch.ai.kr \
+  --base-url https://adaptorch.com \
   --http-host 127.0.0.1 \
   --http-port 8765 \
   --http-auth-token "$ADAPTORCH_MCP_HTTP_AUTH_TOKEN"
@@ -73,7 +73,7 @@ PY
 | `adaptorch-mcp-doctor` | Print redacted local diagnostics. | `--json`, `--strict` |
 | `adaptorch-mcp-smoke` | Verify stdio `initialize` + `tools/list`. | `--command`, `--base-url`, `--api-token`, `--timeout-seconds`, repeatable `--expected-tool` |
 
-For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this order: explicit `--base-url`, then trimmed/validated `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then the hosted fallback `https://adaptorch.ai.kr`. `adaptorch-mcp-smoke` keeps a local-dev fallback of `http://127.0.0.1:8000` when no base URL is configured. Pass `--base-url` explicitly in checked-in MCP client configs for reproducible behavior.
+For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this order: explicit `--base-url`, then trimmed/validated `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then the hosted fallback `https://adaptorch.com`. `adaptorch-mcp-smoke` keeps a local-dev fallback of `http://127.0.0.1:8000` when no base URL is configured. Pass `--base-url` explicitly in checked-in MCP client configs for reproducible behavior.
 
 ## Environment variables
 
@@ -88,17 +88,17 @@ For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this o
 | `ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS` | Maximum concurrent SSE subscribers. | Defaults are provided by `adaptorch.mcp_server`. |
 | `ADAPTORCH_MCP_TIMEOUT_SECONDS` | Control-plane client timeout for app-factory usage. | Useful when embedding the ASGI app. |
 | `ADAPTORCH_MCP_HTTP_HOST` / `ADAPTORCH_MCP_HTTP_PORT` | Shell/template values for `--http-host` and `--http-port`. | CLI flags are authoritative. |
-| `ADAPTORCH_ACCURACY_PROFILE` | Optional P11–P19 accuracy preset. | `off` default; `balanced` and `max_accuracy` are opt-in. |
-| `ADAPTORCH_PARTIAL_CREDIT_PREFER_CONFIDENCE` | Per-field accuracy override. | Truthy value prefers higher-confidence partial-credit candidates. |
-| `ADAPTORCH_JUDGE_OVERRIDE_MARGIN` | Per-field accuracy override. | Float margin for judge override gating. |
-| `ADAPTORCH_VERIFICATION_CRITICAL_COMMANDS` | Per-field accuracy override. | Comma list of critical verification commands. |
-| `ADAPTORCH_VERIFICATION_CRITICAL_WEIGHT` | Per-field accuracy override. | Numeric weight for critical verification commands. |
+| `ADAPTORCH_REPRODUCIBLE` | Benchmark/eval reproducibility beta. | Benchmark/eval scope only; not general runtime determinism. |
+| `ADAPTORCH_ROUTER_ACCURACY_GATE` | Online-router learned-model gate. | `point` default or `wilson`; advanced/operator use. |
+| `ADAPTORCH_PAPER_SEMANTIC_WEIGHT` | Paper-mode lexical/semantic blend. | Default `0.35`; nonzero values use Python scoring over the native fast path. |
 
-## Accuracy profile
+## Engine-delegated optional controls
 
-Accuracy features are engine delegated and default to `off`, preserving current behavior. Set `ADAPTORCH_ACCURACY_PROFILE=balanced` or `max_accuracy` only after measuring a deployment-specific improvement. Per-field overrides win over the profile.
-
-The profile surfaces the AdaptOrch core P11–P19 line: confidence-weighted and robust self-consistency, answer-aware partial credit, semantic vote pooling, medoid selection, command-criticality weighting, logprob-aware confidence, agreement-adaptive ranking, router-threshold calibration, `AccuracyProfile`, selection fusion, and measured adopt-only-if-better gates.
+The wrapper forwards these controls to the installed `adaptorch` engine; it does
+not implement routing, synthesis, or benchmark algorithms itself. See the root
+configuration guide for non-env controls such as `manifest_canonical_sha256`,
+`pass_rate_credit`, `quality_signal`, `prefer_multi_model_ensemble_singleton`,
+and MCP `prefer_ensemble_singleton`.
 
 ## Tool surface
 
@@ -109,7 +109,7 @@ The profile surfaces the AdaptOrch core P11–P19 line: confidence-weighted and 
 | `adaptorch_get_artifacts` | Read artifact metadata for a run. |
 | `adaptorch_list_runs` | List recent runs. |
 | `adaptorch_get_traces` | Read execution traces. |
-| `adaptorch_cancel_run` | Request run cancellation. |
+| `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
 | `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router. |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | Read synthesis modes, connectors, and server features. |
@@ -127,7 +127,7 @@ The doctor command reports package availability, expected MCP tools, redacted en
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-adaptorch-mcp-smoke --base-url https://adaptorch.ai.kr
+adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 Expected JSON includes `"ok": true`, `adaptorch_plan_catalog`, and the expected core tool subset. If no base URL is supplied, smoke targets `http://127.0.0.1:8000` for local development. Add repeatable `--expected-tool <name>` flags when validating a specific hosted/core release.
@@ -146,7 +146,7 @@ Checked-in examples use placeholders or environment interpolation. Fill real URL
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<upstream-adaptorch-token>"
-export ADAPTORCH_CONTROL_PLANE_BASE_URL="https://adaptorch.ai.kr"
+export ADAPTORCH_CONTROL_PLANE_BASE_URL="https://adaptorch.com"
 export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<client-facing-mcp-token>"
 ```
 

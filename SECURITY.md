@@ -34,4 +34,4 @@ Do not open a public issue for suspected secrets, authentication bypasses, trans
 
 ## Accuracy and Benchmark Data Hygiene
 
-`ADAPTORCH_ACCURACY_PROFILE` is opt-in and engine-delegated. When sharing accuracy reports, benchmark corpora, traces, artifacts, prompts, and outputs, remove tenant data, credentials, file-system secrets, and private source snippets first.
+Engine algorithm controls (e.g. `ADAPTORCH_REPRODUCIBLE`, `ADAPTORCH_PAPER_SEMANTIC_WEIGHT`, `ADAPTORCH_ROUTER_ACCURACY_GATE`) are opt-in and engine-delegated; the wrapper does not implement these algorithms. When sharing accuracy reports, benchmark corpora, traces, artifacts, prompts, and outputs, remove tenant data, credentials, file-system secrets, and private source snippets first.

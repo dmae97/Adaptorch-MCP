@@ -35,8 +35,11 @@ _TOKEN_ENV_VARS: tuple[str, ...] = (
     "ADAPTORCH_MCP_HTTP_AUTH_TOKEN",
 )
 
+_ALLOWED_ORIGINS_ENV = "ADAPTORCH_MCP_ALLOWED_ORIGINS"
+
 _CONFIG_ENV_VARS: tuple[str, ...] = (
     "ADAPTORCH_CONTROL_PLANE_BASE_URL",
+    _ALLOWED_ORIGINS_ENV,
     "ADAPTORCH_MCP_HTTP_HOST",
     "ADAPTORCH_MCP_HTTP_PORT",
     "ADAPTORCH_MCP_TIMEOUT_SECONDS",
@@ -76,6 +79,11 @@ def _config_env_value(name: str, value: str) -> str | None:
     if name == _CONTROL_PLANE_BASE_URL_ENV:
         stripped = value.strip()
         return _redact_url_userinfo(stripped) if stripped else None
+    if name == _ALLOWED_ORIGINS_ENV:
+        stripped = value.strip()
+        if not stripped:
+            return None
+        return ",".join(_redact_url_userinfo(origin) for origin in stripped.split(","))
     return value
 
 
@@ -103,7 +111,12 @@ def _control_plane_status(env: Mapping[str, str]) -> dict[str, Any]:
         env_base_url = _normalize_env_base_url(raw_env_base_url)
     except ValueError as exc:
         invalid_env_url = True
-        env_error = str(exc)
+        raw_env_error = str(exc)
+        env_error = (
+            _redact_url_userinfo(raw_env_error)
+            if "://" not in raw_env_error
+            else f"{_CONTROL_PLANE_BASE_URL_ENV} is invalid"
+        )
         env_base_url = None
 
     resolved_base_url = env_base_url or _HOSTED_BASE_URL

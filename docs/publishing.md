@@ -36,9 +36,8 @@ uv publish --dry-run dist/*
 ```
 
 Before publishing, verify documentation and examples cover install, stdio, HTTP,
-doctor, smoke, tool lists, `ADAPTORCH_ACCURACY_PROFILE`, HTTP auth, max payload,
-request timeout, and placeholder-only example values. Keep P11–P19 wording
-engine-delegated and default-off.
+doctor, smoke, tool lists, prompts, engine-delegated optional controls, HTTP
+auth, max payload, request timeout, and placeholder-only example values.
 
 Run a redacted secret scan and store the evidence:
 
@@ -72,7 +71,7 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 1. Create the PyPI project `adaptorch-mcp`.
 2. In PyPI, add a trusted publisher for this repository.
 3. Require the GitHub `pypi` environment.
-4. Tag a release like `adaptorch-mcp-v0.2.0`.
+4. Tag a release like `adaptorch-mcp-v0.2.1`.
 5. Let `.github/workflows/publish.yml` build and publish without storing a PyPI API token.
 
 ## Post-publish smoke
@@ -81,7 +80,7 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 uvx adaptorch-mcp --help
 uvx --with "adaptorch[api]" adaptorch-mcp-doctor --json
 ADAPTORCH_CONTROL_PLANE_TOKEN="<token>" \
-  uvx --with "adaptorch[api]" adaptorch-mcp-smoke --base-url https://adaptorch.ai.kr
+  uvx --with "adaptorch[api]" adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 Expected MCP tools include `adaptorch_plan_catalog`. For HTTP, also verify `/mcp/health`, `initialize`, and `tools/list` with a client-facing `ADAPTORCH_MCP_HTTP_AUTH_TOKEN`.

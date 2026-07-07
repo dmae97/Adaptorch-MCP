@@ -11,7 +11,7 @@
        │  ADAPTORCH_CONTROL_PLANE_TOKEN          │
        ▼                                        ▼
 ┌──────────────────────────────────────────────────────────┐
-│                adaptorch.ai.kr (server.js)                │
+│             adaptorch.com hosted control plane              │
 │                                                          │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐ │
 │  │ Auth     │  │ Runs API │  │Dashboard │  │ Billing │ │
@@ -29,23 +29,25 @@
 
 ## 2. Skills 할당
 
+아래 표는 실제 라이브 OMK 허브 스킬 이름을 사용하는 예시 매핑이다.
+
 | Phase | Skill | 담당 컴포넌트 | 역할 |
 |-------|-------|--------------|------|
-| **Plan** | `omk-plan-first` | 전체 아키텍처 | API↔Dashboard 연결 설계, DAG 분석 |
-| **API** | `omk-backend-api-review` | `/v1/*` 엔드포인트 | REST contract 검증, error handling, pagination |
-| **Auth** | `omk-security-review` | `authMiddleware`, `authenticateApiKey` | JWT/API Key 이중인증, 토큰 탈취 방어 |
-| **Secret** | `omk-secret-guard` | `.env`, token 전달 | 키 노출 방지, 로그 sanitization |
-| **Code** | `omk-code-review` | server.js, MCP tool 구현 | 코드 품질, 타입 안전성 |
-| **Test** | `omk-evidence-contract` | 통합 테스트 | API → Dashboard end-to-end 증거 |
-| **QA** | `omk-quality-gate` | CI/CD | lint, typecheck, test, build 게이트 |
-| **Debug** | `omk-test-debug-loop` | 장애 대응 | 실패한 테스트/배포 디버깅 |
+| **Plan** | `omk-plan` | 전체 아키텍처 | API↔Dashboard 연결 설계, DAG 분석 |
+| **API** | `omk-backend-data` | `/v1/*` 엔드포인트 | REST contract 검증, error handling, pagination |
+| **Auth** | `omk-security` | `authMiddleware`, `authenticateApiKey` | JWT/API Key 이중인증, 토큰 탈취 방어 |
+| **Secret** | `omk-security` | `.env`, token 전달 | 키 노출 방지, 로그 sanitization |
+| **Code** | `omk-engineering` | hosted API, MCP wrapper 구현 | 코드 품질, 타입 안전성 |
+| **Test** | `omk-research-docs` | 통합 테스트 | API → Dashboard end-to-end 증거 |
+| **QA** | `omk-engineering` | CI/CD | lint, typecheck, test, build 게이트 |
+| **Debug** | `omk-engineering` | 장애 대응 | 실패한 테스트/배포 디버깅 |
 
 ## 3. MCP Tools 할당
 
 | Tool | 용도 | 적용 지점 |
 |------|------|----------|
 | `context7` | Supabase/Express/Redis 문서 조회 | API 구현 시 라이브러리 usage 확인 |
-| `filesystem` | server.js, frontend 코드 읽기/쓰기 | 파일 수정 |
+| `filesystem` | repo docs/config/frontend 코드 읽기/쓰기 | 파일 수정 |
 | `github` | PR, CI 상태 확인 | 배포 전 검증 |
 | `memory` | 세션 간 컨텍스트 유지 | 장기 작업 시 checkpoint |
 
@@ -59,16 +61,16 @@
 
 ## 5. 핵심 알고리즘: Run 제출 → Dashboard 반영
 
-### Algorithm 1: POST /v1/runs (server.js lines 1293-1543)
+### Algorithm 1: POST /v1/runs (hosted backend contract)
 
 ```python
 def submit_run(request: RunRequest, auth: AuthContext) -> RunResponse:
     """
-    Skills: omk-backend-api-review (contract), omk-security-review (auth)
+    Skills: omk-backend-data (contract), omk-security (auth)
     MCP: context7 (Supabase insert patterns)
     Hooks: protect-secrets.sh (token never logged)
     """
-    # ── Phase 0: Validate (omk-backend-api-review) ──
+    # ── Phase 0: Validate (omk-backend-data) ──
     if not request.subtasks or len(request.subtasks) == 0:
         raise APIError(400, "SUBTASKS_REQUIRED")
     if len(request.subtasks) > 50:
@@ -83,7 +85,7 @@ def submit_run(request: RunRequest, auth: AuthContext) -> RunResponse:
     # Topology routing (AdaptOrch TopologyRouter mirror)
     topology = route_topology(node_count, edge_count, coupling_density)
     
-    # ── Phase 2: Auth resolution (omk-security-review) ──
+    # ── Phase 2: Auth resolution (omk-security) ──
     # Priority: x-api-key header → Bearer ado_/ak_ token → JWT
     tenant_id = auth.tenant_id  # server-authoritative, never from body
     
@@ -116,7 +118,7 @@ def submit_run(request: RunRequest, auth: AuthContext) -> RunResponse:
 ```python
 def get_dashboard_kpi(tenant_id: str, window: str = "7d") -> KPIResponse:
     """
-    Skills: omk-backend-api-review (response contract)
+    Skills: omk-backend-data (response contract)
     MCP: context7 (Supabase aggregate queries)
     """
     since = now() - parse_window(window)
@@ -150,7 +152,7 @@ def get_dashboard_kpi(tenant_id: str, window: str = "7d") -> KPIResponse:
 ```python
 def issue_api_key(user_id: str, tenant_id: str) -> APIKeyResponse:
     """
-    Skills: omk-security-review (key management)
+    Skills: omk-security (key management)
     Hooks: protect-secrets.sh (key never in logs/response after creation)
     """
     # ── Generate cryptographically random key ──
@@ -175,17 +177,17 @@ def issue_api_key(user_id: str, tenant_id: str) -> APIKeyResponse:
 
 ```python
 # adaptorch_mcp/server.py delegates to adaptorch.mcp_server
-# adaptorch.mcp_server → adaptorch.ai.kr/v1/runs
+# adaptorch.mcp_server → adaptorch.com/v1/runs
 
 def mcp_tool_adaptorch_run(payload: dict) -> dict:
     """
-    Skills: omk-secret-guard (token in env, never in args)
+    Skills: omk-security (token in env, never in args)
     MCP: context7 (httpx patterns)
     """
     # ── Token from env only, never from MCP tool params ──
     token = os.environ["ADAPTORCH_CONTROL_PLANE_TOKEN"]
     base_url = os.environ.get("ADAPTORCH_CONTROL_PLANE_BASE_URL", 
-                               "https://adaptorch.ai.kr")
+                               "https://adaptorch.com")
     
     # ── Call upstream API with timeout ──
     response = httpx.post(
@@ -199,7 +201,7 @@ def mcp_tool_adaptorch_run(payload: dict) -> dict:
     )
     
     if response.status_code == 401:
-        raise MCPToolError("INVALID_TOKEN — regenerate at adaptorch.ai.kr/app/signup")
+        raise MCPToolError("INVALID_TOKEN — regenerate at adaptorch.com/app/signup")
     
     return response.json()
 ```
@@ -225,18 +227,18 @@ Dashboard View   →  React KPI cards         →  GET /v1/dashboard/kpi  →  r
                                                                       →  Redis counters
 ```
 
-## 7. 품질 게이트 (omk-quality-gate)
+## 7. 품질 게이트 (omk-engineering)
 
 ```bash
 # 각 변경 후 필수 검증 파이프라인
 uv run ruff check .                    # lint
 uv run mypy src/adaptorch/             # typecheck
 uv run pytest tests/ -q                # unit tests
-curl -s https://adaptorch.ai.kr/health # smoke test
+curl -s https://adaptorch.com/health # smoke test
 node -e "require('./adaptor-page/server.test.js')"  # API integration
 ```
 
-## 8. 보안 경계 (omk-security-review + omk-secret-guard)
+## 8. 보안 경계 (omk-security)
 
 | 경계 | 규칙 |
 |------|------|

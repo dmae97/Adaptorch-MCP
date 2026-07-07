@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from urllib.parse import urlparse
 
 _CONTROL_PLANE_BASE_URL_ENV = "ADAPTORCH_CONTROL_PLANE_BASE_URL"
-_HOSTED_BASE_URL = "https://adaptorch.ai.kr"
+_HOSTED_BASE_URL = "https://adaptorch.com"
 _ALLOWED_CONTROL_PLANE_SCHEMES = frozenset({"http", "https"})
 
 _MISSING_ADAPTORCH_MESSAGE = (

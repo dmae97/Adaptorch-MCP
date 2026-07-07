@@ -29,10 +29,18 @@ If `gitleaks` is unavailable, run the project-approved equivalent and keep the o
 ## Documentation and Environment Coverage
 
 - [ ] README and package README cover install, stdio, HTTP, doctor, smoke, examples, and the tool surface.
-- [ ] Examples cover public env vars with placeholders: upstream token/base URL, HTTP auth token, allowed origins, max payload, request timeout, SSE subscribers, and accuracy profile overrides.
-- [ ] Accuracy docs state that `ADAPTORCH_ACCURACY_PROFILE` defaults to `off` and that `balanced`/`max_accuracy` are opt-in per deployment.
-- [ ] P11–P19 wording is engine-delegated; the wrapper must not claim duplicated algorithm implementations.
+- [ ] Examples cover public env vars with placeholders: upstream token/base URL, HTTP auth token, allowed origins, max payload, request timeout, SSE subscribers, and engine-delegated optional controls.
+- [ ] Algorithm-control docs distinguish benchmark/eval beta flags from general runtime determinism and state that the wrapper delegates to the engine.
+- [ ] Public benchmark or accuracy claims include the required honesty gate evidence.
 - [ ] Auto-approve guidance distinguishes trusted local clients from shared or production clients.
+
+
+## B2C Readiness Hard Gates
+
+- [ ] `billing_failopen_path_absent`
+- [ ] `dashboard_route_integrity`
+- [ ] `gate_enforces_exit`
+- [ ] Full50 overclaim gate: no public improvement claim without `n >= 50`, a Wilcoxon signed-rank test, and a 95% confidence interval.
 
 ## MCP Smoke Tests
 

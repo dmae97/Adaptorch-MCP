@@ -31,5 +31,5 @@ PYTHONPATH=packages/adaptorch-mcp/src python -m pytest packages/adaptorch-mcp/te
 - [ ] `PYTHONPATH=packages/adaptorch-mcp/src python -m pytest packages/adaptorch-mcp/tests -q`
 - [ ] README/package README/examples updated when CLI or config behavior changes
 - [ ] `SECURITY.md` and `PUBLICATION.md` updated when auth, transport, env vars, or example safety guidance changes
-- [ ] P11–P19 accuracy wording remains engine-delegated and default-off unless benchmark evidence supports a deployment-specific profile
+- [ ] Documented engine algorithm controls stay engine-delegated and grep-verified against the installed engine (`tests/test_docs_truth.py`); no accuracy/benchmark improvement numbers without n>=50 + Wilcoxon + 95% CI
 - [ ] No real tokens, private URLs, `.env*` files, prompts, traces, or artifacts in diffs

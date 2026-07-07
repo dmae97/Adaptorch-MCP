@@ -1,11 +1,11 @@
 # AdaptOrch MCP
 
 <p align="center">
-  <a href="https://adaptorch.ai.kr"><img src="assets/readme-hero.png" alt="AdaptOrch MCP — route, run, and retrieve evidence from Claude Code" width="100%"></a>
+  <a href="https://adaptorch.com"><img src="assets/readme-hero.png" alt="AdaptOrch MCP — route, run, and retrieve evidence from Claude Code" width="100%"></a>
 </p>
 
 <p align="center">
-  <a href="https://adaptorch.ai.kr"><strong>adaptorch.ai.kr</strong></a>
+  <a href="https://adaptorch.com"><strong>adaptorch.com</strong></a>
   ·
   <a href="docs/configuration.md">Configuration</a>
   ·
@@ -26,7 +26,7 @@
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
 </p>
 
-**AdaptOrch MCP** is the public MCP wrapper for [AdaptOrch](https://adaptorch.ai.kr): a reliability kernel that lets Claude Code route tasks, launch orchestrated runs, and pull evidence artifacts back into the chat.
+**AdaptOrch MCP** is the public MCP wrapper for [AdaptOrch](https://adaptorch.com): a reliability kernel that lets Claude Code route tasks, launch orchestrated runs, and pull evidence artifacts back into the chat.
 
 Use it when a coding task is too large, too ambiguous, or too expensive to trust to one single-pass response.
 
@@ -38,7 +38,7 @@ Claude Code → AdaptOrch MCP → route topology → run with synthesis → retr
 
 AdaptOrch requires authentication. Get your token in two steps:
 
-1. **Sign up** → [adaptorch.ai.kr/app/signup](https://adaptorch.ai.kr/app/signup)
+1. **Sign up** → [adaptorch.com/app/signup](https://adaptorch.com/app/signup)
 2. **Create an API key** → Dashboard → API Key Management → generate a key (starts with `ado_`)
 
 Use that key as `ADAPTORCH_CONTROL_PLANE_TOKEN`:
@@ -52,25 +52,22 @@ export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | All AdaptOrch API calls (run, status, artifacts) | Dashboard after signup |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Protect your local HTTP MCP endpoint | You define it (any secure string) |
 
-Free tier (Starter `$0`) includes API key access. See [adaptorch.ai.kr](https://adaptorch.ai.kr) for Pro/Team plans.
+Starter `$0` includes API key access, 1,000 calls/month, and shadow mode. See [adaptorch.com](https://adaptorch.com) for Pro/Team plans.
 
-### Accuracy profile (optional)
+### Engine-delegated optional algorithm controls (latest)
 
-AdaptOrch MCP delegates to the AdaptOrch engine, so accuracy features are
-activated purely via environment variables (no code change). All default to
-**off** (current behavior); activate a measured-justified profile per deployment:
+AdaptOrch MCP forwards optional algorithm controls to the installed `adaptorch`
+engine. The wrapper does not implement these algorithms. Treat these as
+benchmark/eval or operator controls, not quickstart defaults.
 
-| Variable | Purpose | Values |
+| Control | Scope | Verified behavior |
 | --- | --- | --- |
-| `ADAPTORCH_ACCURACY_PROFILE` | Named accuracy preset (base) | `off` (default) \| `balanced` \| `max_accuracy` |
-| `ADAPTORCH_PARTIAL_CREDIT_PREFER_CONFIDENCE` | Per-field override: prefer higher-confidence partial-credit candidate | truthy |
-| `ADAPTORCH_JUDGE_OVERRIDE_MARGIN` | Per-field override: confidence margin gating judge overrides | float |
-| `ADAPTORCH_VERIFICATION_CRITICAL_COMMANDS` | Per-field override: commands treated as verification-critical | comma list |
-| `ADAPTORCH_VERIFICATION_CRITICAL_WEIGHT` | Per-field override: weight applied to critical verification commands | integer or float |
-
-Profiles are opt-in and adopt-only-if-measured-better; per-field variables win
-over the profile. The wrapper does not implement the algorithms itself; it
-forwards environment activation to the AdaptOrch engine's P11–P19 line.
+| `ADAPTORCH_REPRODUCIBLE` | Benchmark/eval beta | Fixes benchmark clock/RNG sources and canonicalizes record timing/path fields. It does not cover live-provider outputs, parallel-suite record order, cassettes, traces, or report timing aggregates. |
+| `manifest_canonical_sha256` | Benchmark manifest | Importable as `adaptorch.benchmarking.manifest_canonical_sha256`; hashes canonical nonvolatile manifest fields. |
+| `ADAPTORCH_ROUTER_ACCURACY_GATE` | Online router | `point` is the default; `wilson` uses a Wilson lower bound for learned-model adoption. Pair with operator knobs such as `retrain_window`, `min_loo_accuracy`, `min_posterior`, `quality_floor`, `use_quality_weights`, `use_failure_evidence`, `exploration_rate`, `max_observations`, `cv`, and `kfold_k`. |
+| `pass_rate_credit` / `quality_signal` | Online-router learning | `compute_quality` tries exact-answer token matching before fuzzy matching. `pass_rate_credit` is opt-in partial credit; do not claim it changes `AdaptOrchEngine` router feedback by default. |
+| `ADAPTORCH_PAPER_SEMANTIC_WEIGHT` | Synthesis | Default is `0.35`. Nonzero semantic weight, plus CJK/Hangul inputs, use Python scoring rather than the native fast path. |
+| `prefer_multi_model_ensemble_singleton` | Routing threshold | Auto-enables when at least two ensemble providers exist and synthesis mode is not `direct`, unless an explicit debate-singleton preference wins. The MCP hint `prefer_ensemble_singleton` can request the same preference manually. |
 
 ## Research paper
 
@@ -156,7 +153,7 @@ Use stdio for local clients such as Claude Code or desktop MCP hosts.
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-adaptorch-mcp --transport stdio --base-url https://adaptorch.ai.kr
+adaptorch-mcp --transport stdio --base-url https://adaptorch.com
 ```
 
 ## HTTP MCP
@@ -169,7 +166,7 @@ export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<client-facing-mcp-token>"
 
 adaptorch-mcp \
   --transport http \
-  --base-url https://adaptorch.ai.kr \
+  --base-url https://adaptorch.com \
   --http-host 127.0.0.1 \
   --http-port 8765
 ```
@@ -194,7 +191,7 @@ PY
 For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this
 order: explicit `--base-url`, then trimmed/validated
 `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then the hosted fallback
-`https://adaptorch.ai.kr`. `adaptorch-mcp-smoke` keeps a local-dev fallback of
+`https://adaptorch.com`. `adaptorch-mcp-smoke` keeps a local-dev fallback of
 `http://127.0.0.1:8000` when no base URL is configured. Pass `--base-url`
 explicitly in checked-in MCP client configs for reproducible behavior.
 
@@ -208,7 +205,9 @@ explicitly in checked-in MCP client configs for reproducible behavior.
 | `ADAPTORCH_MCP_REQUEST_TIMEOUT_SECONDS` | HTTP request timeout budget. | Applies to HTTP server request handling. |
 | `ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS` | Maximum concurrent SSE subscribers. | Defaults are provided by `adaptorch.mcp_server`. |
 | `ADAPTORCH_MCP_TIMEOUT_SECONDS` | Control-plane client timeout for app-factory usage. | Useful when embedding the ASGI app. |
-| `ADAPTORCH_ACCURACY_PROFILE` | Optional P11–P19 accuracy preset. | `off` by default; `balanced`/`max_accuracy` are opt-in. |
+| `ADAPTORCH_REPRODUCIBLE` | Benchmark/eval reproducibility beta. | Benchmark/eval scope only; not general runtime determinism. |
+| `ADAPTORCH_ROUTER_ACCURACY_GATE` | Online-router learned-model gate. | `point` default or `wilson`; advanced/operator use. |
+| `ADAPTORCH_PAPER_SEMANTIC_WEIGHT` | Paper-mode lexical/semantic blend. | Default `0.35`; nonzero values use Python scoring over the native fast path. |
 
 ## Claude Code MCP config
 
@@ -221,7 +220,7 @@ explicitly in checked-in MCP client configs for reproducible behavior.
         "--transport",
         "stdio",
         "--base-url",
-        "https://adaptorch.ai.kr"
+        "https://adaptorch.com"
       ],
       "env": {
         "ADAPTORCH_CONTROL_PLANE_TOKEN": "${ADAPTORCH_CONTROL_PLANE_TOKEN}"
@@ -254,7 +253,7 @@ Run a stdio smoke test. The token is passed through the child environment, not p
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-adaptorch-mcp-smoke --base-url https://adaptorch.ai.kr
+adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 Expected JSON includes `"ok": true`, `adaptorch_plan_catalog`, and the expected
@@ -271,7 +270,7 @@ validating a specific hosted/core release.
 | `adaptorch_get_artifacts` | Read artifact metadata for a run. |
 | `adaptorch_list_runs` | List recent runs. |
 | `adaptorch_get_traces` | Read execution traces. |
-| `adaptorch_cancel_run` | Request run cancellation. |
+| `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
 | `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router. |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | Read synthesis modes, connectors, and server features. |

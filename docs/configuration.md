@@ -14,7 +14,7 @@ Base-url resolution differs by entrypoint:
 
 | Entrypoint | Resolution when `--base-url` is omitted | Default with no env |
 | --- | --- | --- |
-| `adaptorch-mcp` | `ADAPTORCH_CONTROL_PLANE_BASE_URL` after trimming/validation, then hosted fallback | `https://adaptorch.ai.kr` |
+| `adaptorch-mcp` | `ADAPTORCH_CONTROL_PLANE_BASE_URL` after trimming/validation, then hosted fallback | `https://adaptorch.com` |
 | `adaptorch-mcp-smoke` | `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then local smoke target | `http://127.0.0.1:8000` |
 | `create_default_mcp_http_app()` | Delegates to the AdaptOrch engine and reads environment only | engine default |
 
@@ -31,19 +31,30 @@ Pass `--base-url` explicitly in checked-in MCP client configs for reproducible b
 | `ADAPTORCH_MCP_TIMEOUT_SECONDS` | Control-plane client timeout for embedded/app-factory usage. |
 | `ADAPTORCH_MCP_HTTP_HOST` / `ADAPTORCH_MCP_HTTP_PORT` | Shell/template values for `--http-host` and `--http-port`; CLI flags are authoritative. |
 
-## Accuracy Profile Environment
+## Engine-delegated optional algorithm controls (latest)
 
-Accuracy features are engine-delegated and default to `off`, preserving current behavior.
+`adaptorch-mcp` forwards these controls to the installed `adaptorch` engine. The
+wrapper does not implement routing, synthesis, quality scoring, or benchmark
+algorithms itself.
 
-| Variable | Purpose | Values |
+### Environment controls
+
+| Variable | Scope | Notes |
 | --- | --- | --- |
-| `ADAPTORCH_ACCURACY_PROFILE` | Named P11–P19 accuracy preset | `off` (default), `balanced`, `max_accuracy` |
-| `ADAPTORCH_PARTIAL_CREDIT_PREFER_CONFIDENCE` | Prefer higher-confidence partial-credit candidates | truthy |
-| `ADAPTORCH_JUDGE_OVERRIDE_MARGIN` | Confidence margin gating judge overrides | float |
-| `ADAPTORCH_VERIFICATION_CRITICAL_COMMANDS` | Commands treated as verification-critical | comma list |
-| `ADAPTORCH_VERIFICATION_CRITICAL_WEIGHT` | Weight applied to critical verification commands | integer or float |
+| `ADAPTORCH_REPRODUCIBLE` | Benchmark/eval beta | Fixes benchmark clock/RNG sources and canonicalizes record timing/path fields. It does not cover live-provider outputs, parallel-suite record order, cassettes, traces, or report timing aggregates. |
+| `ADAPTORCH_ROUTER_ACCURACY_GATE` | Online router | `point` is the default; `wilson` compares learned-router adoption against a Wilson lower bound. Advanced/operator use. |
+| `ADAPTORCH_PAPER_SEMANTIC_WEIGHT` | Synthesis | Default is `0.35`. Nonzero semantic weight, plus CJK/Hangul inputs, use Python scoring rather than the native fast path. |
 
-Use `balanced` or `max_accuracy` only after measuring a deployment-specific improvement. Per-field overrides win over the profile.
+### Engine API/config controls
+
+| Control | Scope | Notes |
+| --- | --- | --- |
+| `manifest_canonical_sha256` | Benchmark manifest | Importable as `adaptorch.benchmarking.manifest_canonical_sha256`; hashes canonical nonvolatile manifest fields. |
+| `pass_rate_credit` | Quality signal | Opt-in partial credit in `adaptorch.quality_signal.compute_quality`; do not claim it changes `AdaptOrchEngine` router feedback by default. |
+| `quality_signal` | Online-router learning | Exact-answer tokens are compared before fuzzy gold-label matching. |
+| `prefer_multi_model_ensemble_singleton` | Routing threshold | Auto-enables when at least two ensemble providers exist and synthesis mode is not `direct`, unless an explicit debate-singleton preference wins. |
+| `prefer_ensemble_singleton` | MCP run hint | Manual hint forwarded by MCP/benchmark run options. |
+| Online-router knobs | Operator tuning | `retrain_window`, `min_loo_accuracy`, `min_posterior`, `quality_floor`, `use_quality_weights`, `use_failure_evidence`, `exploration_rate`, `max_observations`, `cv`, and `kfold_k`. |
 
 ## Common Flags
 
@@ -73,7 +84,7 @@ adaptorch-mcp --transport stdio --base-url http://127.0.0.1:8000
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<tenant-api-key>"
-adaptorch-mcp --transport stdio --base-url https://adaptorch.ai.kr
+adaptorch-mcp --transport stdio --base-url https://adaptorch.com
 ```
 
 ## Local HTTP
@@ -83,7 +94,7 @@ export ADAPTORCH_CONTROL_PLANE_TOKEN="<upstream-token>"
 export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<mcp-client-token>"
 adaptorch-mcp \
   --transport http \
-  --base-url https://adaptorch.ai.kr \
+  --base-url https://adaptorch.com \
   --http-host 127.0.0.1 \
   --http-port 8765 \
   --http-auth-token "$ADAPTORCH_MCP_HTTP_AUTH_TOKEN"
@@ -109,7 +120,7 @@ adaptorch-mcp-doctor --strict
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-adaptorch-mcp-smoke --base-url https://adaptorch.ai.kr
+adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 The command starts `adaptorch-mcp --transport stdio`, sends `initialize` and `tools/list`, then verifies the expected core tool subset. When neither `--base-url` nor `ADAPTORCH_CONTROL_PLANE_BASE_URL` is set, smoke intentionally targets `http://127.0.0.1:8000` for local development. Add repeatable `--expected-tool <name>` flags when validating a specific hosted/core release.
