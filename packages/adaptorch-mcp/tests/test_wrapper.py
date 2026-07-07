@@ -269,7 +269,7 @@ def test_server_factory_delegates_to_adaptorch_http_app(monkeypatch: pytest.Monk
 def test_package_exports_public_contract() -> None:
     import adaptorch_mcp
 
-    assert adaptorch_mcp.__version__ == "0.2.1"
+    assert adaptorch_mcp.__version__ == "0.3.0"
     assert callable(adaptorch_mcp.main)
     assert callable(adaptorch_mcp.collect_diagnostics)
     assert callable(adaptorch_mcp.create_default_mcp_http_app)

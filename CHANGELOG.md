@@ -4,12 +4,19 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
-## [Unreleased]
+## [0.3.0] - 2026-07-07
 
 ### Changed
-- Re-pinned the delegated AdaptOrch engine dependency from `5b674a42` to `3a700afbb` in `uv.lock`.
-- Removed public documentation and examples for the unsupported accuracy-profile preset surface; the repinned engine has no source-backed implementation for that surface.
+- Re-pinned the delegated AdaptOrch engine dependency from `5b674a42` to `3a700afbb` in `uv.lock`, so the wrapper ships the latest engine algorithm surface (reproducibility beta, manifest canonical hash, router accuracy gate, quality-signal partial credit, configurable synthesis semantic weight, ensemble auto-preference).
+- Removed public documentation and examples for the unsupported accuracy-profile preset surface (`ADAPTORCH_ACCURACY_PROFILE` and its four overrides); no shipped engine implements it.
+- `docs/tools.md`: documented the two MCP prompts (`adaptorch_run_prompt`, `adaptorch_get_run_prompt`) and marked `adaptorch_cancel_run` as write/destructive.
+
+### Added
 - Documented installed-engine controls: `ADAPTORCH_REPRODUCIBLE`, `manifest_canonical_sha256`, `ADAPTORCH_ROUTER_ACCURACY_GATE`, `pass_rate_credit`/`quality_signal`, `ADAPTORCH_PAPER_SEMANTIC_WEIGHT`, `prefer_multi_model_ensemble_singleton`, and MCP `prefer_ensemble_singleton`.
+- `tests/test_docs_truth.py` (fails if a phantom env symbol reappears or a documented `ADAPTORCH_*` is absent from the installed engine, and locks the publishing tag to the package version) and `tests/test_activation_surface.py`.
+
+### Security
+- Diagnostics now surface `ADAPTORCH_MCP_ALLOWED_ORIGINS` and guarantee `controlPlane.envError` never echoes a raw URL.
 
 ### Documentation
 - Replaced benchmark-improvement claims with an honesty gate: publish improvement claims only with `n >= 50`, a Wilcoxon signed-rank test, and a 95% confidence interval.

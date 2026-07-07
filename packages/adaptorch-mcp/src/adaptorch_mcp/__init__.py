@@ -6,4 +6,4 @@ from adaptorch_mcp.server import create_default_mcp_http_app
 
 __all__ = ["__version__", "collect_diagnostics", "create_default_mcp_http_app", "main"]
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
