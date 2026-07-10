@@ -113,6 +113,10 @@ def test_package_readme_documents_hardened_defaults_and_claim_boundary() -> None
         "remote",
         "full",
         "reverse engineering cannot be made impossible",
+        # Dashboard (adaptor-page) API-key and run-visibility contract.
+        "ado_live_",
+        "/app/api-keys",
+        'connector_source="mcp"',
     ):
         assert required in text
 

@@ -53,6 +53,9 @@ _TOKEN_ENV_VARS: tuple[str, ...] = (
     "ADAPTORCH_CONTROL_PLANE_TOKEN",
     "ADAPTORCH_MCP_HTTP_AUTH_TOKEN",
 )
+_CONTROL_PLANE_TOKEN_ENV = "ADAPTORCH_CONTROL_PLANE_TOKEN"
+# Dashboard API-key contract: canonical ado_live_/ado_test_ plus legacy ak_ prefixes.
+_RECOGNIZED_TOKEN_PREFIXES: tuple[str, ...] = ("ado_", "ak_")
 
 _ALLOWED_ORIGINS_ENV = "ADAPTORCH_MCP_ALLOWED_ORIGINS"
 
@@ -109,13 +112,19 @@ def _config_env_value(name: str, value: str) -> str | None:
 
 
 def _env_status(env: Mapping[str, str]) -> dict[str, Any]:
-    token_vars = {name: {"set": bool(env.get(name))} for name in _TOKEN_ENV_VARS}
+    token_vars: dict[str, dict[str, Any]] = {}
+    for name in _TOKEN_ENV_VARS:
+        value = env.get(name, "")
+        status: dict[str, Any] = {"set": bool(value)}
+        if name == _CONTROL_PLANE_TOKEN_ENV and value:
+            status["formatRecognized"] = value.strip().startswith(_RECOGNIZED_TOKEN_PREFIXES)
+        token_vars[name] = status
     config_vars: dict[str, str] = {}
     for name in _CONFIG_ENV_VARS:
-        value = env.get(name)
-        if not value:
+        config_value = env.get(name)
+        if not config_value:
             continue
-        normalized = _config_env_value(name, value)
+        normalized = _config_env_value(name, config_value)
         if normalized:
             config_vars[name] = normalized
     return {"tokens": token_vars, "config": config_vars}

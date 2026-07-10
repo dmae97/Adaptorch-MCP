@@ -33,12 +33,14 @@ uv run adaptorch-mcp --help
 
 ## Run stdio MCP
 
-Use stdio for Claude Code, Claude Desktop, and other local MCP hosts.
+Use stdio for Claude Code, Claude Desktop, and other local MCP hosts. The upstream token is the AdaptOrch API key issued at `https://adaptorch.com/app/api-keys` (`ado_live_*`, or `ado_test_*` for test mode; legacy `ak_*` keys remain accepted).
 
 ```bash
-export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
+export ADAPTORCH_CONTROL_PLANE_TOKEN="<ado_live_your-key>"
 adaptorch-mcp --transport stdio --base-url https://adaptorch.com
 ```
+
+Runs submitted through this wrapper are stamped `metadata.connector_source="mcp"` by the engine, so they appear in the dashboard MCP status card and `https://adaptorch.com/app/runs` for the key's tenant.
 
 ## Run HTTP MCP
 
@@ -88,7 +90,7 @@ For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this o
 
 | Variable | Purpose | Notes |
 | --- | --- | --- |
-| `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch token. | Required unless `--api-token` is passed. |
+| `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch API key (`ado_live_*`/`ado_test_*`, legacy `ak_*`) from `/app/api-keys`. | Required unless `--api-token` is passed. |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | Base URL used when `--base-url` is omitted. | Trimmed and validated as HTTP(S); do not embed credentials. |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Required for HTTP and must differ from the upstream token. |
 | `ADAPTORCH_MCP_EXPOSURE_PROFILE` | MCP exposure policy. | `remote` (default) hides local route/trace oracles; `full` explicitly restores the parent surface. |
@@ -140,10 +142,10 @@ adaptorch-mcp-doctor --json
 adaptorch-mcp-doctor --strict
 ```
 
-The doctor command reports package availability, expected MCP tools, redacted environment metadata, and `controlPlane` base-url plus transport-policy validity without printing token values. `--strict` fails for invalid exposure profiles, malformed URLs, or remote plaintext URLs without the explicit development opt-in.
+The doctor command reports package availability, expected MCP tools, redacted environment metadata, and `controlPlane` base-url plus transport-policy validity without printing token values. The control-plane token entry adds `formatRecognized` (prefix check against the dashboard `ado_*`/`ak_*` key contract, booleans only). `--strict` fails for invalid exposure profiles, malformed URLs, or remote plaintext URLs without the explicit development opt-in.
 
 ```bash
-export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
+export ADAPTORCH_CONTROL_PLANE_TOKEN="<ado_live_your-key>"
 adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 

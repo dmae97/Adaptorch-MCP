@@ -4,6 +4,12 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [0.4.1] - 2026-07-11
+
+### Changed
+- Aligned the wrapper with the adaptor-page dashboard contract: documented the `ado_live_*`/`ado_test_*` (legacy `ak_*`) API-key story from `/app/api-keys`, and documented that engine-stamped `metadata.connector_source="mcp"` runs surface in the dashboard MCP status card and `/app/runs`.
+- Diagnostics now report `formatRecognized` (boolean prefix check only) for the control-plane token so misconfigured credentials (for example a pasted dashboard JWT) are visible without exposing values.
+
 ## [0.4.0] - 2026-07-10
 
 ### Added

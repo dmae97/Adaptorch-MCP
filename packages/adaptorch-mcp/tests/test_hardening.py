@@ -275,9 +275,12 @@ def test_parent_contract_validation_fails_closed() -> None:
 def test_diagnostics_reports_hardened_posture_without_token_length() -> None:
     from adaptorch_mcp.diagnostics import collect_diagnostics
 
-    payload = collect_diagnostics({"ADAPTORCH_CONTROL_PLANE_TOKEN": "secret-token-value"})
+    payload = collect_diagnostics({"ADAPTORCH_CONTROL_PLANE_TOKEN": "ado_live_secret"})
 
-    assert payload["environment"]["tokens"]["ADAPTORCH_CONTROL_PLANE_TOKEN"] == {"set": True}
+    assert payload["environment"]["tokens"]["ADAPTORCH_CONTROL_PLANE_TOKEN"] == {
+        "set": True,
+        "formatRecognized": True,
+    }
     assert payload["security"] == {
         "exposureProfile": "remote",
         "profileValid": True,

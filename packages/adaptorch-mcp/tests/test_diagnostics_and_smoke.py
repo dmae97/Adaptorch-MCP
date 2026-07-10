@@ -47,7 +47,7 @@ def test_diagnostics_redacts_token_values() -> None:
 
     assert "secret-token-value" not in rendered
     token_status = payload["environment"]["tokens"]["ADAPTORCH_CONTROL_PLANE_TOKEN"]
-    assert token_status == {"set": True}
+    assert token_status == {"set": True, "formatRecognized": False}
     assert "adaptorch_plan_catalog" in payload["expectedTools"]
     assert "adaptorch_cancel_run" in payload["expectedTools"]
 
