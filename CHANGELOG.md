@@ -4,7 +4,7 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
-## [Unreleased]
+## [0.4.0] - 2026-07-10
 
 ### Added
 - Added a hardened MCP facade that continues to execute through the canonical parent AdaptOrch server/backend while defaulting to a strict remote tool/resource allowlist.

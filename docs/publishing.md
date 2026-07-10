@@ -71,7 +71,7 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 1. Create the PyPI project `adaptorch-mcp`.
 2. In PyPI, add a trusted publisher for this repository.
 3. Require the GitHub `pypi` environment.
-4. Tag a release like `adaptorch-mcp-v0.3.0`.
+4. Tag a release like `adaptorch-mcp-v0.4.0`.
 5. Let `.github/workflows/publish.yml` build and publish without storing a PyPI API token.
 
 ## Post-publish smoke
