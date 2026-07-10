@@ -2,29 +2,27 @@ from __future__ import annotations
 
 import json
 import re
-import sys
-import types
 from collections.abc import Sequence
-from typing import Any
 
 import pytest
 
 RAW_URL_PATTERN = re.compile(r"[a-z][a-z0-9+.-]*://[^\s]+", re.IGNORECASE)
 
 
-def _install_fake_adaptorch(monkeypatch: pytest.MonkeyPatch, *, main_return: int = 0) -> list[Any]:
-    calls: list[Any] = []
-    adaptorch_module = types.ModuleType("adaptorch")
-    mcp_server_module = types.ModuleType("adaptorch.mcp_server")
+def _install_fake_adaptorch(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    main_return: int = 0,
+) -> list[list[str] | None]:
+    from adaptorch_mcp import cli
+
+    calls: list[list[str] | None] = []
 
     def fake_main(argv: Sequence[str] | None = None) -> int:
         calls.append(list(argv) if argv is not None else None)
         return main_return
 
-    mcp_server_module.main = fake_main  # type: ignore[attr-defined]
-    adaptorch_module.mcp_server = mcp_server_module  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "adaptorch", adaptorch_module)
-    monkeypatch.setitem(sys.modules, "adaptorch.mcp_server", mcp_server_module)
+    monkeypatch.setattr(cli, "_load_runtime_main", lambda: fake_main)
     return calls
 
 

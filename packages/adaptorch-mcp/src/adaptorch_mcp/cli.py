@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from urllib.parse import urlparse
 
 _CONTROL_PLANE_BASE_URL_ENV = "ADAPTORCH_CONTROL_PLANE_BASE_URL"
@@ -90,10 +90,16 @@ def _with_hosted_base_url_default(argv: Sequence[str] | None) -> list[str] | Non
     return ["--base-url", _HOSTED_BASE_URL, *forwarded]
 
 
+def _load_runtime_main() -> Callable[[Sequence[str] | None], int]:
+    from adaptorch_mcp.runtime import run_hardened_main
+
+    return run_hardened_main
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    """Delegate the public console script to the canonical AdaptOrch MCP server."""
+    """Run the canonical AdaptOrch engine behind the hardened MCP facade."""
     try:
-        from adaptorch.mcp_server import main as adaptorch_mcp_main
+        runtime_main = _load_runtime_main()
     except ModuleNotFoundError as exc:
         if exc.name == "adaptorch":
             print(_MISSING_ADAPTORCH_MESSAGE, file=sys.stderr)
@@ -101,4 +107,4 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise
 
     forwarded_argv = _with_hosted_base_url_default(argv)
-    return int(adaptorch_mcp_main(forwarded_argv))
+    return int(runtime_main(forwarded_argv))

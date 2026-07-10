@@ -4,6 +4,22 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [Unreleased]
+
+### Added
+- Added a hardened MCP facade that continues to execute through the canonical parent AdaptOrch server/backend while defaulting to a strict remote tool/resource allowlist.
+- Added regression coverage for exposure profiles, TLS/loopback policy, role-separated HTTP tokens, authenticated status endpoints, parent-tool compatibility, response redaction, and SSE event suppression.
+
+### Changed
+- Diagnostics now use `adaptorch_mcp.diagnostics.v2`: token presence remains visible, but token lengths are no longer reported; the payload also reports the active exposure profile, transport-policy validity, insecure-development opt-in, and honest algorithm-execution boundary.
+- `adaptorch-mcp` and the HTTP app factory now use the hardened runtime instead of delegating directly to the parent CLI/factory.
+- Split wrapper tests into focused modules to keep each touched test module below the repository's 250-pure-LOC review ceiling.
+
+### Security
+- The default `remote` profile hides local topology and trace oracles, blocks trace and verification-command controls, redacts algorithm-sensitive fields from all tool responses, suppresses MCP tool-event broadcasts, and disables sensitive run resources/completions.
+- Remote control-plane HTTP is denied unless explicitly enabled for development; the MCP HTTP listener is loopback-only, status endpoints require bearer authentication, and the client-facing HTTP token must differ from the upstream token.
+- Documented that these controls reduce exposure but cannot make distributed Python or black-box behavior impossible to reverse engineer.
+
 ## [0.3.0] - 2026-07-07
 
 ### Changed

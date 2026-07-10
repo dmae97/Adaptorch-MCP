@@ -26,6 +26,8 @@ NON_ENGINE_DOC_TOKENS = frozenset(
         # Wrapper-only shell/template names that map to CLI flags.
         "ADAPTORCH_MCP_HTTP_HOST",
         "ADAPTORCH_MCP_HTTP_PORT",
+        "ADAPTORCH_MCP_EXPOSURE_PROFILE",
+        "ADAPTORCH_MCP_ALLOW_INSECURE_CONTROL_PLANE",
         # Line-wrapped diagram fragment for ADAPTORCH_CONTROL_PLANE_TOKEN.
         "ADAPTORCH_CONTROL",
     }
@@ -100,6 +102,19 @@ def test_publishing_release_tag_matches_package_version() -> None:
     tags = VERSION_TAG_PATTERN.findall(text)
 
     assert tags == [f"adaptorch-mcp-v{__version__}"]
+
+
+def test_package_readme_documents_hardened_defaults_and_claim_boundary() -> None:
+    text = (PACKAGE_ROOT / "README.md").read_text(encoding="utf-8")
+
+    for required in (
+        "ADAPTORCH_MCP_EXPOSURE_PROFILE",
+        "ADAPTORCH_MCP_ALLOW_INSECURE_CONTROL_PLANE",
+        "remote",
+        "full",
+        "reverse engineering cannot be made impossible",
+    ):
+        assert required in text
 
 
 def test_env_example_uses_placeholders_for_all_secret_values() -> None:

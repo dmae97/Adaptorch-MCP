@@ -10,8 +10,28 @@ from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from adaptorch_mcp.cli import _CONTROL_PLANE_BASE_URL_ENV, _HOSTED_BASE_URL, _normalize_env_base_url
+from adaptorch_mcp.diagnostic_format import format_diagnostics
+from adaptorch_mcp.security_policy import (
+    ALLOW_INSECURE_ENV,
+    EXPOSURE_PROFILE_ENV,
+    insecure_control_plane_allowed,
+    validate_control_plane_url,
+)
+
+__all__ = ["EXPECTED_CORE_TOOLS", "collect_diagnostics", "format_diagnostics"]
 
 EXPECTED_CORE_TOOLS: tuple[str, ...] = (
+    "adaptorch_run",
+    "adaptorch_get_run",
+    "adaptorch_get_artifacts",
+    "adaptorch_list_runs",
+    "adaptorch_cancel_run",
+    "adaptorch_server_metrics",
+    "adaptorch_capabilities",
+    "adaptorch_plan_catalog",
+)
+
+_FULL_CORE_TOOLS: tuple[str, ...] = (
     "adaptorch_run",
     "adaptorch_get_run",
     "adaptorch_get_artifacts",
@@ -23,7 +43,6 @@ EXPECTED_CORE_TOOLS: tuple[str, ...] = (
     "adaptorch_capabilities",
     "adaptorch_plan_catalog",
 )
-
 _RUNTIME_PACKAGES: tuple[tuple[str, str], ...] = (
     ("adaptorch", "adaptorch"),
     ("fastapi", "fastapi"),
@@ -43,6 +62,8 @@ _CONFIG_ENV_VARS: tuple[str, ...] = (
     "ADAPTORCH_MCP_HTTP_HOST",
     "ADAPTORCH_MCP_HTTP_PORT",
     "ADAPTORCH_MCP_TIMEOUT_SECONDS",
+    EXPOSURE_PROFILE_ENV,
+    ALLOW_INSECURE_ENV,
 )
 
 
@@ -88,10 +109,7 @@ def _config_env_value(name: str, value: str) -> str | None:
 
 
 def _env_status(env: Mapping[str, str]) -> dict[str, Any]:
-    token_vars = {
-        name: {"set": bool(env.get(name)), "length": len(env.get(name, "")) or None}
-        for name in _TOKEN_ENV_VARS
-    }
+    token_vars = {name: {"set": bool(env.get(name))} for name in _TOKEN_ENV_VARS}
     config_vars: dict[str, str] = {}
     for name in _CONFIG_ENV_VARS:
         value = env.get(name)
@@ -120,6 +138,15 @@ def _control_plane_status(env: Mapping[str, str]) -> dict[str, Any]:
         env_base_url = None
 
     resolved_base_url = env_base_url or _HOSTED_BASE_URL
+    allow_insecure = insecure_control_plane_allowed(env)
+    policy_valid = not invalid_env_url
+    policy_error = "control-plane environment URL is invalid" if invalid_env_url else None
+    if policy_valid:
+        try:
+            validate_control_plane_url(resolved_base_url, allow_insecure=allow_insecure)
+        except ValueError:
+            policy_valid = False
+            policy_error = "control-plane URL violates the transport security policy"
     return {
         "defaultBaseUrl": _HOSTED_BASE_URL,
         "envBaseUrl": _redact_url_userinfo(env_base_url) if env_base_url is not None else None,
@@ -127,6 +154,26 @@ def _control_plane_status(env: Mapping[str, str]) -> dict[str, Any]:
         "resolvedSource": "env" if env_base_url is not None else "hosted-default",
         "invalidEnvUrl": invalid_env_url,
         "envError": env_error,
+        "policyValid": policy_valid,
+        "policyError": policy_error,
+    }
+
+
+def _security_status(env: Mapping[str, str]) -> dict[str, Any]:
+    raw_profile = env.get(EXPOSURE_PROFILE_ENV, "remote").strip().lower()
+    profile_valid = raw_profile in {"", "remote", "full"}
+    profile = "full" if raw_profile == "full" else "remote"
+    allow_insecure = insecure_control_plane_allowed(env)
+    return {
+        "exposureProfile": profile,
+        "profileValid": profile_valid,
+        "algorithmExecutionBoundary": (
+            "mixed-local-and-control-plane" if profile == "full" else "control-plane"
+        ),
+        "localAlgorithmOraclesExposed": profile == "full" and profile_valid,
+        "remoteControlPlaneRequiresHttps": not allow_insecure,
+        "insecureControlPlaneAllowed": allow_insecure,
+        "httpTokensMustBeDistinct": True,
     }
 
 
@@ -137,8 +184,15 @@ def collect_diagnostics(env: Mapping[str, str] | None = None) -> dict[str, Any]:
         distribution_name: _package_status(import_name, distribution_name)
         for import_name, distribution_name in _RUNTIME_PACKAGES
     }
+    security = _security_status(resolved_env)
+    control_plane = _control_plane_status(resolved_env)
+    expected_tools = (
+        _FULL_CORE_TOOLS
+        if security["exposureProfile"] == "full" and security["profileValid"]
+        else EXPECTED_CORE_TOOLS
+    )
     return {
-        "schemaVersion": "adaptorch_mcp.diagnostics.v1",
+        "schemaVersion": "adaptorch_mcp.diagnostics.v2",
         "python": {
             "version": platform.python_version(),
             "implementation": platform.python_implementation(),
@@ -151,57 +205,13 @@ def collect_diagnostics(env: Mapping[str, str] | None = None) -> dict[str, Any]:
         },
         "packages": packages,
         "environment": _env_status(resolved_env),
-        "controlPlane": _control_plane_status(resolved_env),
-        "expectedTools": list(EXPECTED_CORE_TOOLS),
-        "ok": packages["adaptorch"]["importable"],
+        "controlPlane": control_plane,
+        "security": security,
+        "expectedTools": list(expected_tools),
+        "ok": (
+            packages["adaptorch"]["importable"]
+            and security["profileValid"]
+            and not control_plane["invalidEnvUrl"]
+            and control_plane["policyValid"]
+        ),
     }
-
-
-def format_diagnostics(payload: Mapping[str, Any]) -> str:
-    """Format diagnostics without printing secret values."""
-    packages = payload.get("packages", {})
-    environment = payload.get("environment", {})
-    token_vars = environment.get("tokens", {}) if isinstance(environment, Mapping) else {}
-    config_vars = environment.get("config", {}) if isinstance(environment, Mapping) else {}
-    control_plane = payload.get("controlPlane", {})
-
-    lines = ["AdaptOrch MCP diagnostics", ""]
-    python_info = payload.get("python", {})
-    if isinstance(python_info, Mapping):
-        lines.append(f"Python: {python_info.get('implementation')} {python_info.get('version')}")
-    lines.append(f"OK: {bool(payload.get('ok'))}")
-    lines.append("")
-    lines.append("Packages:")
-    if isinstance(packages, Mapping):
-        for name, status in packages.items():
-            if isinstance(status, Mapping):
-                lines.append(
-                    f"- {name}: importable={status.get('importable')} "
-                    f"version={status.get('version') or 'unknown'}"
-                )
-    lines.append("")
-    lines.append("Environment:")
-    if isinstance(token_vars, Mapping):
-        for name, status in token_vars.items():
-            set_flag = status.get("set") if isinstance(status, Mapping) else False
-            length = status.get("length") if isinstance(status, Mapping) else None
-            length_label = f", length={length}" if length is not None else ""
-            lines.append(f"- {name}: set={set_flag}{length_label}")
-    if isinstance(config_vars, Mapping):
-        for name, value in config_vars.items():
-            lines.append(f"- {name}: {value}")
-    lines.append("")
-    lines.append("Control plane:")
-    if isinstance(control_plane, Mapping):
-        lines.append(f"- defaultBaseUrl: {control_plane.get('defaultBaseUrl')}")
-        lines.append(f"- envBaseUrl: {control_plane.get('envBaseUrl')}")
-        lines.append(f"- resolvedBaseUrl: {control_plane.get('resolvedBaseUrl')}")
-        lines.append(f"- resolvedSource: {control_plane.get('resolvedSource')}")
-        lines.append(f"- invalidEnvUrl: {bool(control_plane.get('invalidEnvUrl'))}")
-        if control_plane.get("envError"):
-            lines.append(f"- envError: {control_plane.get('envError')}")
-    lines.append("")
-    lines.append("Expected core MCP tools:")
-    for tool in payload.get("expectedTools", []):
-        lines.append(f"- {tool}")
-    return "\n".join(lines)

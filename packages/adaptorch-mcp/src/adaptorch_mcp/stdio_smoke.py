@@ -192,12 +192,10 @@ def run_stdio_smoke(
             "duration_ms": round((time.monotonic() - started_at) * 1000, 3),
         }
     except Exception as exc:
-        if process.poll() is not None:
-            stderr = _collect_stderr(process, sensitive_values)
-            if stderr:
-                raise MCPStdioSmokeError(
-                    f"MCP process exited with stderr: {stderr}"
-                ) from exc
+        _shutdown_process(process)
+        stderr = _collect_stderr(process, sensitive_values)
+        if stderr:
+            raise MCPStdioSmokeError(f"MCP process exited with stderr: {stderr}") from exc
         raise
     finally:
         _shutdown_process(process)

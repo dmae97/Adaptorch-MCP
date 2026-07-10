@@ -1,0 +1,46 @@
+version: "1.0"
+
+project:
+  name: "AdaptOrch MCP"
+  repository_root: "."
+  architecture_source: "specs/001-mcp-algorithm-hardening/plan.md"
+  primary_language: "Korean"
+
+paths:
+  specs_root: "specs"
+  constitution: "specs/constitution.md"
+  templates:
+    spec: "specs/templates/spec-template.md"
+    plan: "specs/templates/plan-template.md"
+    tasks: "specs/templates/tasks-template.md"
+
+spec_naming:
+  id_format: "NNN"
+  slug_case: "kebab-case"
+  directory_pattern: "{id}-{slug}"
+
+workflow:
+  default_base_branch: "main"
+  sequence:
+    - "specify"
+    - "plan"
+    - "tasks"
+    - "implement"
+  require_human_review_before:
+    - "release"
+
+quality_gates:
+  required_commands:
+    - "uv run ruff check ."
+    - "uv run mypy packages/adaptorch-mcp/src"
+    - "uv run pytest -q"
+    - "uv build --package adaptorch-mcp"
+  fail_fast: true
+  require_green_before_done: true
+
+delivery:
+  include_artifacts:
+    - "spec.md"
+    - "plan.md"
+    - "tasks.md"
+  include_status_log: false

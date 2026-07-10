@@ -2,7 +2,7 @@
 
 Installable Python wrapper for the AdaptOrch MCP server.
 
-The package intentionally delegates runtime behavior to `adaptorch.mcp_server`, so MCP tools, transports, safety checks, prompts, and optional algorithm controls stay aligned with AdaptOrch core.
+The package runs a hardened facade over `adaptorch.mcp_server`, so routing and synthesis stay aligned with AdaptOrch core without copying those algorithms into the wrapper. The default `remote` exposure profile keeps local topology and trace oracles out of the public MCP surface.
 
 ## Install
 
@@ -46,7 +46,7 @@ Use HTTP for local gateways, reverse proxies, or remote MCP clients. Keep the cl
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<upstream-adaptorch-token>"
-export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<client-facing-mcp-token>"
+export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<client-facing-mcp-token>"  # must differ from upstream
 
 adaptorch-mcp \
   --transport http \
@@ -56,14 +56,23 @@ adaptorch-mcp \
   --http-auth-token "$ADAPTORCH_MCP_HTTP_AUTH_TOKEN"
 ```
 
-Health check:
+Health and metrics require the client-facing bearer token:
 
 ```bash
 python - <<'PY'
-import httpx
-print(httpx.get('http://127.0.0.1:8765/mcp/health').json())
+import os
+from urllib.request import Request, urlopen
+
+request = Request(
+    "http://127.0.0.1:8765/mcp/health",
+    headers={"Authorization": f"Bearer {os.environ['ADAPTORCH_MCP_HTTP_AUTH_TOKEN']}"},
+)
+with urlopen(request) as response:
+    print(response.read().decode("utf-8"))
 PY
 ```
+
+The built-in HTTP listener is loopback-only. Put an authenticated TLS reverse proxy in front of it for remote clients.
 
 ## CLI reference
 
@@ -81,7 +90,9 @@ For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this o
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch token. | Required unless `--api-token` is passed. |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | Base URL used when `--base-url` is omitted. | Trimmed and validated as HTTP(S); do not embed credentials. |
-| `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Keep separate from the upstream token. |
+| `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Required for HTTP and must differ from the upstream token. |
+| `ADAPTORCH_MCP_EXPOSURE_PROFILE` | MCP exposure policy. | `remote` (default) hides local route/trace oracles; `full` explicitly restores the parent surface. |
+| `ADAPTORCH_MCP_ALLOW_INSECURE_CONTROL_PLANE` | Development-only remote HTTP opt-in. | Truthy values allow plaintext non-loopback control-plane URLs; never enable in production. |
 | `ADAPTORCH_MCP_ALLOWED_ORIGINS` | Comma-separated HTTP origin allowlist. | Use with browser or remote HTTP clients. |
 | `ADAPTORCH_MCP_MAX_PAYLOAD_SIZE_BYTES` | Maximum accepted HTTP request body size. | Keep bounded for public deployments. |
 | `ADAPTORCH_MCP_REQUEST_TIMEOUT_SECONDS` | HTTP request timeout budget. | Applies to HTTP server request handling. |
@@ -108,12 +119,18 @@ and MCP `prefer_ensemble_singleton`.
 | `adaptorch_get_run` | Read run summary by `run_id`. |
 | `adaptorch_get_artifacts` | Read artifact metadata for a run. |
 | `adaptorch_list_runs` | List recent runs. |
-| `adaptorch_get_traces` | Read execution traces. |
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
-| `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router. |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | Read synthesis modes, connectors, and server features. |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
+
+`adaptorch_get_traces` and `adaptorch_route_topology` are available only when `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`. In the default profile, run diagnostics and telemetry are redacted, run-resource templates are hidden, completions are disabled, and server events are not broadcast to SSE subscribers.
+
+## Security boundary
+
+The hardened defaults reduce direct algorithm-oracle, transport, and token-confusion risk. They do not provide DRM: reverse engineering cannot be made impossible for distributed Python code or a queryable black-box service. Keep proprietary algorithms and rate-limit/model-extraction defenses on the hosted control plane; treat `full` as trusted local/operator mode only.
+
+Remote control-plane URLs require HTTPS by default. Plain HTTP is accepted only for exact loopback addresses, unless the development-only `ADAPTORCH_MCP_ALLOW_INSECURE_CONTROL_PLANE=1` opt-in is set. The HTTP MCP listener itself accepts only loopback binds.
 
 ## Diagnostics and smoke tests
 
@@ -123,7 +140,7 @@ adaptorch-mcp-doctor --json
 adaptorch-mcp-doctor --strict
 ```
 
-The doctor command reports package availability, expected MCP tools, redacted environment metadata, and `controlPlane` base-url resolution details without printing token values.
+The doctor command reports package availability, expected MCP tools, redacted environment metadata, and `controlPlane` base-url plus transport-policy validity without printing token values. `--strict` fails for invalid exposure profiles, malformed URLs, or remote plaintext URLs without the explicit development opt-in.
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
@@ -147,7 +164,7 @@ Checked-in examples use placeholders or environment interpolation. Fill real URL
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<upstream-adaptorch-token>"
 export ADAPTORCH_CONTROL_PLANE_BASE_URL="https://adaptorch.com"
-export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<client-facing-mcp-token>"
+export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<client-facing-mcp-token>"  # distinct from upstream
 ```
 
 ```python
