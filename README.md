@@ -1,7 +1,7 @@
 # AdaptOrch MCP
 
 <p align="center">
-  <a href="https://adaptorch.com"><img src="assets/readme-hero.png" alt="AdaptOrch MCP — route, run, and retrieve evidence from Claude Code" width="100%"></a>
+  <a href="https://adaptorch.com"><img src="assets/adaptorch_preview.png" alt="AdaptOrch MCP — route, run, and retrieve evidence from Claude Code" width="100%"></a>
 </p>
 
 <p align="center">
