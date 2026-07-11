@@ -4,6 +4,11 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [0.4.2] - 2026-07-11
+
+### Changed
+- Release pipeline only: GitHub Actions publishes with an environment-scoped PyPI token, authenticates the private core dependency during workspace install, and skips already-uploaded identical files. No wrapper runtime changes.
+
 ## [0.4.1] - 2026-07-11
 
 ### Changed
