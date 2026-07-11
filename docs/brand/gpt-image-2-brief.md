@@ -4,7 +4,7 @@ Use this prompt if generating raster social/README artwork with GPT-image-2.0 or
 
 ## Prompt
 
-Create a premium GitHub README hero image for “AdaptOrch MCP”, a developer tool at adaptorch.ai.kr that connects Claude Code to an adaptive orchestration kernel. The visual should feel like a dark-mode control plane: deep navy background, faint technical grid, cyan-to-violet gradient glow, precise terminal typography, clean DAG node lines, and small evidence artifact cards. Include visual metaphors for route → run → evidence: a Claude Code terminal on the left, an MCP bridge in the center, topology routing nodes below, and artifacts returning to chat on the right. Avoid mascots, stock photos, clutter, or generic AI robot imagery. Use crisp vector-like geometry, high contrast, subtle depth, and GitHub-safe composition with enough whitespace for badges and headings.
+Create a premium GitHub README hero image for “AdaptOrch MCP”, a developer tool at adaptorch.com that connects Claude Code to an adaptive orchestration kernel. The visual should feel like a dark-mode control plane: deep navy background, faint technical grid, cyan-to-violet gradient glow, precise terminal typography, clean DAG node lines, and small evidence artifact cards. Include visual metaphors for route → run → evidence: a Claude Code terminal on the left, an MCP bridge in the center, topology routing nodes below, and artifacts returning to chat on the right. Avoid mascots, stock photos, clutter, or generic AI robot imagery. Use crisp vector-like geometry, high contrast, subtle depth, and GitHub-safe composition with enough whitespace for badges and headings.
 
 ## Palette
 

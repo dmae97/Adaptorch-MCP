@@ -39,13 +39,23 @@ Claude Code → AdaptOrch MCP → route topology → run with synthesis → retr
 AdaptOrch requires authentication. Get your token in two steps:
 
 1. **Sign up** → [adaptorch.com/app/signup](https://adaptorch.com/app/signup)
-2. **Create an API key** → Dashboard → API Key Management → generate a key (starts with `ado_`)
+2. **Create an API key** → [adaptorch.com/app/api-keys](https://adaptorch.com/app/api-keys) → generate a key (starts with `ado_`)
 
 Use that key as `ADAPTORCH_CONTROL_PLANE_TOKEN`:
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
 ```
+
+### Signup → MCP → dashboard run list
+
+1. Sign up at `/app/signup` and open `/app/api-keys`.
+2. Generate an `ado_*` key and copy the raw value once.
+3. Set it only in your local MCP environment as `ADAPTORCH_CONTROL_PLANE_TOKEN`.
+4. Run `adaptorch_run` or `adaptorch_list_runs` from Claude Code.
+5. Refresh `/app/runs` in the dashboard to see the same tenant's run list.
+
+한국어 요약: 가입 → `/app/api-keys`에서 `ado_*` 생성 → MCP env에 설정 → Claude Code에서 실행/목록 확인 → 대시보드 `/app/runs`에서 같은 실행 목록 확인.
 
 | Token | Purpose | Where to get it |
 | --- | --- | --- |

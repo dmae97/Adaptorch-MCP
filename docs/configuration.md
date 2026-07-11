@@ -20,6 +20,8 @@ Base-url resolution differs by entrypoint:
 
 Pass `--base-url` explicitly in checked-in MCP client configs for reproducible behavior. Do not embed credentials in base URLs; use token environment variables instead.
 
+The connector always sends `ADAPTORCH_CONTROL_PLANE_TOKEN` as `Authorization: Bearer <token>`. Hosted AdaptOrch SaaS (`https://adaptorch.com`) resolves `ado_live_*`/`ado_test_*` (legacy `ak_*`) API keys from that bearer header, so dashboard-issued keys work unchanged; the hosted API additionally accepts `X-API-Key` from other client types. Local and custom control planes receive the same bearer header.
+
 ## HTTP Environment
 
 | Variable | Purpose |

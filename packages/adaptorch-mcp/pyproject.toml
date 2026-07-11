@@ -34,10 +34,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/dmae97/adaptorch_mcp"
-Repository = "https://github.com/dmae97/adaptorch_mcp"
-Issues = "https://github.com/dmae97/adaptorch_mcp/issues"
-Documentation = "https://github.com/dmae97/adaptorch_mcp#readme"
+Homepage = "https://github.com/dmae97/adaptorch"
+Repository = "https://github.com/dmae97/adaptorch"
+Issues = "https://github.com/dmae97/adaptorch/issues"
+Documentation = "https://github.com/dmae97/adaptorch#readme"
 
 [project.scripts]
 adaptorch-mcp = "adaptorch_mcp.cli:main"

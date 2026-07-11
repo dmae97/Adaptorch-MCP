@@ -5,12 +5,18 @@ This package should feel useful to individual Claude Code users before they lear
 ## Get your API key (first thing)
 
 1. Sign up at [adaptorch.com/app/signup](https://adaptorch.com/app/signup)
-2. Dashboard → API Key Management → generate a key (starts with `ado_`)
+2. Open [adaptorch.com/app/api-keys](https://adaptorch.com/app/api-keys) and generate a key (starts with `ado_`)
 3. Starter `$0` includes API key access, 1,000 calls/month, and shadow mode
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
 ```
+
+### First-run story
+
+Signup → `/app/api-keys` → copy `ado_*` once → set `ADAPTORCH_CONTROL_PLANE_TOKEN` in the Claude Code MCP env → call `adaptorch_run` or `adaptorch_list_runs` → open `/app/runs` to see the same tenant run list on the dashboard.
+
+한국어: 가입 후 `/app/api-keys`에서 `ado_*`를 만들고 MCP 환경 변수에 넣으면 Claude Code 실행/목록 결과가 대시보드 `/app/runs`에 이어집니다.
 
 ## Recommended default tool surface
 
