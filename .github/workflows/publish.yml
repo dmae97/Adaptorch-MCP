@@ -35,4 +35,6 @@ jobs:
       - name: Build
         run: uv run python -m build packages/adaptorch-mcp --outdir dist
       - name: Publish to PyPI
-        run: uv publish --trusted-publishing always dist/*
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish --check-url https://pypi.org/simple/adaptorch-mcp/ dist/*
