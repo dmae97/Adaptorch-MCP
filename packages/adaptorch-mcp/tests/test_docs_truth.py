@@ -23,6 +23,9 @@ PHANTOM_ENV_VARS = frozenset(
 
 NON_ENGINE_DOC_TOKENS = frozenset(
     {
+        # Independent SaaS CLI configuration.
+        "ADAPTORCH_API_KEY",
+        "ADAPTORCH_API_URL",
         # Wrapper-only shell/template names that map to CLI flags.
         "ADAPTORCH_MCP_HTTP_HOST",
         "ADAPTORCH_MCP_HTTP_PORT",

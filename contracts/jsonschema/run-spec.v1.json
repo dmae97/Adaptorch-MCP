@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:adaptorch:schema:run-spec:v1",
+  "title": "AdaptOrch run specification",
+  "oneOf": [
+    { "$ref": "#/$defs/OrchestrationRun" },
+    { "$ref": "#/$defs/PatchVerificationRun" }
+  ],
+  "$defs": {
+    "OrchestrationRun": {
+      "title": "OrchestrationRun",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goal"],
+      "properties": {
+        "kind": { "const": "orchestration" },
+        "goal": { "type": "string", "minLength": 1 },
+        "constraints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "PatchVerificationRun": {
+      "title": "PatchVerificationRun",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "repository_url", "base_revision", "patch"],
+      "properties": {
+        "kind": { "const": "patch_verification" },
+        "repository_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Repository URL without embedded credentials."
+        },
+        "base_revision": { "type": "string", "minLength": 1 },
+        "patch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unified diff to verify."
+        },
+        "requirements": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

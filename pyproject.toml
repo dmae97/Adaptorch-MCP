@@ -16,7 +16,14 @@ adaptorch = { git = "https://github.com/dmae97/adaptorch.git" }
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["packages/adaptorch-mcp/src", "packages/adaptorch-mcp/tests"]
+src = [
+  "packages/adaptorch-client/src",
+  "packages/adaptorch-client/tests",
+  "packages/adaptorch-cli/src",
+  "packages/adaptorch-cli/tests",
+  "packages/adaptorch-mcp/src",
+  "packages/adaptorch-mcp/tests",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -24,8 +31,25 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-mypy_path = "packages/adaptorch-mcp/src"
+mypy_path = [
+  "packages/adaptorch-client/src",
+  "packages/adaptorch-cli/src",
+  "packages/adaptorch-mcp/src",
+]
+files = [
+  "packages/adaptorch-client/src",
+  "packages/adaptorch-cli/src",
+  "packages/adaptorch-mcp/src",
+]
 
 [tool.pytest.ini_options]
-testpaths = ["packages/adaptorch-mcp/tests"]
+pythonpath = [
+  "packages/adaptorch-client/src",
+  "packages/adaptorch-cli/src",
+]
+testpaths = [
+  "packages/adaptorch-client/tests",
+  "packages/adaptorch-cli/tests",
+  "packages/adaptorch-mcp/tests",
+]
 addopts = "-q"

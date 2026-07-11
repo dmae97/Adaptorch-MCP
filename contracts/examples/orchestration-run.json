@@ -1,0 +1,8 @@
+{
+  "kind": "orchestration",
+  "goal": "Summarize the validation results for the supplied release candidate.",
+  "constraints": [
+    "Use only the supplied inputs",
+    "Return evidence for each conclusion"
+  ]
+}

@@ -7,6 +7,8 @@
 <p align="center">
   <a href="https://adaptorch.com"><strong>adaptorch.com</strong></a>
   ·
+  <a href="docs/adaptorchctl-usage.ko.md">adaptorchctl 한국어 가이드</a>
+  ·
   <a href="docs/configuration.md">Configuration</a>
   ·
   <a href="docs/tools.md">Tools</a>

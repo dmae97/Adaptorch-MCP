@@ -1,0 +1,1 @@
+"""AdaptOrch command-line client."""
