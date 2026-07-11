@@ -133,6 +133,14 @@ uvx --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adapto
 | Safer setup support | `adaptorch-mcp-doctor` | Users can paste redacted diagnostics without leaking tokens. |
 | Fast install loop | `adaptorch-mcp-smoke` | Local MCP wiring is verified with `initialize` + `tools/list`. |
 
+## Scenario benchmark projection
+
+<p align="center">
+  <img src="docs/glm-5-2-max-adaptorch-after-confidence-8.png" alt="GLM-5.2 Max with AdaptOrch — confidence-weighted scenario benchmark projection" width="72%">
+</p>
+
+<p align="center"><sub>Confidence-weighted scenario projection (8.0/10). Projected uplift, not measured benchmark results.</sub></p>
+
 ## Architecture
 
 <p align="center">
