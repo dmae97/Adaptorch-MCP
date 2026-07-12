@@ -1,8 +1,9 @@
 {
-  "kind": "orchestration",
-  "goal": "Summarize the validation results for the supplied release candidate.",
-  "constraints": [
-    "Use only the supplied inputs",
-    "Return evidence for each conclusion"
-  ]
+  "subtasks": [
+    {
+      "id": "summarize-validation",
+      "prompt": "Summarize the validation results for the supplied release candidate. Use only the supplied inputs and return evidence for each conclusion."
+    }
+  ],
+  "dependencies": []
 }

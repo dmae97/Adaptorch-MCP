@@ -8,7 +8,7 @@
 
 ## Minimal Vertical Slice
 
-Use only the Python standard library. `adaptorch-client` implements secure JSON HTTP and typed service methods. `adaptorch-cli` handles env/config resolution, file input, deterministic JSON, and exit codes. No workspace or lockfile mutation is required for source-level validation.
+Use only the Python standard library. `adaptorch-client` implements secure JSON HTTP and typed service methods. `ado_` tenant dashboard keys use only `X-API-Key`; non-tenant service credentials retain Bearer authentication. `adaptorch-cli` handles env/config resolution, file input, deterministic JSON, and exit codes. No workspace or lockfile mutation is required for source-level validation.
 
 ## DAG
 
@@ -24,6 +24,10 @@ Use only the Python standard library. `adaptorch-client` implements secure JSON 
 - Goal evidence: `.omk/goals/adaptorchctl/result.json`
 
 Existing modified paths under `packages/adaptorch-mcp/**`, `specs/002-remote-public-contract/**`, and `uv.lock` are forbidden.
+
+## Compatibility Limits
+
+Auth selection does not certify hosted endpoint compatibility. `list_runs` does not yet accept the OpenAPI `cursor` or `limit` inputs, and public DTOs expose sanitized projections rather than every endpoint/status/detail field.
 
 ## Verification
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from urllib.parse import quote, urlencode
 
@@ -14,7 +15,9 @@ from adaptorch_client.responses import (
 )
 from adaptorch_client.transport import HTTPTransport, RequestSpec
 
-_MAX_IDEMPOTENCY_KEY_LENGTH = 200
+_IDEMPOTENCY_KEY_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
+)
 
 
 class AdaptOrchClient:
@@ -83,7 +86,7 @@ class AdaptOrchClient:
         return Run.from_payload(
             self._transport.request(
                 RequestSpec(
-                    "POST",
+                    "PUT",
                     f"/v1/runs/{self._segment(run_id)}/cancel",
                     payload=payload,
                 )
@@ -115,12 +118,5 @@ class AdaptOrchClient:
 
     @staticmethod
     def _require_idempotency_key(value: str) -> None:
-        if not 1 <= len(value) <= _MAX_IDEMPOTENCY_KEY_LENGTH:
-            raise ValueError(
-                f"idempotency_key must be 1..{_MAX_IDEMPOTENCY_KEY_LENGTH} characters long"
-            )
-        if any(
-            ord(character) < 32 or ord(character) == 127 or ord(character) > 255
-            for character in value
-        ):
-            raise ValueError("idempotency_key must be an HTTP header value")
+        if not _IDEMPOTENCY_KEY_RE.fullmatch(value):
+            raise ValueError("idempotency_key must be a hyphenated UUID")

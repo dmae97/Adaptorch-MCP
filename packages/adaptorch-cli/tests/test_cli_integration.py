@@ -10,9 +10,12 @@ from queue import Queue
 from threading import Thread
 
 _TEST_TOKEN = "adaptorch-integration-placeholder"
-_REQUEST_ID = "integration-request-1"
-_REQUEST_BODY = b'{"goal":"verify composition","metadata":{"lane":"integration"}}'
-_RESPONSE_BODY = b'{"run_id":"run-real","status":"queued"}'
+_REQUEST_ID = "33333333-3333-4333-8333-333333333333"
+_REQUEST_BODY = b'{"dependencies":[],"subtasks":[{"id":"verify","prompt":"verify composition"}]}'
+_RESPONSE_BODY = b'{"ok":true,"run_id":"run-real","status":"QUEUED"}'
+_REQUEST_INPUT = (
+    '{"subtasks":[{"id":"verify","prompt":"verify composition"}],"dependencies":[]}\n'
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,7 +41,7 @@ class RunHandler(BaseHTTPRequestHandler):
                 body=body,
             )
         )
-        self.send_response(202)
+        self.send_response(201)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(_RESPONSE_BODY)))
         self.end_headers()
@@ -88,7 +91,7 @@ def test_run_submit_composes_cli_with_real_client_over_loopback() -> None:
                 check=False,
                 capture_output=True,
                 env=env,
-                input='{"metadata":{"lane":"integration"},"goal":"verify composition"}\n',
+                input=_REQUEST_INPUT,
                 text=True,
                 timeout=10,
             )
@@ -105,7 +108,7 @@ def test_run_submit_composes_cli_with_real_client_over_loopback() -> None:
         body=_REQUEST_BODY,
     )
     assert completed.returncode == 0
-    assert completed.stdout == '{"run_id":"run-real","status":"queued"}\n'
+    assert completed.stdout == '{"ok":true,"run_id":"run-real","status":"QUEUED"}\n'
     assert completed.stderr == ""
     assert _TEST_TOKEN not in completed.stdout
     assert _TEST_TOKEN not in completed.stderr

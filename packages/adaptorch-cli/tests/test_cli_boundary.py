@@ -128,7 +128,7 @@ def test_invalid_request_id_is_usage_error(run_cli: CliRunner) -> None:
             "--file",
             "-",
             "--request-id",
-            "x" * 201,
+            "not-a-uuid",
         ],
         '{"goal":"verify"}',
     )
@@ -136,8 +136,7 @@ def test_invalid_request_id_is_usage_error(run_cli: CliRunner) -> None:
     assert result.returncode == 2
     assert result.stdout == ""
     assert result.stderr
-    calls = [json.loads(line) for line in result.client_log.splitlines()]
-    assert [call["method"] for call in calls] == ["init"]
+    assert result.client_log == ""
 
 
 def test_oversized_submit_stdin_is_usage_error(run_cli: CliRunner) -> None:

@@ -41,6 +41,9 @@ class LocalAPIServer:
             def do_POST(self) -> None:  # noqa: N802
                 owner._handle(self)
 
+            def do_PUT(self) -> None:  # noqa: N802
+                owner._handle(self)
+
             def log_message(self, format: str, *args: JSONValue) -> None:
                 return
 

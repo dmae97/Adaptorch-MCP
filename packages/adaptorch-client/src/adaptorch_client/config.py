@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
@@ -62,3 +63,10 @@ class ClientConfig:
             raise ValueError("api_key must be a non-empty HTTP header value")
         if not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive and finite")
+
+    @property
+    def auth_headers(self) -> Mapping[str, str]:
+        """Return the sole authentication header valid for this credential."""
+        if self.api_key.startswith("ado_"):
+            return {"X-API-Key": self.api_key}
+        return {"Authorization": f"Bearer {self.api_key}"}

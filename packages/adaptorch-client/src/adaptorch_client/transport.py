@@ -55,7 +55,7 @@ class _NoRedirectHandler(HTTPRedirectHandler):
 
 @dataclass(frozen=True, slots=True)
 class RequestSpec:
-    method: Literal["GET", "POST"]
+    method: Literal["GET", "POST", "PUT"]
     path: str
     payload: Mapping[str, JSONValue] | None = None
     headers: Mapping[str, str] | None = None
@@ -74,8 +74,12 @@ class HTTPTransport:
         body = self._encode_payload(spec.payload)
         headers = {
             "Accept": "application/json",
-            "Authorization": f"Bearer {self._config.api_key}",
-            **(spec.headers or {}),
+            **{
+                name: value
+                for name, value in (spec.headers or {}).items()
+                if name.lower() not in {"authorization", "x-api-key"}
+            },
+            **self._config.auth_headers,
         }
         if body is not None:
             headers["Content-Type"] = "application/json"

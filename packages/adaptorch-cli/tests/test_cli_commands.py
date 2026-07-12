@@ -74,7 +74,7 @@ def test_run_submit_reads_json_file_and_forwards_request_id(
             "--file",
             str(request_path),
             "--request-id",
-            "request-1",
+            "11111111-1111-4111-8111-111111111111",
         ]
     )
 
@@ -83,7 +83,7 @@ def test_run_submit_reads_json_file_and_forwards_request_id(
     calls = [json.loads(line) for line in result.client_log.splitlines()]
     assert calls[-1] == {
         "args": [{"goal": "verify release"}],
-        "kwargs": {"idempotency_key": "request-1"},
+        "kwargs": {"idempotency_key": "11111111-1111-4111-8111-111111111111"},
         "method": "submit_run",
     }
 

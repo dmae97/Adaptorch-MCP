@@ -2,11 +2,21 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from collections.abc import Sequence
 
 _DEFAULT_API_URL = "https://adaptorch.com"
 _CREDENTIAL_FLAGS = ("--token", "--api-key")
+_IDEMPOTENCY_KEY_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
+)
+
+
+def _idempotency_key(value: str) -> str:
+    if not _IDEMPOTENCY_KEY_RE.fullmatch(value):
+        raise argparse.ArgumentTypeError("request ID must be a hyphenated UUID")
+    return value
 
 
 def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -15,7 +25,7 @@ def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser
 
     submit = commands.add_parser("submit", help="Submit a run")
     submit.add_argument("--file", required=True, help="JSON request path, or - for stdin")
-    submit.add_argument("--request-id", help="Idempotency key")
+    submit.add_argument("--request-id", type=_idempotency_key, help="UUID idempotency key")
 
     list_parser = commands.add_parser("list", help="List runs")
     list_parser.add_argument("--status")

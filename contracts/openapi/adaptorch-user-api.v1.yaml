@@ -4,6 +4,7 @@ info:
   version: 1.0.0
   description: Public API used by the independent AdaptOrch SaaS CLI.
 security:
+  - tenantApiKey: []
   - bearerAuth: []
 tags:
   - name: discovery
@@ -57,15 +58,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "../jsonschema/run-spec.v1.json"
+              $ref: "#/components/schemas/RunSubmission"
             examples:
               orchestration:
                 externalValue: "../examples/orchestration-run.json"
               patchVerification:
                 externalValue: "../examples/patch-verification-run.json"
       responses:
-        "202":
-          description: Run accepted
+        "201":
+          description: Run admitted by the gateway
           headers:
             Location:
               description: Canonical URL for the run
@@ -74,16 +75,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Run"
+                $ref: "#/components/schemas/RunAdmission"
               example:
+                ok: true
                 run_id: run-1
-                kind: orchestration
-                status: queued
-                phase: accepted
-                created_at: "2026-07-01T12:00:00Z"
-                policy_version: "2026-07-01"
-                links:
-                  self: /v1/runs/run-1
+                status: QUEUED
+                topology: parallel
+                origin: api
         default:
           $ref: "#/components/responses/Error"
     get:
@@ -113,7 +111,7 @@ paths:
                 items:
                   - run_id: run-1
                     kind: orchestration
-                    status: succeeded
+                    status: SUCCEEDED
                     created_at: "2026-07-01T12:00:00Z"
                 next_cursor: null
         default:
@@ -135,7 +133,7 @@ paths:
               example:
                 run_id: run-1
                 kind: patch_verification
-                status: running
+                status: RUNNING
                 phase: verifying
                 created_at: "2026-07-01T12:00:00Z"
                 policy_version: "2026-07-01"
@@ -148,7 +146,7 @@ paths:
   /v1/runs/{run_id}/cancel:
     parameters:
       - $ref: "#/components/parameters/RunId"
-    post:
+    put:
       tags: [runs]
       operationId: cancelRun
       summary: Request cancellation of a non-terminal run
@@ -161,17 +159,28 @@ paths:
             example:
               reason: stale request
       responses:
-        "202":
-          description: Cancellation accepted
+        "200":
+          description: Cancellation confirmed locally
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Run"
+                $ref: "#/components/schemas/RunAdmission"
               example:
+                ok: true
                 run_id: run-1
-                kind: orchestration
-                status: cancelled
-                created_at: "2026-07-01T12:00:00Z"
+                status: FAILED
+                error_class: CANCELLED
+        "202":
+          description: Cancellation propagation pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunAdmission"
+              example:
+                ok: true
+                run_id: run-1
+                status: CANCELLING
+                cancel_state: pending
         default:
           $ref: "#/components/responses/Error"
   /v1/runs/{run_id}/evidence:
@@ -218,19 +227,27 @@ paths:
           $ref: "#/components/responses/Error"
 components:
   securitySchemes:
+    tenantApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: >-
+        Tenant dashboard API key with the documented ado_ prefix. Send it only
+        as X-API-Key; do not also send it in Authorization.
     bearerAuth:
       type: http
       scheme: bearer
+      description: "Non-tenant service credential sent as Authorization: Bearer."
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      description: Reusing a key with the same request returns the original result; reusing it with a different request returns a conflict.
+      description: Hyphenated UUID. Reusing a key with the same request returns the original result; reusing it with a different request returns a conflict.
       schema:
         type: string
-        minLength: 1
-        maxLength: 200
+        format: uuid
+        pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
     RunId:
       name: run_id
       in: path
@@ -262,7 +279,7 @@ components:
   schemas:
     RunStatus:
       type: string
-      enum: [queued, running, succeeded, failed, cancelled, inconclusive]
+      enum: [QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLING]
     RunKind:
       type: string
       enum: [orchestration, patch_verification]
@@ -274,6 +291,42 @@ components:
       additionalProperties:
         type: string
         minLength: 1
+    RunSubmission:
+      type: object
+      additionalProperties: false
+      required: [subtasks]
+      properties:
+        subtasks:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            additionalProperties: true
+        dependencies:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        model:
+          type: ["string", "null"]
+        synthesis_mode:
+          type: ["string", "null"]
+        global_context:
+          type: ["string", "null"]
+    RunAdmission:
+      type: object
+      additionalProperties: true
+      required: [ok, run_id, status]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        run_id:
+          type: string
+          minLength: 1
+        status:
+          $ref: "#/components/schemas/RunStatus"
     Run:
       type: object
       additionalProperties: false

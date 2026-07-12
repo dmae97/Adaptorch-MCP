@@ -10,3 +10,4 @@
 - [x] T008 Produce Korean page usage guide and README link
 - [x] T009 Run targeted tests, Ruff, mypy, and CLI help smoke
 - [x] T010 Run Correctness Wall review and finalize goal evidence
+- [x] T011 Align Spec 007 tenant `ado_` authentication, OpenAPI, Korean guidance, and package-local regression tests

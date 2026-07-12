@@ -43,6 +43,8 @@ export ADAPTORCH_API_URL="https://adaptorch.com"
 
 - `ADAPTORCH_API_KEY`: 인증된 명령에 필요합니다.
 - `ADAPTORCH_API_URL`: 선택 사항입니다. 기본값은 `https://adaptorch.com`입니다.
+- 대시보드에서 발급한 문서화된 `ado_` 접두사 키는 이 CLI에서 **`X-API-Key`로만** 전송합니다. 이 경우 `Authorization` 헤더는 보내지 않습니다. gateway는 이전 호출자 호환성 때문에 Bearer `ado_` 키도 일시적으로 수용할 수 있지만, 새 통합은 그 경로를 사용하면 안 됩니다.
+- `ado_` 접두사가 없는 서비스 자격 증명은 기존처럼 `Authorization: Bearer <credential>`로 전송합니다.
 - `--api-url`도 사용할 수 있지만 전역 옵션이므로 하위 명령보다 앞에 둡니다.
 - `--token`과 `--api-key` 인자는 지원하지 않습니다. 키를 명령행 인자에 넣지 마세요.
 
@@ -86,32 +88,33 @@ adaptorchctl capabilities
 ```bash
 cat > run-request.json <<'JSON'
 {
-  "kind": "orchestration",
-  "goal": "배포 후보의 검증 결과를 요약합니다.",
-  "constraints": [
-    "제공된 입력만 사용합니다.",
-    "각 결론에 증거를 연결합니다."
-  ]
+  "subtasks": [
+    {
+      "id": "summarize-validation",
+      "prompt": "배포 후보의 검증 결과를 요약하고 각 결론에 증거를 연결합니다."
+    }
+  ],
+  "dependencies": []
 }
 JSON
 
 adaptorchctl run submit \
   --file run-request.json \
-  --request-id "release-check-example-001"
+  --request-id "11111111-1111-4111-8111-111111111111"
 ```
 
 표준 입력 예시:
 
 ```bash
-printf '%s\n' '{"kind":"orchestration","goal":"검증 결과를 요약합니다."}' \
-  | adaptorchctl run submit --file - --request-id "stdin-example-001"
+printf '%s\n' '{"subtasks":[{"id":"summarize","prompt":"검증 결과를 요약합니다."}],"dependencies":[]}' \
+  | adaptorchctl run submit --file - --request-id "22222222-2222-4222-8222-222222222222"
 ```
 
 ### 멱등성
 
 `run submit`은 모든 요청에 `Idempotency-Key`를 보냅니다.
 
-- `--request-id`를 지정하면 그 값을 사용합니다.
+- `--request-id`를 지정하면 하이픈이 포함된 UUID를 사용해야 합니다.
 - 생략하면 실행할 때마다 새 UUID를 생성합니다.
 - 같은 논리적 제출을 재시도할 때는 같은 JSON과 같은 `--request-id`를 다시 사용하세요.
 - 같은 키를 다른 요청에 재사용하면 서버가 충돌로 거절할 수 있습니다.
@@ -120,9 +123,10 @@ printf '%s\n' '{"kind":"orchestration","goal":"검증 결과를 요약합니다.
 CI에서는 비밀 저장소가 `ADAPTORCH_API_KEY`를 환경 변수로 주입하게 하고, 논리적 작업마다 안정적인 요청 ID를 만드세요.
 
 ```bash
+# 같은 논리 작업의 재시도에는 보관한 동일 UUID를 다시 사용합니다.
 adaptorchctl run submit \
   --file run-request.json \
-  --request-id "${CI_PIPELINE_ID:-local}-${CI_JOB_ID:-run-submit}" \
+  --request-id "11111111-1111-4111-8111-111111111111" \
   > run-result.json
 ```
 
@@ -152,6 +156,15 @@ adaptorchctl artifact list "$RUN_ID"
 ```
 
 현재 CLI는 아티팩트 메타데이터 목록만 조회합니다. 파일 다운로드 명령은 아직 없습니다.
+
+## 호스팅 API 호환성의 현재 한계
+
+이 클라이언트의 인증 헤더 선택은 Spec 007과 일치하지만, 실제 호스팅 서버의 모든 엔드포인트·상태·페이지네이션 호환성을 이미 검증했다는 뜻은 아닙니다.
+
+- `run submit`은 gateway의 `subtasks` 배열과 선택 `dependencies`를 전송하며, `201`과 대문자 `QUEUED` 상태를 수용합니다. `run cancel`은 `PUT`을 사용하며 전파 대기 시 `202 CANCELLING`, 확정 취소 시 `200 FAILED`와 `error_class=CANCELLED`를 받을 수 있습니다.
+- `run list`는 `status`와 `project_id`만 전송합니다. 응답의 `next_cursor`는 보존하지만 OpenAPI에 있는 `cursor`와 `limit` 입력은 아직 CLI/클라이언트에서 지원하지 않습니다.
+- `Run` DTO는 `run_id`와 `status`를 필수로 처리하고, `kind`·`phase`·`created_at`·`policy_version`·`links`는 선택적으로 보존합니다. 서버별 추가 필드와 상태 의미의 호환성은 별도 통합 검증이 필요합니다.
+- 오류 DTO는 안전한 코드·메시지만 진단에 사용하며 `request_id`와 세부 오류 구조를 자동화 계약으로 노출하지 않습니다.
 
 ## 자동화 계약
 

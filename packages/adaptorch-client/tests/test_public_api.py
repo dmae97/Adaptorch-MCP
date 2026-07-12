@@ -69,6 +69,21 @@ def test_client_config_accepts_required_fields() -> None:
     assert config.timeout_seconds == 12.5
 
 
+@pytest.mark.parametrize(
+    ("api_key", "expected_headers"),
+    [
+        ("ado_tenant-dashboard-key", {"X-API-Key": "ado_tenant-dashboard-key"}),
+        ("service-credential", {"Authorization": "Bearer service-credential"}),
+    ],
+)
+def test_client_config_selects_the_documented_auth_header(
+    api_key: str, expected_headers: dict[str, str]
+) -> None:
+    config = ClientConfig(api_url="https://api.example.com", api_key=api_key)
+
+    assert config.auth_headers == expected_headers
+
+
 def test_client_config_rejects_non_header_api_key() -> None:
     with pytest.raises(ValueError):
         ClientConfig(

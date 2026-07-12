@@ -21,7 +21,9 @@ def test_submit_run_does_not_retry_transient_post_failure(
     local_api.enqueue_json(error_payload, status=503)
 
     with pytest.raises(AdaptOrchAPIError):
-        _client(local_api).submit_run({"goal": "one attempt"}, "idem-one-attempt")
+        _client(local_api).submit_run(
+            {"goal": "one attempt"}, "11111111-1111-4111-8111-111111111111"
+        )
 
     assert len(local_api.requests) == 1
     assert local_api.requests[0].method == "POST"
@@ -31,13 +33,13 @@ def test_submit_run_does_not_retry_transient_post_failure(
 def test_api_error_message_excludes_credentials_and_private_details(
     local_api: LocalAPIServer,
 ) -> None:
-    api_key = "test-api-key-do-not-leak"
+    api_key = "ado_tenant-key-do-not-leak"
     error_payload: JSONMapping = {
         "error": {
             "code": "INVALID_API_KEY",
-            "message": "authentication failed",
+            "message": f"authentication failed for {api_key}",
             "details": {
-                "authorization": f"Bearer {api_key}",
+                "x_api_key": api_key,
                 "debug": "private-server-stack",
             },
         }
@@ -52,7 +54,7 @@ def test_api_error_message_excludes_credentials_and_private_details(
     assert "authentication failed" in message
     assert api_key not in message
     assert "private-server-stack" not in message
-    assert "Authorization" not in message
+    assert "X-API-Key" not in message
 
 
 def test_client_rejects_oversized_response_before_parsing(
@@ -129,7 +131,9 @@ def test_submit_run_rejects_oversized_request_before_network(
     oversized_spec: JSONMapping = {"goal": "x" * (8 * 1024 * 1024)}
 
     with pytest.raises(AdaptOrchAPIError, match="(?i)(large|size|limit)"):
-        _client(local_api).submit_run(oversized_spec, "idem-oversized")
+        _client(local_api).submit_run(
+            oversized_spec, "11111111-1111-4111-8111-111111111111"
+        )
 
     assert local_api.requests == []
 
@@ -146,6 +150,8 @@ def test_submit_run_rejects_oversized_request_before_network(
         "bad\x1fkey",
         "bad\x7fkey",
         "bad\u20ackey",
+        "11111111111141118111111111111111",
+        "11111111-1111-4111-8111-11111111111z",
     ],
 )
 def test_submit_run_rejects_invalid_idempotency_key(
@@ -157,11 +163,14 @@ def test_submit_run_rejects_invalid_idempotency_key(
     assert local_api.requests == []
 
 
-@pytest.mark.parametrize("idempotency_key", ["k", "k" * 200])
-def test_submit_run_accepts_boundary_idempotency_keys(
+@pytest.mark.parametrize(
+    "idempotency_key",
+    ["11111111-1111-4111-8111-111111111111", "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"],
+)
+def test_submit_run_accepts_gateway_uuid_idempotency_keys(
     local_api: LocalAPIServer, idempotency_key: str
 ) -> None:
-    local_api.enqueue_json(make_run_payload(), status=202)
+    local_api.enqueue_json(make_run_payload(), status=201)
 
     _client(local_api).submit_run({"goal": "boundary"}, idempotency_key)
 

@@ -14,7 +14,7 @@ def _client(local_api: LocalAPIServer, *, api_key: str = "test-api-key") -> Adap
     )
 
 
-def test_capabilities_uses_authenticated_get_and_returns_typed_result(
+def test_capabilities_uses_service_bearer_auth_and_returns_typed_result(
     local_api: LocalAPIServer,
 ) -> None:
     expected: JSONMapping = {
@@ -30,12 +30,29 @@ def test_capabilities_uses_authenticated_get_and_returns_typed_result(
     assert request.method == "GET"
     assert request.path == "/v1/capabilities"
     assert request.headers["Authorization"] == "Bearer test-api-key"
+    assert "X-API-Key" not in request.headers
     assert isinstance(result, PayloadResult)
     assert result.api_version == "v1"
     assert result.run_types == ("orchestration", "patch_verification")
     assert result.features == ("runs", "evidence", "artifacts")
     assert result.to_payload() == expected
     json.dumps(result.to_payload())
+
+
+def test_tenant_dashboard_key_uses_only_x_api_key(local_api: LocalAPIServer) -> None:
+    local_api.enqueue_json(
+        {
+            "api_version": "v1",
+            "run_types": ["orchestration"],
+            "features": ["runs"],
+        }
+    )
+
+    _client(local_api, api_key="ado_tenant-dashboard-key").capabilities()
+
+    headers = {name.lower(): value for name, value in local_api.requests[0].headers.items()}
+    assert headers["x-api-key"] == "ado_tenant-dashboard-key"
+    assert "authorization" not in headers
 
 
 def test_whoami_returns_typed_principal(local_api: LocalAPIServer) -> None:
@@ -52,22 +69,25 @@ def test_whoami_returns_typed_principal(local_api: LocalAPIServer) -> None:
     assert result.to_payload() == expected
 
 
-def test_submit_run_sends_spec_and_idempotency_header(local_api: LocalAPIServer) -> None:
-    payload = make_run_payload(status="queued")
-    spec: JSONMapping = {"goal": "verify release", "subtasks": [{"id": "check"}]}
-    local_api.enqueue_json(payload, status=202)
+def test_submit_run_sends_gateway_contract_and_uuid_idempotency_header(
+    local_api: LocalAPIServer,
+) -> None:
+    payload: JSONMapping = {"ok": True, "run_id": "run-1", "status": "QUEUED"}
+    spec: JSONMapping = {"subtasks": [{"id": "check"}], "dependencies": []}
+    idempotency_key = "11111111-1111-4111-8111-111111111111"
+    local_api.enqueue_json(payload, status=201)
 
-    result = _client(local_api).submit_run(spec, "idem-123")
+    result = _client(local_api).submit_run(spec, idempotency_key)
 
     request = local_api.requests[0]
     assert request.method == "POST"
     assert request.path == "/v1/runs"
     assert request.headers["Authorization"] == "Bearer test-api-key"
-    assert request.headers["Idempotency-Key"] == "idem-123"
+    assert request.headers["Idempotency-Key"] == idempotency_key
     assert request.headers["Content-Type"] == "application/json"
     assert json.loads(request.body) == spec
     assert result.run_id == "run-1"
-    assert result.status == "queued"
+    assert result.status == "QUEUED"
     assert result.to_payload() == payload
 
 
@@ -128,16 +148,18 @@ def test_get_run_uses_run_resource_path(local_api: LocalAPIServer) -> None:
     assert result.to_payload() == payload
 
 
-def test_cancel_run_posts_optional_reason(local_api: LocalAPIServer) -> None:
-    local_api.enqueue_json(make_run_payload(status="cancelled"), status=202)
+def test_cancel_run_uses_gateway_put_contract(local_api: LocalAPIServer) -> None:
+    local_api.enqueue_json(
+        {"ok": True, "run_id": "run-1", "status": "CANCELLING"}, status=202
+    )
 
     result = _client(local_api).cancel_run("run-1", reason="stale request")
 
     request = local_api.requests[0]
-    assert request.method == "POST"
+    assert request.method == "PUT"
     assert request.path == "/v1/runs/run-1/cancel"
     assert json.loads(request.body) == {"reason": "stale request"}
-    assert result.status == "cancelled"
+    assert result.status == "CANCELLING"
 
 
 def test_cancel_run_omits_reason_when_absent(local_api: LocalAPIServer) -> None:

@@ -1,9 +1,10 @@
 {
-  "kind": "patch_verification",
-  "repository_url": "https://example.com/acme/widget.git",
-  "base_revision": "0123456789abcdef0123456789abcdef01234567",
-  "patch": "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-Old heading\n+New heading\n",
-  "requirements": [
-    "The documentation heading is updated"
-  ]
+  "subtasks": [
+    {
+      "id": "verify-patch",
+      "prompt": "Verify that the documentation heading changes from Old heading to New heading."
+    }
+  ],
+  "dependencies": [],
+  "global_context": "Repository: https://example.com/acme/widget.git; base revision: 0123456789abcdef0123456789abcdef01234567"
 }
