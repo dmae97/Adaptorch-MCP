@@ -6,7 +6,15 @@ from typing import Any, Final
 from adaptorch.mcp_server import AdaptOrchMCPServer, MCPToolBackend, NotificationSink
 from adaptorch.n8n_connector import N8nConnectorConfig, N8nControlPlaneConnector
 
-from adaptorch_mcp.response_policy import sanitize_tool_response
+from adaptorch_mcp.public_schema import (
+    ParentContractError,
+    project_remote_tool,
+    tool_argument_names,
+)
+from adaptorch_mcp.response_policy import (
+    sanitize_resource_response,
+    sanitize_tool_response,
+)
 from adaptorch_mcp.security_policy import (
     FULL_EXPOSURE_PROFILE,
     REMOTE_EXPOSURE_PROFILE,
@@ -55,6 +63,10 @@ _REMOTE_RESOURCE_URIS: Final = frozenset(
 )
 
 
+class _InvalidExposureProfileError(ValueError):
+    """Raised when direct construction bypasses profile parsing."""
+
+
 def validate_parent_tools(
     tool_names: tuple[str, ...],
     exposure_profile: ExposureProfile,
@@ -94,15 +106,8 @@ def _run_arguments(message: Mapping[str, Any]) -> Mapping[str, Any]:
     return arguments if isinstance(arguments, Mapping) else {}
 
 
-def _run_requests_trace(message: Mapping[str, Any]) -> bool:
-    return _run_arguments(message).get("trace") is True
-
-
 def _run_requests_verification_commands(message: Mapping[str, Any]) -> bool:
-    arguments = _run_arguments(message)
-    if "verification_commands" in arguments:
-        return True
-    payload = arguments.get("payload")
+    payload = _run_arguments(message).get("payload")
     if not isinstance(payload, Mapping):
         return False
     metadata = payload.get("metadata")
@@ -122,14 +127,18 @@ class HardenedMCPServer(AdaptOrchMCPServer):
         exposure_profile: ExposureProfile,
     ) -> None:
         if exposure_profile not in {REMOTE_EXPOSURE_PROFILE, FULL_EXPOSURE_PROFILE}:
-            raise ValueError("exposure profile must be 'remote' or 'full'")
+            raise _InvalidExposureProfileError(
+                "exposure profile must be 'remote' or 'full'"
+            )
         super().__init__(backend=backend)
         self._exposure_profile = exposure_profile
         parent_response = super().handle_message(
             {"jsonrpc": "2.0", "id": 0, "method": "tools/list", "params": {}}
         )
         if parent_response is None:
-            raise RuntimeError("parent AdaptOrch MCP did not return its tool contract")
+            raise ParentContractError(
+                "parent AdaptOrch MCP did not return its tool contract"
+            )
         tools = parent_response.get("result", {}).get("tools", [])
         names = tuple(
             item["name"]
@@ -137,6 +146,16 @@ class HardenedMCPServer(AdaptOrchMCPServer):
             if isinstance(item, Mapping) and isinstance(item.get("name"), str)
         )
         validate_parent_tools(names, exposure_profile)
+        self._remote_argument_names: dict[str, frozenset[str]] = {}
+        if exposure_profile == REMOTE_EXPOSURE_PROFILE:
+            projected_tools = tuple(
+                project_remote_tool(item)
+                for item in tools
+                if isinstance(item, Mapping) and item.get("name") in REMOTE_TOOL_NAMES
+            )
+            self._remote_argument_names = {
+                str(item["name"]): tool_argument_names(item) for item in projected_tools
+            }
 
     @property
     def exposure_profile(self) -> ExposureProfile:
@@ -153,11 +172,17 @@ class HardenedMCPServer(AdaptOrchMCPServer):
 
         method = message.get("method")
         if method == "tools/call":
+            params = message.get("params")
+            if not isinstance(params, Mapping):
+                return _jsonrpc_error(message, -32602, "Invalid tool arguments")
+            if "arguments" in params and not isinstance(params["arguments"], Mapping):
+                return _jsonrpc_error(message, -32602, "Invalid tool arguments")
             name = _tool_name(message)
             if name not in REMOTE_TOOL_NAMES:
                 return _jsonrpc_error(message, -32601, "Method not found")
-            if name == "adaptorch_run" and _run_requests_trace(message):
-                return _jsonrpc_error(message, -32602, "trace is unavailable in remote profile")
+            unknown_arguments = set(_run_arguments(message)) - self._remote_argument_names[name]
+            if unknown_arguments:
+                return _jsonrpc_error(message, -32602, "Invalid tool arguments")
             if name == "adaptorch_run" and _run_requests_verification_commands(message):
                 return _jsonrpc_error(
                     message,
@@ -176,14 +201,22 @@ class HardenedMCPServer(AdaptOrchMCPServer):
         if response is None:
             return None
         if method == "tools/call":
-            return sanitize_tool_response(response)
+            tool_name = _tool_name(message)
+            if tool_name is None:
+                return _jsonrpc_error(message, -32602, "Invalid tool arguments")
+            return sanitize_tool_response(response, tool_name=tool_name)
+        if method == "resources/read":
+            params = message.get("params")
+            uri = params.get("uri") if isinstance(params, Mapping) else None
+            if isinstance(uri, str):
+                return sanitize_resource_response(response, uri=uri)
         result = response.get("result")
         if not isinstance(result, dict):
             return response
         if method == "tools/list":
             tools = result.get("tools", [])
             result["tools"] = [
-                item
+                project_remote_tool(item)
                 for item in tools
                 if isinstance(item, Mapping) and item.get("name") in REMOTE_TOOL_NAMES
             ]

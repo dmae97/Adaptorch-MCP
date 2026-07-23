@@ -45,6 +45,35 @@ Run a redacted secret scan and store the evidence:
 gitleaks detect --source . --redact
 ```
 
+## Local global refresh from current AdaptOrch source
+
+Build immutable wheel snapshots for both the wrapper and the current local AdaptOrch tree, record their SHA-256 hashes, then install only those artifacts:
+
+```bash
+uv run --no-sync python -m build packages/adaptorch-mcp --outdir dist
+uv run --no-sync python -m build --wheel \
+  --outdir /absolute/path/to/core-dist /absolute/path/to/adaptorch
+sha256sum \
+  dist/adaptorch_mcp-0.5.0-py3-none-any.whl \
+  /absolute/path/to/core-dist/adaptorch-0.1.0-py3-none-any.whl
+uv tool install --offline --force \
+  --with "adaptorch[api] @ file:///absolute/path/to/core-dist/adaptorch-0.1.0-py3-none-any.whl" \
+  dist/adaptorch_mcp-0.5.0-py3-none-any.whl
+```
+
+Both distributions currently publish an `adaptorch-mcp` console script. After installing the core as an extra, restore the wrapper-owned hardened entry point in the same tool environment and verify its import target:
+
+```bash
+uv pip install --offline \
+  --python "$HOME/.local/share/uv/tools/adaptorch-mcp/bin/python" \
+  --force-reinstall --no-deps \
+  dist/adaptorch_mcp-0.5.0-py3-none-any.whl
+grep -q "from adaptorch_mcp.cli import main" \
+  "$HOME/.local/share/uv/tools/adaptorch-mcp/bin/adaptorch-mcp"
+```
+
+Run `adaptorch-mcp-smoke` afterward and require the default remote surface to contain exactly eight tools. Do not use a deleted temporary source directory as the uv receipt origin.
+
 ## Real PyPI publish with uv
 
 Use a PyPI token only in your shell/session or CI secret store. Do not commit it.
@@ -71,7 +100,7 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 1. Create the PyPI project `adaptorch-mcp`.
 2. In PyPI, add a trusted publisher for this repository.
 3. Require the GitHub `pypi` environment.
-4. Tag a release like `adaptorch-mcp-v0.4.2`.
+4. Tag a release like `adaptorch-mcp-v0.5.0`.
 5. Let `.github/workflows/publish.yml` build and publish without storing a PyPI API token.
 
 ## Post-publish smoke

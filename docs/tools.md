@@ -1,19 +1,23 @@
 # MCP Tool Surface
 
-The package delegates tool registration to `adaptorch.mcp_server`. The public wrapper expects the following core tools when paired with a recent AdaptOrch release.
+The package delegates tool registration to `adaptorch.mcp_server`. The default `remote` profile exposes eight hardened tools. The two rows marked `full only` are available only with `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`.
 
 | Tool | Type | Purpose |
 | --- | --- | --- |
 | `adaptorch_run` | write | Submit an AdaptOrch task payload and optionally wait for terminal status. |
-| `adaptorch_get_run` | read | Fetch a run summary by `run_id`. |
+| `adaptorch_get_run` | read | Fetch a run summary plus an optional bounded Correctness Wall view by `run_id`. |
 | `adaptorch_get_artifacts` | read | Fetch artifact metadata for a run. |
 | `adaptorch_list_runs` | read | List recent control-plane runs. |
-| `adaptorch_get_traces` | read | Fetch execution traces for a run. |
+| `adaptorch_get_traces` | read/full only | Fetch execution traces for a run. |
 | `adaptorch_cancel_run` | write/destructive | Request cancellation for an in-flight run. Keep manually approved. |
-| `adaptorch_route_topology` | read/local | Route a DAG locally through AdaptOrch's topology router. |
+| `adaptorch_route_topology` | read/local/full only | Route a DAG locally through AdaptOrch's topology router. |
 | `adaptorch_server_metrics` | read/local | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | read/local | Read synthesis modes, connectors, server features, and plan catalog. |
 | `adaptorch_plan_catalog` | read/local | Read hosted plan catalog: Starter $0, Pro $39, Team $149. |
+
+## Structured run output
+
+In the remote profile, `adaptorch_get_run` advertises a closed MCP `outputSchema` and returns both the legacy JSON text block and an equivalent safe `structuredContent` mapping. When the installed AdaptOrch control plane provides `correctness_wall`, the wrapper projects only bounded verdict, blocker, advisory, evidence-note, recommendation, and claim-boundary fields. A `PASS` verdict is evidence-gate observability only—not a correctness proof, active-selector decision, Full50 GO result, or authorization to apply a candidate.
 
 ## Resources and templates
 

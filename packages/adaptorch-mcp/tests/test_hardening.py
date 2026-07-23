@@ -5,7 +5,6 @@ from collections.abc import Mapping
 from typing import Any
 
 import pytest
-from adaptorch.types import SynthesisMode
 
 from adaptorch_mcp.hardening import (
     FULL_EXPOSURE_PROFILE,
@@ -18,63 +17,9 @@ from adaptorch_mcp.hardening import (
     validate_parent_tools,
     validate_separate_tokens,
 )
+from mcp_test_support import FakeBackend
 
-
-class _FakeBackend:
-    def run_task(
-        self,
-        *,
-        payload: Mapping[str, Any],
-        synthesis_mode: SynthesisMode = "robust",
-        model: str | None = None,
-        budget_policy: Mapping[str, int | float | str | bool] | None = None,
-        trace: bool = False,
-    ) -> dict[str, Any]:
-        del payload, synthesis_mode, model, budget_policy, trace
-        return {"status": "QUEUED", "diagnostics": {"features": {"width": 2}}}
-
-    def run_task_and_collect(
-        self,
-        *,
-        payload: Mapping[str, Any],
-        synthesis_mode: SynthesisMode = "robust",
-        model: str | None = None,
-        budget_policy: Mapping[str, int | float | str | bool] | None = None,
-        trace: bool = False,
-        timeout_seconds: float = 120.0,
-        poll_interval_seconds: float = 1.0,
-    ) -> dict[str, Any]:
-        del (
-            payload,
-            synthesis_mode,
-            model,
-            budget_policy,
-            trace,
-            timeout_seconds,
-            poll_interval_seconds,
-        )
-        return {
-            "status": "SUCCEEDED",
-            "topology": "hybrid",
-            "diagnostics": {"topology_evidence": {"reason": "threshold", "features": {}}},
-            "telemetry": {"ensemble": {"selected_model_id": "private-model"}},
-        }
-
-    def get_run(self, run_id: str) -> dict[str, Any]:
-        return {
-            "run_id": run_id,
-            "status": "SUCCEEDED",
-            "topology": "hybrid",
-            "diagnostics": {"reason": "private threshold", "features": {"width": 4}},
-            "telemetry": {"verification": {"candidate_index": 2}},
-        }
-
-    def get_artifacts(self, run_id: str) -> dict[str, Any]:
-        return {
-            "run_id": run_id,
-            "artifacts": [],
-            "diagnostics": {"routing_scores": {"hybrid": 0.9}},
-        }
+_FakeBackend = FakeBackend
 
 
 def _request(
@@ -89,10 +34,14 @@ def _request(
     return payload
 
 
-def _tool_names(server: HardenedMCPServer) -> tuple[str, ...]:
+def _tools(server: HardenedMCPServer) -> tuple[Mapping[str, Any], ...]:
     response = server.handle_message(_request("tools/list"))
     assert response is not None
-    return tuple(tool["name"] for tool in response["result"]["tools"])
+    return tuple(response["result"]["tools"])
+
+
+def _tool_names(server: HardenedMCPServer) -> tuple[str, ...]:
+    return tuple(tool["name"] for tool in _tools(server))
 
 
 def _call_tool(
@@ -194,6 +143,41 @@ def test_remote_profile_uses_strict_tool_allowlist_and_blocks_oracles(
     assert nested_command_response["error"]["code"] == -32602
 
 
+def test_remote_profile_projects_run_schema_and_rejects_unknown_arguments() -> None:
+    server = HardenedMCPServer(backend=_FakeBackend(), exposure_profile="remote")
+    run_tool = next(tool for tool in _tools(server) if tool["name"] == "adaptorch_run")
+
+    properties = run_tool["inputSchema"]["properties"]
+    assert "trace" not in properties
+    assert "verification_commands" not in properties
+    assert run_tool["inputSchema"]["additionalProperties"] is False
+
+    response = _call_tool(server, "adaptorch_run", {"prompt": "hello", "future": True})
+    assert response["error"]["code"] == -32602
+
+    malformed = server.handle_message(
+        _request(
+            "tools/call",
+            params={"name": "adaptorch_server_metrics", "arguments": []},
+        )
+    )
+    assert malformed is not None
+    assert malformed["error"]["code"] == -32602
+
+
+def test_remote_capabilities_match_facade_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ADAPTORCH_MCP_ALLOW_VERIFICATION_COMMANDS", "1")
+    server = HardenedMCPServer(backend=_FakeBackend(), exposure_profile="remote")
+
+    response = _call_tool(server, "adaptorch_capabilities")
+    payload = json.loads(response["result"]["content"][0]["text"])
+
+    assert payload["server_capabilities"]["completions"] is False
+    assert payload["server_capabilities"]["verification_commands_enabled"] is False
+
+
 def test_remote_profile_hides_sensitive_resources_and_completions() -> None:
     server = HardenedMCPServer(backend=_FakeBackend(), exposure_profile="remote")
 
@@ -206,6 +190,20 @@ def test_remote_profile_hides_sensitive_resources_and_completions() -> None:
 
     templates = server.handle_message(_request("resources/templates/list"))
     assert templates == {"jsonrpc": "2.0", "id": 1, "result": {"resourceTemplates": []}}
+
+    server_info = server.handle_message(
+        _request("resources/read", params={"uri": "adaptorch://server-info"})
+    )
+    assert server_info is not None
+    server_payload = json.loads(server_info["result"]["contents"][0]["text"])
+    assert "completions" not in server_payload["capabilities"]
+
+    plan_catalog = server.handle_message(
+        _request("resources/read", params={"uri": "adaptorch://plans/cloud"})
+    )
+    assert plan_catalog is not None
+    plan_payload = json.loads(plan_catalog["result"]["contents"][0]["text"])
+    assert plan_payload["schemaVersion"] == "adaptorch.cloud_plan_catalog.v1"
 
     blocked = server.handle_message(
         _request("resources/read", params={"uri": "adaptorch://runs/r1/summary"})
@@ -270,39 +268,3 @@ def test_parent_contract_validation_fails_closed() -> None:
     validate_parent_tools(REMOTE_TOOL_NAMES, REMOTE_EXPOSURE_PROFILE)
     with pytest.raises(RuntimeError, match="missing required tools"):
         validate_parent_tools(("adaptorch_run",), REMOTE_EXPOSURE_PROFILE)
-
-
-def test_diagnostics_reports_hardened_posture_without_token_length() -> None:
-    from adaptorch_mcp.diagnostics import collect_diagnostics
-
-    payload = collect_diagnostics({"ADAPTORCH_CONTROL_PLANE_TOKEN": "ado_live_secret"})
-
-    assert payload["environment"]["tokens"]["ADAPTORCH_CONTROL_PLANE_TOKEN"] == {
-        "set": True,
-        "formatRecognized": True,
-    }
-    assert payload["security"] == {
-        "exposureProfile": "remote",
-        "profileValid": True,
-        "algorithmExecutionBoundary": "control-plane",
-        "localAlgorithmOraclesExposed": False,
-        "remoteControlPlaneRequiresHttps": True,
-        "insecureControlPlaneAllowed": False,
-        "httpTokensMustBeDistinct": True,
-    }
-    assert payload["expectedTools"] == list(REMOTE_TOOL_NAMES)
-
-
-def test_diagnostics_full_profile_is_explicit_and_invalid_profile_fails_closed() -> None:
-    from adaptorch_mcp.diagnostics import collect_diagnostics
-
-    full = collect_diagnostics({"ADAPTORCH_MCP_EXPOSURE_PROFILE": "full"})
-    assert full["security"]["localAlgorithmOraclesExposed"] is True
-    assert full["security"]["algorithmExecutionBoundary"] == "mixed-local-and-control-plane"
-    assert "adaptorch_route_topology" in full["expectedTools"]
-    assert "adaptorch_get_traces" in full["expectedTools"]
-
-    invalid = collect_diagnostics({"ADAPTORCH_MCP_EXPOSURE_PROFILE": "debug"})
-    assert invalid["ok"] is False
-    assert invalid["security"]["profileValid"] is False
-    assert invalid["expectedTools"] == list(REMOTE_TOOL_NAMES)

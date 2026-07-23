@@ -44,3 +44,41 @@ def test_diagnostics_fail_closed_for_remote_plaintext_control_plane() -> None:
     assert payload["security"]["remoteControlPlaneRequiresHttps"] is True
     assert payload["security"]["insecureControlPlaneAllowed"] is False
     assert payload["ok"] is False
+
+
+def test_diagnostics_reports_hardened_posture_without_token_length() -> None:
+    from adaptorch_mcp.diagnostics import collect_diagnostics
+    from adaptorch_mcp.hardening import REMOTE_TOOL_NAMES
+
+    payload = collect_diagnostics({"ADAPTORCH_CONTROL_PLANE_TOKEN": "ado_live_secret"})
+
+    assert payload["environment"]["tokens"]["ADAPTORCH_CONTROL_PLANE_TOKEN"] == {
+        "set": True,
+        "formatRecognized": True,
+    }
+    assert payload["security"] == {
+        "exposureProfile": "remote",
+        "profileValid": True,
+        "algorithmExecutionBoundary": "control-plane",
+        "localAlgorithmOraclesExposed": False,
+        "remoteControlPlaneRequiresHttps": True,
+        "insecureControlPlaneAllowed": False,
+        "httpTokensMustBeDistinct": True,
+    }
+    assert payload["expectedTools"] == list(REMOTE_TOOL_NAMES)
+
+
+def test_diagnostics_full_profile_is_explicit_and_invalid_profile_fails_closed() -> None:
+    from adaptorch_mcp.diagnostics import collect_diagnostics
+    from adaptorch_mcp.hardening import REMOTE_TOOL_NAMES
+
+    full = collect_diagnostics({"ADAPTORCH_MCP_EXPOSURE_PROFILE": "full"})
+    assert full["security"]["localAlgorithmOraclesExposed"] is True
+    assert full["security"]["algorithmExecutionBoundary"] == "mixed-local-and-control-plane"
+    assert "adaptorch_route_topology" in full["expectedTools"]
+    assert "adaptorch_get_traces" in full["expectedTools"]
+
+    invalid = collect_diagnostics({"ADAPTORCH_MCP_EXPOSURE_PROFILE": "debug"})
+    assert invalid["ok"] is False
+    assert invalid["security"]["profileValid"] is False
+    assert invalid["expectedTools"] == list(REMOTE_TOOL_NAMES)

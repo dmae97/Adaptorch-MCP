@@ -4,6 +4,20 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [0.5.0] - 2026-07-14
+
+### Added
+- `adaptorch_get_run` now advertises a closed MCP `outputSchema` and returns safe `structuredContent` alongside its legacy JSON text response.
+- The default remote profile can expose the parent engine's bounded `correctness_wall` view, including verdict, blockers, advisories, evidence notes, and the non-authorizing claim boundary.
+
+### Changed
+- Bumped the standalone wrapper to `0.5.0` so the rebuilt artifact no longer collides with the released `0.4.2` code under the same version.
+- Remote input descriptors and tool/resource responses are projected through explicit allowlists and fail closed on malformed parent contracts or unsupported nested output.
+
+### Security
+- Correctness Wall output is limited to sixteen 256-character entries per context list (covering the current parent contract), rejects proof/active-selector claims, and never exposes CEK records, selector scores, traces, diagnostics, or parent-provided structured side channels.
+- The default remote surface remains eight tools; topology routing and trace oracles remain available only in the explicit `full` profile.
+
 ## [0.4.2] - 2026-07-11
 
 ### Changed

@@ -4,8 +4,9 @@
 
 | Version | Supported |
 | --- | --- |
-| `0.2.x` | yes |
-| `0.1.x` | best effort until `0.2.x` is public |
+| `0.5.x` | yes |
+| `0.4.x` | best effort |
+| `< 0.4` | no |
 | `main` | yes |
 
 Security fixes target the latest public release and the `main` branch.

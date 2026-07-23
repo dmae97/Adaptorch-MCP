@@ -127,7 +127,7 @@ uvx --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adapto
 
 | First-run win | Tool | What changes in the chat |
 | --- | --- | --- |
-| Less planning uncertainty | `adaptorch_route_topology` | Claude can explain whether the task should be singleton, pipeline, DAG, or ensemble before spending run budget. |
+| Less proof ambiguity | `adaptorch_get_run` | Claude can inspect a bounded Correctness Wall view without exposing selector internals or treating `PASS` as a proof. |
 | Fewer failed long tasks | `adaptorch_run` | Large goals move through AdaptOrch routing, synthesis, and telemetry instead of one brittle pass. |
 | Evidence without context switching | `adaptorch_get_artifacts` | Outputs, traces, and run proof come back into the Claude Code conversation. |
 | Safer setup support | `adaptorch-mcp-doctor` | Users can paste redacted diagnostics without leaking tokens. |
@@ -191,12 +191,19 @@ adaptorch-mcp \
   --http-port 8765
 ```
 
-Health check:
+Authenticated health check:
 
 ```bash
 python - <<'PY'
-import httpx
-print(httpx.get('http://127.0.0.1:8765/mcp/health').json())
+import os
+from urllib.request import Request, urlopen
+
+request = Request(
+    "http://127.0.0.1:8765/mcp/health",
+    headers={"Authorization": f"Bearer {os.environ['ADAPTORCH_MCP_HTTP_AUTH_TOKEN']}"},
+)
+with urlopen(request) as response:
+    print(response.read().decode("utf-8"))
 PY
 ```
 
@@ -286,15 +293,17 @@ validating a specific hosted/core release.
 | Tool | Purpose |
 | --- | --- |
 | `adaptorch_run` | Submit an AdaptOrch task payload and optionally wait. |
-| `adaptorch_get_run` | Read run summary by `run_id`. |
+| `adaptorch_get_run` | Read a run summary and its optional bounded Correctness Wall view by `run_id`. |
 | `adaptorch_get_artifacts` | Read artifact metadata for a run. |
 | `adaptorch_list_runs` | List recent runs. |
-| `adaptorch_get_traces` | Read execution traces. |
+| `adaptorch_get_traces` | Read execution traces (`full` profile only). |
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
-| `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router. |
+| `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router (`full` profile only). |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | Read synthesis modes, connectors, and server features. |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
+
+The default `remote` profile exposes the eight tools other than `adaptorch_get_traces` and `adaptorch_route_topology`. `adaptorch_get_run` publishes a closed `outputSchema` and safe `structuredContent`; its optional `correctness_wall` is advisory observability, not a correctness proof, selector decision, or apply authorization.
 
 For trusted local clients, auto-approve only tools whose outputs are safe for
 that client. Keep `adaptorch_run` and `adaptorch_cancel_run` manually approved.

@@ -118,7 +118,7 @@ and MCP `prefer_ensemble_singleton`.
 | Tool | Purpose |
 | --- | --- |
 | `adaptorch_run` | Submit an AdaptOrch task payload and optionally wait. |
-| `adaptorch_get_run` | Read run summary by `run_id`. |
+| `adaptorch_get_run` | Read a run summary and its optional bounded Correctness Wall view by `run_id`. |
 | `adaptorch_get_artifacts` | Read artifact metadata for a run. |
 | `adaptorch_list_runs` | List recent runs. |
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
@@ -127,6 +127,8 @@ and MCP `prefer_ensemble_singleton`.
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
 
 `adaptorch_get_traces` and `adaptorch_route_topology` are available only when `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`. In the default profile, run diagnostics and telemetry are redacted, run-resource templates are hidden, completions are disabled, and server events are not broadcast to SSE subscribers.
+
+For modern MCP clients, `adaptorch_get_run` advertises a closed `outputSchema` and returns `structuredContent` reconstructed from the wrapper's own allowlist projection. Its optional `correctness_wall` is bounded advisory observability from the installed parent AdaptOrch engine. Even a `PASS` verdict is not a correctness proof, active-selector decision, or authorization to apply a candidate; inspect its `claim_boundary` and `recommended_action`.
 
 ## Security boundary
 
