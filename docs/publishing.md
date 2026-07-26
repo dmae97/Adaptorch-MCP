@@ -72,7 +72,7 @@ grep -q "from adaptorch_mcp.cli import main" \
   "$HOME/.local/share/uv/tools/adaptorch-mcp/bin/adaptorch-mcp"
 ```
 
-Run `adaptorch-mcp-smoke` afterward and require the default remote surface to contain exactly eight tools. Do not use a deleted temporary source directory as the uv receipt origin.
+Run `adaptorch-mcp-smoke` afterward and require the default remote surface to contain exactly nine tools. Do not use a deleted temporary source directory as the uv receipt origin.
 
 ## Real PyPI publish with uv
 

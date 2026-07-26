@@ -49,15 +49,14 @@ REMOTE_TOOL_NAMES: Final = (
     "adaptorch_cancel_run",
     "adaptorch_server_metrics",
     "adaptorch_capabilities",
+    "adaptorch_usage",
     "adaptorch_plan_catalog",
 )
-_REQUIRED_FULL_TOOL_NAMES: Final = (
-    *REMOTE_TOOL_NAMES[:4],
+_FULL_ONLY_TOOL_NAMES: Final = (
     "adaptorch_get_traces",
-    *REMOTE_TOOL_NAMES[4:5],
     "adaptorch_route_topology",
-    *REMOTE_TOOL_NAMES[5:],
 )
+_REQUIRED_FULL_TOOL_NAMES: Final = (*REMOTE_TOOL_NAMES, *_FULL_ONLY_TOOL_NAMES)
 _REMOTE_RESOURCE_URIS: Final = frozenset(
     {"adaptorch://server-info", "adaptorch://plans/cloud"}
 )

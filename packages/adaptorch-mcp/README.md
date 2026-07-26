@@ -124,6 +124,7 @@ and MCP `prefer_ensemble_singleton`.
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | Read synthesis modes (with deprecated aliases), topologies, output extractors, connectors, and server features. |
+| `adaptorch_usage` | Read the calling tenant's usage window (plan level, period, used, limit, remaining, percentage). |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
 
 `adaptorch_get_traces` and `adaptorch_route_topology` are available only when `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`. In the default profile, run diagnostics and telemetry are redacted, run-resource templates are hidden, completions are disabled, and server events are not broadcast to SSE subscribers.

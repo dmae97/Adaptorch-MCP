@@ -20,6 +20,9 @@ from adaptorch_mcp.security_policy import (
 
 __all__ = ["EXPECTED_CORE_TOOLS", "collect_diagnostics", "format_diagnostics"]
 
+# Kept literal (not imported from hardening) so `adaptorch-mcp-doctor` still
+# reports a posture when the engine package is missing. Must stay in sync with
+# hardening.REMOTE_TOOL_NAMES; test_diagnostics_policy asserts the equality.
 EXPECTED_CORE_TOOLS: tuple[str, ...] = (
     "adaptorch_run",
     "adaptorch_get_run",
@@ -28,21 +31,16 @@ EXPECTED_CORE_TOOLS: tuple[str, ...] = (
     "adaptorch_cancel_run",
     "adaptorch_server_metrics",
     "adaptorch_capabilities",
+    "adaptorch_usage",
     "adaptorch_plan_catalog",
 )
 
-_FULL_CORE_TOOLS: tuple[str, ...] = (
-    "adaptorch_run",
-    "adaptorch_get_run",
-    "adaptorch_get_artifacts",
-    "adaptorch_list_runs",
+_FULL_ONLY_TOOLS: tuple[str, ...] = (
     "adaptorch_get_traces",
-    "adaptorch_cancel_run",
     "adaptorch_route_topology",
-    "adaptorch_server_metrics",
-    "adaptorch_capabilities",
-    "adaptorch_plan_catalog",
 )
+
+_FULL_CORE_TOOLS: tuple[str, ...] = (*EXPECTED_CORE_TOOLS, *_FULL_ONLY_TOOLS)
 _RUNTIME_PACKAGES: tuple[tuple[str, str], ...] = (
     ("adaptorch", "adaptorch"),
     ("fastapi", "fastapi"),

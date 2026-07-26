@@ -114,6 +114,7 @@ def test_diagnostics_redacts_base_url_userinfo() -> None:
 
 def test_expected_core_tools_are_canonical() -> None:
     from adaptorch_mcp.diagnostics import EXPECTED_CORE_TOOLS
+    from adaptorch_mcp.hardening import REMOTE_TOOL_NAMES
 
     assert EXPECTED_CORE_TOOLS == (
         "adaptorch_run",
@@ -123,8 +124,12 @@ def test_expected_core_tools_are_canonical() -> None:
         "adaptorch_cancel_run",
         "adaptorch_server_metrics",
         "adaptorch_capabilities",
+        "adaptorch_usage",
         "adaptorch_plan_catalog",
     )
+    # Doctor duplicates the list so it works without the engine installed; the
+    # duplicate must never drift from the exposure policy it reports.
+    assert EXPECTED_CORE_TOOLS == REMOTE_TOOL_NAMES
 
 
 def test_pyproject_registers_console_scripts() -> None:

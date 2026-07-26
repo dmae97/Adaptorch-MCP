@@ -60,3 +60,22 @@ class FakeBackend:
             "artifacts": [],
             "diagnostics": {"routing_scores": {"hybrid": 0.9}},
         }
+
+
+class ControlPlaneFakeBackend(FakeBackend):
+    """FakeBackend that also answers the control-plane HTTP transport."""
+
+    def __init__(self, responses: Mapping[str, Mapping[str, Any]] | None = None) -> None:
+        self.responses: dict[str, Mapping[str, Any]] = dict(responses or {})
+        self.requests: list[tuple[str, str]] = []
+
+    def _request_json(
+        self,
+        method: str,
+        path: str,
+        *,
+        body: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        del body
+        self.requests.append((method, path))
+        return dict(self.responses.get(path, {}))

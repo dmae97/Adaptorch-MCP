@@ -1,6 +1,6 @@
 # MCP Tool Surface
 
-The package delegates tool registration to `adaptorch.mcp_server`. The default `remote` profile exposes eight hardened tools. The two rows marked `full only` are available only with `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`.
+The package delegates tool registration to `adaptorch.mcp_server`. The default `remote` profile exposes nine hardened tools. The two rows marked `full only` are available only with `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`.
 
 | Tool | Type | Purpose |
 | --- | --- | --- |
@@ -13,6 +13,7 @@ The package delegates tool registration to `adaptorch.mcp_server`. The default `
 | `adaptorch_route_topology` | read/local/full only | Route a DAG locally through AdaptOrch's topology router. |
 | `adaptorch_server_metrics` | read/local | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | read/local | Read synthesis modes, deprecated aliases, topologies, output extractors, connectors, server features, and plan catalog. |
+| `adaptorch_usage` | read | Read the calling tenant's usage window: plan level, period, used, limit, remaining, percentage. |
 | `adaptorch_plan_catalog` | read/local | Read hosted plan catalog: Starter $0, Pro $39, Team $149. |
 
 ## Engine algorithm surface (delegated)
@@ -31,6 +32,38 @@ installed `adaptorch` engine and are asserted by
 `adaptorch_capabilities` reports `synthesis_modes` (everything callers may pass),
 `supported_synthesis_modes`, `deprecated_synthesis_mode_aliases`, `topologies`, and
 `output_extractor_modes`. Older engines that omit those fields still project cleanly.
+
+## Tenant usage awareness
+
+Usage is scoped by the `ADAPTORCH_CONTROL_PLANE_TOKEN` you configure. The control plane
+resolves the tenant from that key, so `adaptorch_usage` takes **no arguments** and a
+client cannot ask for another tenant's numbers — an extra argument is rejected with
+JSON-RPC `-32602`.
+
+| Field | Meaning |
+| --- | --- |
+| `tenant_id` | Your own tenant, as resolved from the key |
+| `plan_level` | Plan the limit came from (`starter`, `pro`, `team`) |
+| `period` | UTC billing period the counter belongs to |
+| `used` / `limit` / `remaining` | Run counter for the period (`limit` may be unlimited) |
+| `usage_percentage` | `used / limit` as a percentage |
+
+The wrapper projects only those fields; counter sources, database rows, and any other
+control-plane internals are dropped.
+
+When a run is rejected because the period counter is exhausted, the tool result is an
+error payload rather than a masked internal failure:
+
+```json
+{
+  "error": "QUOTA_EXCEEDED",
+  "message": "tenant quota exhausted for the current period (used=1000, limit=1000); upgrade at /pricing",
+  "usage": { "limit": 1000, "used": 1000, "remaining": 0, "upgrade_url": "/pricing" }
+}
+```
+
+The engine does not retry that response: a monthly counter only resets at the period
+boundary. A `429 RATE_LIMITED` (burst limiting) is still retried as before.
 
 ## Structured run output
 

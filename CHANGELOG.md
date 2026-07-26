@@ -6,13 +6,17 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### Added
+- `adaptorch_usage` is exposed in the default remote profile, so a client can read its own tenant usage window (plan level, period, used, limit, remaining, percentage) before starting expensive work. The tenant comes from `ADAPTORCH_CONTROL_PLANE_TOKEN`; the tool takes no arguments and a client-supplied tenant is rejected with `-32602`. The default remote surface is now nine tools.
+- Usage responses are projected through an explicit allowlist, so control-plane internals (counter sources, database rows) never reach the client.
+- `docs/tools.md` documents the usage fields and the `QUOTA_EXCEEDED` result shape returned when the period counter is exhausted.
+- `packages/adaptorch-mcp/tests/test_engine_algorithm_parity.py`: fails closed when the exposed run schema, remote tool acceptance, capability projection, or docs drift from the installed engine's synthesis/topology/extractor constants.
+- `packages/adaptorch-mcp/tests/test_tenant_usage_surface.py`: exposure, projection, sanitization, and client-supplied-tenant rejection for the usage surface.
+- `make engine-local ENGINE_PATH=../adaptorch` installs a local engine checkout over the git pin so parity gates validate the current algorithm rather than the last published revision.
+
 ### Changed
 - Capability projection now preserves the engine-declared algorithm surface when the installed engine reports it: `supported_synthesis_modes`, `deprecated_synthesis_mode_aliases`, `topologies`, and `output_extractor_modes`. Parents without those fields still project cleanly, and malformed values fail closed as before.
 - Documentation states the engine truth instead of implying five peer synthesis modes: `paper`, `robust`, `robust_lite`, and `stable_hybrid` are executed strategies, `fourier_aggressive` is a deprecated alias resolved to `stable_hybrid`, engine extractors are `final_answer` and `multiple_choice_letter`, and the MCP `none` extractor value is not forwarded to the engine.
-
-### Added
-- `packages/adaptorch-mcp/tests/test_engine_algorithm_parity.py`: fails closed when the exposed run schema, remote tool acceptance, capability projection, or docs drift from the installed engine's synthesis/topology/extractor constants.
-- `make engine-local ENGINE_PATH=../adaptorch` installs a local engine checkout over the git pin so parity gates validate the current algorithm rather than the last published revision.
 
 ## [0.5.0] - 2026-07-14
 

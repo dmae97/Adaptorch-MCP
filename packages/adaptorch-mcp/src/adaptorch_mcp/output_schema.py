@@ -125,6 +125,24 @@ def _project_metrics(value: Mapping[str, Any]) -> dict[str, Any] | None:
     return projected
 
 
+def _project_usage(value: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Project the tenant's own usage window; the control plane scopes it by key."""
+    keys = frozenset(
+        {
+            "tenant_id",
+            "plan_level",
+            "period",
+            "used",
+            "limit",
+            "remaining",
+            "usage_percentage",
+        }
+    )
+    if not {"used", "limit"}.issubset(value):
+        return None
+    return _project_scalars(value, keys)
+
+
 def _project_plan(value: Mapping[str, Any]) -> dict[str, Any] | None:
     projected = _project_scalars(value, _PLAN_SCALAR_KEYS)
     features = _project_string_list(value.get("features"))
@@ -246,6 +264,7 @@ _PROJECTORS: Final[dict[str, _Projector]] = {
     "adaptorch_cancel_run": _project_run,
     "adaptorch_server_metrics": _project_metrics,
     "adaptorch_capabilities": _project_capabilities,
+    "adaptorch_usage": _project_usage,
     "adaptorch_plan_catalog": project_catalog,
 }
 

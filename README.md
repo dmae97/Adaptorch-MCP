@@ -314,9 +314,10 @@ validating a specific hosted/core release.
 | `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router (`full` profile only). |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | Read synthesis modes (with deprecated aliases), topologies, output extractors, connectors, and server features. |
+| `adaptorch_usage` | Read the calling tenant's usage window (plan level, period, used, limit, remaining, percentage). |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
 
-The default `remote` profile exposes the eight tools other than `adaptorch_get_traces` and `adaptorch_route_topology`. `adaptorch_get_run` publishes a closed `outputSchema` and safe `structuredContent`; its optional `correctness_wall` is advisory observability, not a correctness proof, selector decision, or apply authorization.
+The default `remote` profile exposes the nine tools other than `adaptorch_get_traces` and `adaptorch_route_topology`. `adaptorch_get_run` publishes a closed `outputSchema` and safe `structuredContent`; its optional `correctness_wall` is advisory observability, not a correctness proof, selector decision, or apply authorization.
 
 For trusted local clients, auto-approve only tools whose outputs are safe for
 that client. Keep `adaptorch_run` and `adaptorch_cancel_run` manually approved.
