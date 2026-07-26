@@ -153,14 +153,42 @@ def project_catalog(value: Mapping[str, Any]) -> dict[str, Any] | None:
     return {**projected, "sourceOfTruth": sources, "plans": projected_plans, "notes": notes}
 
 
+def _project_string_map(value: Any) -> dict[str, str] | None:
+    if not isinstance(value, Mapping) or not all(
+        isinstance(key, str) and isinstance(item, str) for key, item in value.items()
+    ):
+        return None
+    return {str(key): str(item) for key, item in value.items()}
+
+
+def _project_algorithm_surface(value: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Project engine-declared algorithm surface fields when the parent sends them."""
+    projected: dict[str, Any] = {}
+    for key in ("supported_synthesis_modes", "topologies", "output_extractor_modes"):
+        if key not in value:
+            continue
+        items = _project_string_list(value[key])
+        if items is None:
+            return None
+        projected[key] = items
+    if "deprecated_synthesis_mode_aliases" in value:
+        aliases = _project_string_map(value["deprecated_synthesis_mode_aliases"])
+        if aliases is None:
+            return None
+        projected["deprecated_synthesis_mode_aliases"] = aliases
+    return projected
+
+
 def _project_capabilities(value: Mapping[str, Any]) -> dict[str, Any] | None:
     synthesis_modes = _project_string_list(value.get("synthesis_modes"))
     connectors = _project_string_list(value.get("connectors"))
+    algorithm_surface = _project_algorithm_surface(value)
     raw_catalog = value.get("cloud_plan_catalog")
     raw_server = value.get("server_capabilities")
     if (
         synthesis_modes is None
         or connectors is None
+        or algorithm_surface is None
         or not isinstance(raw_catalog, Mapping)
         or not isinstance(raw_server, Mapping)
     ):
@@ -171,6 +199,7 @@ def _project_capabilities(value: Mapping[str, Any]) -> dict[str, Any] | None:
         return None
     return {
         "synthesis_modes": synthesis_modes,
+        **algorithm_surface,
         "connectors": connectors,
         "cloud_plan_catalog": catalog,
         "server_capabilities": {

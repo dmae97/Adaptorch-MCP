@@ -4,6 +4,16 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [Unreleased]
+
+### Changed
+- Capability projection now preserves the engine-declared algorithm surface when the installed engine reports it: `supported_synthesis_modes`, `deprecated_synthesis_mode_aliases`, `topologies`, and `output_extractor_modes`. Parents without those fields still project cleanly, and malformed values fail closed as before.
+- Documentation states the engine truth instead of implying five peer synthesis modes: `paper`, `robust`, `robust_lite`, and `stable_hybrid` are executed strategies, `fourier_aggressive` is a deprecated alias resolved to `stable_hybrid`, engine extractors are `final_answer` and `multiple_choice_letter`, and the MCP `none` extractor value is not forwarded to the engine.
+
+### Added
+- `packages/adaptorch-mcp/tests/test_engine_algorithm_parity.py`: fails closed when the exposed run schema, remote tool acceptance, capability projection, or docs drift from the installed engine's synthesis/topology/extractor constants.
+- `make engine-local ENGINE_PATH=../adaptorch` installs a local engine checkout over the git pin so parity gates validate the current algorithm rather than the last published revision.
+
 ## [0.5.0] - 2026-07-14
 
 ### Added

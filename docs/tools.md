@@ -12,8 +12,25 @@ The package delegates tool registration to `adaptorch.mcp_server`. The default `
 | `adaptorch_cancel_run` | write/destructive | Request cancellation for an in-flight run. Keep manually approved. |
 | `adaptorch_route_topology` | read/local/full only | Route a DAG locally through AdaptOrch's topology router. |
 | `adaptorch_server_metrics` | read/local | Read redacted MCP server metrics. |
-| `adaptorch_capabilities` | read/local | Read synthesis modes, connectors, server features, and plan catalog. |
+| `adaptorch_capabilities` | read/local | Read synthesis modes, deprecated aliases, topologies, output extractors, connectors, server features, and plan catalog. |
 | `adaptorch_plan_catalog` | read/local | Read hosted plan catalog: Starter $0, Pro $39, Team $149. |
+
+## Engine algorithm surface (delegated)
+
+The wrapper never reimplements routing or synthesis. The values below are read from the
+installed `adaptorch` engine and are asserted by
+`packages/adaptorch-mcp/tests/test_engine_algorithm_parity.py`.
+
+| Surface | Engine truth | Notes |
+| --- | --- | --- |
+| `synthesis_mode` (supported) | `paper`, `robust`, `robust_lite`, `stable_hybrid` | Distinct strategies executed by `adaptorch.synthesis`. Default is `robust`. |
+| `synthesis_mode` (deprecated alias) | `fourier_aggressive` → `stable_hybrid` | Still accepted for compatibility; the engine resolves it to `stable_hybrid` and reports `mode_used`. |
+| `output_extractor` | `final_answer`, `multiple_choice_letter` | Engine extractor modes. `none` requests no extractor and is not forwarded to the engine. |
+| Topologies | `parallel`, `sequential`, `hierarchical`, `hybrid`, `multi_model_ensemble`, `multi_turn_debate` | Router-selectable topologies reported by `adaptorch_capabilities`. |
+
+`adaptorch_capabilities` reports `synthesis_modes` (everything callers may pass),
+`supported_synthesis_modes`, `deprecated_synthesis_mode_aliases`, `topologies`, and
+`output_extractor_modes`. Older engines that omit those fields still project cleanly.
 
 ## Structured run output
 

@@ -80,6 +80,8 @@ benchmark/eval or operator controls, not quickstart defaults.
 | `pass_rate_credit` / `quality_signal` | Online-router learning | `compute_quality` tries exact-answer token matching before fuzzy matching. `pass_rate_credit` is opt-in partial credit; do not claim it changes `AdaptOrchEngine` router feedback by default. |
 | `ADAPTORCH_PAPER_SEMANTIC_WEIGHT` | Synthesis | Default is `0.35`. Nonzero semantic weight, plus CJK/Hangul inputs, use Python scoring rather than the native fast path. |
 | `prefer_multi_model_ensemble_singleton` | Routing threshold | Auto-enables when at least two ensemble providers exist and synthesis mode is not `direct`, unless an explicit debate-singleton preference wins. The MCP hint `prefer_ensemble_singleton` can request the same preference manually. |
+| `synthesis_mode` | Synthesis | Supported modes are `paper`, `robust`, `robust_lite`, and `stable_hybrid`. `fourier_aggressive` is accepted but deprecated: the engine resolves it to `stable_hybrid` and reports the executed mode. |
+| `output_extractor` | Ensemble extraction | Engine extractors are `final_answer` and `multiple_choice_letter`. The MCP value `none` means "no extractor" and is not forwarded. |
 
 ## Research paper
 
@@ -166,6 +168,17 @@ cd Adaptorch-MCP
 uv sync --all-packages --extra dev
 uv run adaptorch-mcp --help
 ```
+
+`pyproject.toml` pins the engine to the published `adaptorch` git revision. To validate the
+wrapper against a local engine checkout (algorithm-parity runs), install it over the pin:
+
+```bash
+make engine-local ENGINE_PATH=../adaptorch
+make check
+```
+
+`packages/adaptorch-mcp/tests/test_engine_algorithm_parity.py` fails closed when the exposed
+synthesis modes, deprecated aliases, topologies, or output extractors drift from the engine.
 
 ## stdio MCP
 
@@ -300,7 +313,7 @@ validating a specific hosted/core release.
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
 | `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router (`full` profile only). |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
-| `adaptorch_capabilities` | Read synthesis modes, connectors, and server features. |
+| `adaptorch_capabilities` | Read synthesis modes (with deprecated aliases), topologies, output extractors, connectors, and server features. |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
 
 The default `remote` profile exposes the eight tools other than `adaptorch_get_traces` and `adaptorch_route_topology`. `adaptorch_get_run` publishes a closed `outputSchema` and safe `structuredContent`; its optional `correctness_wall` is advisory observability, not a correctness proof, selector decision, or apply authorization.
