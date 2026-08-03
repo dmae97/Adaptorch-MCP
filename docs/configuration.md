@@ -8,6 +8,9 @@
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | yes unless `--api-token` is passed | Upstream AdaptOrch bearer token or cloud API key |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | no | Base URL used when `--base-url` is omitted; surrounding whitespace is ignored and non-empty values must be HTTP(S) URLs with a host |
+| `ADAPTORCH_MCP_PROVIDER` | BYOK-only deployments | Provider name sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER_MODEL` |
+| `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK-only deployments | Provider model sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER` |
+| `ADAPTORCH_MCP_PROVIDER_API_KEY` | Credentialed BYOK providers | Process-local provider key; optional only for keyless CLI providers |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | HTTP only | Client-facing bearer token for MCP HTTP/SSE |
 
 Base-url resolution differs by entrypoint:
@@ -20,7 +23,21 @@ Base-url resolution differs by entrypoint:
 
 Pass `--base-url` explicitly in checked-in MCP client configs for reproducible behavior. Do not embed credentials in base URLs; use token environment variables instead.
 
-The connector always sends `ADAPTORCH_CONTROL_PLANE_TOKEN` as `Authorization: Bearer <token>`. Hosted AdaptOrch SaaS (`https://adaptorch.com`) resolves `ado_live_*`/`ado_test_*` (legacy `ak_*`) API keys from that bearer header, so dashboard-issued keys work unchanged; the hosted API additionally accepts `X-API-Key` from other client types. Local and custom control planes receive the same bearer header.
+The connector sends `ado_*` tenant keys as `X-API-Key`; other control-plane tokens use `Authorization: Bearer <token>`. Provider credentials are separate from tenant authentication.
+
+## BYOK provider credentials
+
+A BYOK-only control plane returns `401 byok_credentials_required` unless run submission includes provider credentials. Configure them in the MCP process environment rather than in a tool argument:
+
+```bash
+export ADAPTORCH_MCP_PROVIDER="openai"
+export ADAPTORCH_MCP_PROVIDER_MODEL="gpt-4.1-mini"
+export ADAPTORCH_MCP_PROVIDER_API_KEY="<provider-api-key>"
+```
+
+The wrapper fails closed when provider/model are incomplete or when the installed engine is too old for provider-credential forwarding. The key is excluded from repr output, MCP schemas, JSON request bodies, status/artifact/usage requests, and error text. It is attached only to `POST /v1/runs` as `X-Provider-Key`; provider and model use `X-Provider` and `X-Provider-Model`. The control plane uses the credential for that request and does not store it, while the local MCP process retains its environment until shutdown.
+
+For source parity against an unreleased engine checkout, run `make engine-local ENGINE_PATH=../adaptorch` before `make check`.
 
 ## HTTP Environment
 

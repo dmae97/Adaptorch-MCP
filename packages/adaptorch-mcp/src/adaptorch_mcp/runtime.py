@@ -1,8 +1,11 @@
+# mypy: disable-error-code="import-not-found,no-any-return"
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import hmac
 import os
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import Any, Final
 
 from adaptorch.mcp_server import (
@@ -24,6 +27,72 @@ from adaptorch_mcp.hardening import (
 
 _HOSTED_BASE_URL: Final = "https://adaptorch.com"
 _STATUS_PATHS: Final = frozenset({"/mcp/health", "/mcp/metrics"})
+MCP_PROVIDER_ENV: Final = "ADAPTORCH_MCP_PROVIDER"
+MCP_PROVIDER_MODEL_ENV: Final = "ADAPTORCH_MCP_PROVIDER_MODEL"
+MCP_PROVIDER_API_KEY_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY"
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCredentialConfig:
+    """Secret-safe wrapper configuration for one process-local provider credential."""
+
+    provider: str
+    model: str
+    api_key: str | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        provider = self.provider.strip().lower()
+        model = self.model.strip()
+        api_key = self.api_key.strip() if self.api_key is not None else None
+        if not provider:
+            raise ValueError(f"{MCP_PROVIDER_ENV} cannot be empty")
+        if not model:
+            raise ValueError(f"{MCP_PROVIDER_MODEL_ENV} cannot be empty")
+        values = (
+            (MCP_PROVIDER_ENV, provider),
+            (MCP_PROVIDER_MODEL_ENV, model),
+            ("provider key", api_key),
+        )
+        for label, value in values:
+            if value is not None and ("\r" in value or "\n" in value):
+                raise ValueError(f"{label} cannot contain newline characters")
+        object.__setattr__(self, "provider", provider)
+        object.__setattr__(self, "model", model)
+        object.__setattr__(self, "api_key", api_key or None)
+
+
+def resolve_provider_credential(
+    env: Mapping[str, str],
+) -> ProviderCredentialConfig | None:
+    provider = env.get(MCP_PROVIDER_ENV, "").strip()
+    model = env.get(MCP_PROVIDER_MODEL_ENV, "").strip()
+    raw_api_key = env.get(MCP_PROVIDER_API_KEY_ENV)
+    api_key = raw_api_key.strip() if raw_api_key is not None else None
+    if not provider and not model and not api_key:
+        return None
+    if not provider or not model:
+        raise ValueError(f"{MCP_PROVIDER_ENV} and {MCP_PROVIDER_MODEL_ENV} must be set together")
+    return ProviderCredentialConfig(provider=provider, model=model, api_key=api_key or None)
+
+
+def _build_server_for_env(
+    *,
+    base_url: str,
+    api_token: str,
+    timeout_seconds: float,
+    resolved_env: Mapping[str, str],
+) -> HardenedMCPServer:
+    common: dict[str, Any] = {
+        "base_url": base_url,
+        "api_token": api_token,
+        "timeout_seconds": timeout_seconds,
+        "exposure_profile": resolve_exposure_profile(resolved_env),
+        "allow_insecure": insecure_control_plane_allowed(resolved_env),
+    }
+    provider_credential = resolve_provider_credential(resolved_env)
+    if provider_credential is not None:
+        common["provider_credential"] = provider_credential
+    return build_hardened_mcp_server(**common)
 
 
 def _required_token(value: str | None, *, label: str) -> str:
@@ -108,12 +177,11 @@ def run_hardened_main(
         )
         validate_separate_tokens(api_token, http_auth_token)
 
-    server = build_hardened_mcp_server(
+    server = _build_server_for_env(
         base_url=args.base_url,
         api_token=api_token,
         timeout_seconds=args.timeout_seconds,
-        exposure_profile=resolve_exposure_profile(resolved_env),
-        allow_insecure=insecure_control_plane_allowed(resolved_env),
+        resolved_env=resolved_env,
     )
     if args.transport == "http":
         assert http_auth_token is not None
@@ -149,12 +217,11 @@ def create_hardened_http_app_from_env(
     if timeout_seconds <= 0:
         raise ValueError("ADAPTORCH_MCP_TIMEOUT_SECONDS must be > 0")
 
-    server = build_hardened_mcp_server(
+    server = _build_server_for_env(
         base_url=resolved_env.get("ADAPTORCH_CONTROL_PLANE_BASE_URL", _HOSTED_BASE_URL),
         api_token=api_token,
         timeout_seconds=timeout_seconds,
-        exposure_profile=resolve_exposure_profile(resolved_env),
-        allow_insecure=insecure_control_plane_allowed(resolved_env),
+        resolved_env=resolved_env,
     )
     app = create_mcp_http_app(server=server, auth_token=http_auth_token)
     return protect_status_endpoints(app, http_auth_token)

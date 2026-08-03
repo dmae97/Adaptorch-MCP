@@ -40,6 +40,16 @@ export ADAPTORCH_CONTROL_PLANE_TOKEN="<ado_live_your-key>"
 adaptorch-mcp --transport stdio --base-url https://adaptorch.com
 ```
 
+For a BYOK-only control plane, configure the provider credential in the MCP process environment:
+
+```bash
+export ADAPTORCH_MCP_PROVIDER="openai"
+export ADAPTORCH_MCP_PROVIDER_MODEL="gpt-4.1-mini"
+export ADAPTORCH_MCP_PROVIDER_API_KEY="<provider-api-key>"
+```
+
+The key is never exposed as an MCP tool argument or JSON body field. It is sent only on run submission, redacted from errors, and omitted from status, artifact, usage, and catalog requests. Older engines without provider-credential support fail closed; source checkouts can install the current engine with `make engine-local ENGINE_PATH=../adaptorch`.
+
 Runs submitted through this wrapper are stamped `metadata.connector_source="mcp"` by the engine, so they appear in the dashboard MCP status card and `https://adaptorch.com/app/runs` for the key's tenant.
 
 ## Run HTTP MCP
@@ -80,7 +90,7 @@ The built-in HTTP listener is loopback-only. Put an authenticated TLS reverse pr
 
 | Command | Purpose | Important options |
 | --- | --- | --- |
-| `adaptorch-mcp` | Start the stdio or HTTP MCP server. | `--transport stdio|http`, `--base-url`, `--api-token`, `--timeout-seconds`, `--stdio-framing`, `--http-host`, `--http-port`, `--http-auth-token` |
+| `adaptorch-mcp` | Start the stdio or HTTP MCP server. | `--transport {stdio,http}`, `--base-url`, `--api-token`, `--timeout-seconds`, `--stdio-framing`, `--http-host`, `--http-port`, `--http-auth-token` |
 | `adaptorch-mcp-doctor` | Print redacted local diagnostics. | `--json`, `--strict` |
 | `adaptorch-mcp-smoke` | Verify stdio `initialize` + `tools/list`. | `--command`, `--base-url`, `--api-token`, `--timeout-seconds`, repeatable `--expected-tool` |
 
@@ -92,6 +102,9 @@ For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this o
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch API key (`ado_live_*`/`ado_test_*`, legacy `ak_*`) from `/app/api-keys`. | Required unless `--api-token` is passed. |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | Base URL used when `--base-url` is omitted. | Trimmed and validated as HTTP(S); do not embed credentials. |
+| `ADAPTORCH_MCP_PROVIDER` | BYOK provider name. | Set with `ADAPTORCH_MCP_PROVIDER_MODEL`; run submission only. |
+| `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK provider model. | Set with `ADAPTORCH_MCP_PROVIDER`; run submission only. |
+| `ADAPTORCH_MCP_PROVIDER_API_KEY` | BYOK provider key. | Process-local and secret-safe; optional only for keyless providers. |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Required for HTTP and must differ from the upstream token. |
 | `ADAPTORCH_MCP_EXPOSURE_PROFILE` | MCP exposure policy. | `remote` (default) hides local route/trace oracles; `full` explicitly restores the parent surface. |
 | `ADAPTORCH_MCP_ALLOW_INSECURE_CONTROL_PLANE` | Development-only remote HTTP opt-in. | Truthy values allow plaintext non-loopback control-plane URLs; never enable in production. |

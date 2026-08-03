@@ -1,8 +1,11 @@
+# mypy: disable-error-code="import-not-found,misc,no-any-return"
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Final
+from typing import Any, Final, Protocol
 
+import adaptorch.n8n_connector as parent_n8n_connector
 from adaptorch.mcp_server import AdaptOrchMCPServer, MCPToolBackend, NotificationSink
 from adaptorch.n8n_connector import N8nConnectorConfig, N8nControlPlaneConnector
 
@@ -57,9 +60,21 @@ _FULL_ONLY_TOOL_NAMES: Final = (
     "adaptorch_route_topology",
 )
 _REQUIRED_FULL_TOOL_NAMES: Final = (*REMOTE_TOOL_NAMES, *_FULL_ONLY_TOOL_NAMES)
-_REMOTE_RESOURCE_URIS: Final = frozenset(
-    {"adaptorch://server-info", "adaptorch://plans/cloud"}
-)
+_REMOTE_RESOURCE_URIS: Final = frozenset({"adaptorch://server-info", "adaptorch://plans/cloud"})
+
+
+class ProviderCredentialConfig(Protocol):
+    @property
+    def provider(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def model(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def api_key(self) -> str | None:
+        raise NotImplementedError
 
 
 class _InvalidExposureProfileError(ValueError):
@@ -126,18 +141,14 @@ class HardenedMCPServer(AdaptOrchMCPServer):
         exposure_profile: ExposureProfile,
     ) -> None:
         if exposure_profile not in {REMOTE_EXPOSURE_PROFILE, FULL_EXPOSURE_PROFILE}:
-            raise _InvalidExposureProfileError(
-                "exposure profile must be 'remote' or 'full'"
-            )
+            raise _InvalidExposureProfileError("exposure profile must be 'remote' or 'full'")
         super().__init__(backend=backend)
-        self._exposure_profile = exposure_profile
+        self._exposure_profile: ExposureProfile = exposure_profile
         parent_response = super().handle_message(
             {"jsonrpc": "2.0", "id": 0, "method": "tools/list", "params": {}}
         )
         if parent_response is None:
-            raise ParentContractError(
-                "parent AdaptOrch MCP did not return its tool contract"
-            )
+            raise ParentContractError("parent AdaptOrch MCP did not return its tool contract")
         tools = parent_response.get("result", {}).get("tools", [])
         names = tuple(
             item["name"]
@@ -235,6 +246,38 @@ class HardenedMCPServer(AdaptOrchMCPServer):
         return response
 
 
+def _parent_connector_config(
+    *,
+    base_url: str,
+    api_token: str,
+    timeout_seconds: float,
+    provider_credential: ProviderCredentialConfig | None,
+) -> N8nConnectorConfig:
+    config_kwargs: dict[str, Any] = {
+        "base_url": base_url,
+        "api_token": api_token.strip(),
+        "timeout_seconds": timeout_seconds,
+    }
+    if provider_credential is not None:
+        credential_type = getattr(
+            parent_n8n_connector,
+            "ControlPlaneProviderCredential",
+            None,
+        )
+        config_fields = getattr(N8nConnectorConfig, "__dataclass_fields__", {})
+        if credential_type is None or "provider_credential" not in config_fields:
+            raise RuntimeError(
+                "installed adaptorch engine is too old for MCP provider credentials; "
+                "install an engine revision with ControlPlaneProviderCredential support"
+            )
+        config_kwargs["provider_credential"] = credential_type(
+            provider=provider_credential.provider,
+            model=provider_credential.model,
+            api_key=provider_credential.api_key,
+        )
+    return N8nConnectorConfig(**config_kwargs)
+
+
 def build_hardened_mcp_server(
     *,
     base_url: str,
@@ -242,14 +285,16 @@ def build_hardened_mcp_server(
     timeout_seconds: float,
     exposure_profile: ExposureProfile,
     allow_insecure: bool,
+    provider_credential: ProviderCredentialConfig | None = None,
 ) -> HardenedMCPServer:
     """Build the parent control-plane backend behind the hardened MCP facade."""
     validated_url = validate_control_plane_url(base_url, allow_insecure=allow_insecure)
     backend = N8nControlPlaneConnector(
-        N8nConnectorConfig(
+        _parent_connector_config(
             base_url=validated_url,
-            api_token=api_token.strip(),
+            api_token=api_token,
             timeout_seconds=timeout_seconds,
+            provider_credential=provider_credential,
         )
     )
     return HardenedMCPServer(backend=backend, exposure_profile=exposure_profile)

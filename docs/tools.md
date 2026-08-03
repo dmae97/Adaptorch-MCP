@@ -33,6 +33,12 @@ installed `adaptorch` engine and are asserted by
 `supported_synthesis_modes`, `deprecated_synthesis_mode_aliases`, `topologies`, and
 `output_extractor_modes`. Older engines that omit those fields still project cleanly.
 
+## BYOK run admission
+
+Provider credentials are process configuration, not part of the public `adaptorch_run` input schema. Set `ADAPTORCH_MCP_PROVIDER` and `ADAPTORCH_MCP_PROVIDER_MODEL` together, plus `ADAPTORCH_MCP_PROVIDER_API_KEY` for credentialed providers. The wrapper forwards them only as `X-Provider`, `X-Provider-Model`, and `X-Provider-Key` headers on `POST /v1/runs`.
+
+The key is omitted from tool arguments, request bodies, non-run requests, repr output, and errors. A partial configuration fails before the server starts, and an installed engine without provider-credential support fails closed rather than silently sending an unauthenticated run.
+
 ## Tenant usage awareness
 
 Usage is scoped by the `ADAPTORCH_CONTROL_PLANE_TOKEN` you configure. The control plane

@@ -49,6 +49,16 @@ Use that key as `ADAPTORCH_CONTROL_PLANE_TOKEN`:
 export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
 ```
 
+If the control plane is BYOK-only, keep provider credentials in the local MCP process environment:
+
+```bash
+export ADAPTORCH_MCP_PROVIDER="openai"
+export ADAPTORCH_MCP_PROVIDER_MODEL="gpt-4.1-mini"
+export ADAPTORCH_MCP_PROVIDER_API_KEY="<provider-api-key>"
+```
+
+These values are not MCP tool arguments or JSON body fields. They are attached only to run submission headers; the provider key is redacted from errors and omitted from status, artifact, and usage requests.
+
 ### Signup → MCP → dashboard run list
 
 1. Sign up at `/app/signup` and open `/app/api-keys`.
@@ -169,8 +179,8 @@ uv sync --all-packages --extra dev
 uv run adaptorch-mcp --help
 ```
 
-`pyproject.toml` pins the engine to the published `adaptorch` git revision. To validate the
-wrapper against a local engine checkout (algorithm-parity runs), install it over the pin:
+`uv.lock` pins the engine to the published `adaptorch` git revision. To validate the
+wrapper against a local engine checkout (algorithm-parity and MCP BYOK runs), install it over the pin:
 
 ```bash
 make engine-local ENGINE_PATH=../adaptorch
@@ -224,7 +234,7 @@ PY
 
 | Command | Purpose | Important options |
 | --- | --- | --- |
-| `adaptorch-mcp` | Start the stdio or HTTP MCP server. | `--transport stdio|http`, `--base-url`, `--api-token`, `--timeout-seconds`, `--stdio-framing`, `--http-host`, `--http-port`, `--http-auth-token` |
+| `adaptorch-mcp` | Start the stdio or HTTP MCP server. | `--transport {stdio,http}`, `--base-url`, `--api-token`, `--timeout-seconds`, `--stdio-framing`, `--http-host`, `--http-port`, `--http-auth-token` |
 | `adaptorch-mcp-doctor` | Print redacted local diagnostics. | `--json`, `--strict` |
 | `adaptorch-mcp-smoke` | Verify stdio `initialize` + `tools/list`. | `--command`, `--base-url`, `--api-token`, `--timeout-seconds`, repeatable `--expected-tool` |
 
@@ -239,6 +249,9 @@ explicitly in checked-in MCP client configs for reproducible behavior.
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch token. | Required unless `--api-token` is passed. |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | Base URL used when `--base-url` is omitted. | Trimmed and validated as HTTP(S); do not embed credentials. |
+| `ADAPTORCH_MCP_PROVIDER` | BYOK provider name. | Set with `ADAPTORCH_MCP_PROVIDER_MODEL`; forwarded only on run submission. |
+| `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK provider model. | Set with `ADAPTORCH_MCP_PROVIDER`; forwarded only on run submission. |
+| `ADAPTORCH_MCP_PROVIDER_API_KEY` | BYOK provider secret. | Process-local, omitted from tool schemas/bodies and non-run requests; optional only for keyless providers. |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Keep separate from the upstream control-plane token. |
 | `ADAPTORCH_MCP_ALLOWED_ORIGINS` | Comma-separated HTTP origin allowlist. | Use with browser or remote HTTP clients. |
 | `ADAPTORCH_MCP_MAX_PAYLOAD_SIZE_BYTES` | Maximum accepted HTTP request body size. | Keep bounded for public deployments. |

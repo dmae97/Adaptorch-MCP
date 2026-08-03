@@ -1,3 +1,5 @@
+# mypy: disable-error-code="import-not-found"
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import os
@@ -31,6 +33,9 @@ NON_ENGINE_DOC_TOKENS = frozenset(
         "ADAPTORCH_MCP_HTTP_PORT",
         "ADAPTORCH_MCP_EXPOSURE_PROFILE",
         "ADAPTORCH_MCP_ALLOW_INSECURE_CONTROL_PLANE",
+        "ADAPTORCH_MCP_PROVIDER",
+        "ADAPTORCH_MCP_PROVIDER_MODEL",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY",
         # Line-wrapped diagram fragment for ADAPTORCH_CONTROL_PLANE_TOKEN.
         "ADAPTORCH_CONTROL",
     }
@@ -50,8 +55,7 @@ def _documentation_paths() -> list[Path]:
 
 def _env_tokens_by_path(paths: list[Path]) -> dict[Path, set[str]]:
     return {
-        path: set(ENV_TOKEN_PATTERN.findall(path.read_text(encoding="utf-8")))
-        for path in paths
+        path: set(ENV_TOKEN_PATTERN.findall(path.read_text(encoding="utf-8"))) for path in paths
     }
 
 
@@ -113,6 +117,9 @@ def test_package_readme_documents_hardened_defaults_and_claim_boundary() -> None
     for required in (
         "ADAPTORCH_MCP_EXPOSURE_PROFILE",
         "ADAPTORCH_MCP_ALLOW_INSECURE_CONTROL_PLANE",
+        "ADAPTORCH_MCP_PROVIDER",
+        "ADAPTORCH_MCP_PROVIDER_MODEL",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY",
         "remote",
         "full",
         "reverse engineering cannot be made impossible",
