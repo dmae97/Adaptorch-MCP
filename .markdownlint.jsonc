@@ -1,0 +1,11 @@
+{
+  // GitHub-rendered README uses the standard hero pattern (centered preview,
+  // doc-link row, shields badges) plus <sub> figure captions. Allow exactly
+  // the inline elements in use; everything else stays at markdownlint defaults.
+  "default": true,
+  "MD033": {
+    "allowed_elements": ["p", "a", "img", "strong", "sub", "br"]
+  },
+  // Badge/link rows and shield URLs exceed usual prose width by design.
+  "MD013": false
+}
