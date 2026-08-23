@@ -363,4 +363,4 @@ Never commit `.env`, API keys, bearer tokens, private keys, or MCP client tokens
 
 ## License
 
-Proprietary — Copyright EGG. All rights reserved. See `LICENSE`.
+Proprietary — Copyright ClassicMate. All rights reserved. See `LICENSE`.
