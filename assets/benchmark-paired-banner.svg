@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="AdaptOrch measured paired run: baseline 86.7 percent vs verified 100.0 percent on 30 shared ledger tasks, plus 13.3 points, 95 percent CI 3.3 to 26.7">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141425"/>
+      <stop offset="1" stop-color="#1a1a2e"/>
+    </linearGradient>
+    <linearGradient id="barA" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a3a55"/>
+      <stop offset="1" stop-color="#4a4a68"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#2a2a45" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="420" fill="url(#bg)"/>
+  <rect width="1200" height="420" fill="url(#grid)" opacity="0.55"/>
+  <rect x="6" y="6" width="1188" height="408" fill="none" stroke="#00d26a" stroke-opacity="0.35" stroke-width="2" rx="14"/>
+
+  <!-- wordmark -->
+  <text x="52" y="74" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace" font-size="34" font-weight="700" fill="#EDE6D6">AdaptOrch</text>
+  <text x="52" y="104" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="15" fill="#8f8fb0">Your agents talk. We decide if they're right.</text>
+
+  <!-- headline stat -->
+  <text x="52" y="185" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="20" fill="#9aa0c0">measured paired run &#183; 30 shared ledger tasks</text>
+  <text x="52" y="262" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="64" font-weight="700" fill="#b9b9d6">86.7%</text>
+  <path d="M 300 246 L 372 246 M 352 226 L 374 246 L 352 266" fill="none" stroke="#00d26a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="402" y="262" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="64" font-weight="700" fill="#00d26a">100.0%</text>
+
+  <!-- chips -->
+  <g font-family="ui-monospace, Menlo, Consolas, monospace" font-size="16">
+    <rect x="52" y="292" width="150" height="38" rx="19" fill="#00d26a" fill-opacity="0.12" stroke="#00d26a" stroke-opacity="0.6"/>
+    <text x="76" y="317" fill="#00d26a">+13.3 pp</text>
+    <rect x="216" y="292" width="238" height="38" rx="19" fill="#ffffff" fill-opacity="0.05" stroke="#4a4a68"/>
+    <text x="238" y="317" fill="#b9b9d6">95% CI [+3.3, +26.7]</text>
+    <rect x="468" y="292" width="132" height="38" rx="19" fill="#ffffff" fill-opacity="0.05" stroke="#4a4a68"/>
+    <text x="492" y="317" fill="#b9b9d6">significant</text>
+  </g>
+
+  <!-- bars for context -->
+  <g font-family="ui-monospace, Menlo, Consolas, monospace" font-size="13" fill="#8f8fb0">
+    <text x="660" y="196">same session &#183; same seeds &#183; same units</text>
+    <text x="660" y="228">baseline (robust, no verifier gate)</text>
+    <rect x="660" y="238" width="330" height="18" rx="9" fill="url(#barA)"/>
+    <text x="998" y="252" fill="#b9b9d6">86.7%</text>
+    <text x="660" y="288" fill="#cfeee0">with AdaptOrch verifier gate</text>
+    <rect x="660" y="298" width="380" height="18" rx="9" fill="#00d26a" fill-opacity="0.85"/>
+    <text x="1048" y="312" fill="#00d26a">100.0%</text>
+  </g>
+
+  <!-- footnote -->
+  <text x="52" y="374" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="13" fill="#70709a">gemma-4-31b &#183; Cerebras &#183; deterministic seeds &#183; internal reproducible regression evidence (synthetic ledger suite)</text>
+
+  <!-- CTA -->
+  <a href="https://adaptorch.com">
+    <rect x="900" y="44" width="248" height="48" rx="24" fill="#00d26a"/>
+    <text x="962" y="75" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#101021">adaptorch.com</text>
+  </a>
+</svg>

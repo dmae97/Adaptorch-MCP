@@ -25,6 +25,7 @@
   <img alt="MCP" src="https://img.shields.io/badge/MCP-stdio%20%7C%20HTTP-22d3ee?style=flat-square">
   <img alt="License Proprietary" src="https://img.shields.io/badge/license-Proprietary-94a3b8?style=flat-square">
   <img alt="Public ready" src="https://img.shields.io/badge/public--ready-yes-86efac?style=flat-square">
+  <a href="https://adaptorch.com"><img alt="Live on adaptorch.com" src="https://img.shields.io/badge/live-adaptorch.com-00d26a?style=flat-square"></a>
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
 </p>
 
@@ -144,6 +145,31 @@ uvx --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adapto
 | Evidence without context switching | `adaptorch_get_artifacts` | Outputs, traces, and run proof come back into the Claude Code conversation. |
 | Safer setup support | `adaptorch-mcp-doctor` | Users can paste redacted diagnostics without leaking tokens. |
 | Fast install loop | `adaptorch-mcp-smoke` | Local MCP wiring is verified with `initialize` + `tools/list`. |
+
+## Measured: the verifier gate wins on identical tasks
+
+<p align="center">
+  <a href="https://adaptorch.com"><img src="assets/benchmark-paired-banner.svg" alt="AdaptOrch measured paired run — baseline 86.7% vs verified 100.0% on 30 shared ledger tasks, +13.3pp, 95% CI [+3.3, +26.7]" width="100%"></a>
+</p>
+
+Both arms see the **same 30 units, same seeds, same session** (gemma-4-31b on
+Cerebras), so the paired delta cancels run-to-run drift:
+
+| Arm | Accuracy |
+| --- | --- |
+| Baseline (robust, no verifier gate) | 86.7% |
+| **With AdaptOrch verifier gate** | **100.0%** |
+
+Paired delta **+13.3pp**, 95% CI **[+3.3, +26.7]** — significant.
+
+> Scope: internal reproducible regression evidence on a synthetic ledger
+> suite (evidence experiment `paired_confirmatory_ledger`, full run IDs and
+> reproduce commands shipped with the core repository). Not an official
+> third-party benchmark.
+
+Run your own workload through the hosted kernel at
+**[adaptorch.com](https://adaptorch.com)** — free starter includes an API key
+and 1,000 calls/month.
 
 ## Scenario benchmark projection
 
