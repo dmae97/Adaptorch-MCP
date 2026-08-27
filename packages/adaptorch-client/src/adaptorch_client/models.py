@@ -144,6 +144,11 @@ class Run(PayloadResult):
 
     run_id: str
     status: str
+    # status is liveness: did the run finish. result_status is the outcome: was
+    # the answer accepted. Both are absent while a run is still queued, and a
+    # finished run can carry a non-OK result, so they must not be conflated.
+    result_status: str | None
+    topology: str | None
     kind: str | None
     phase: str | None
     created_at: str | None
@@ -166,6 +171,8 @@ class Run(PayloadResult):
             record,
             run_id=string_at(record, "run_id", path),
             status=string_at(record, "status", path),
+            result_status=optional_string_at(record, "result_status", path),
+            topology=optional_string_at(record, "topology", path),
             kind=optional_string_at(record, "kind", path),
             phase=optional_string_at(record, "phase", path),
             created_at=optional_string_at(record, "created_at", path),

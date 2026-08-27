@@ -50,6 +50,21 @@ def test_run_parses_canonical_fields() -> None:
     assert result.links == {"self": "/v1/runs/run-1"}
 
 
+def test_run_reports_outcome_separately_from_liveness() -> None:
+    payload = make_run_payload(status="SUCCEEDED")
+    payload["result_status"] = "OK"
+    payload["topology"] = "parallel"
+
+    result = Run.from_payload(payload)
+
+    # status answers "did the run finish". result_status answers "was the answer
+    # accepted". A run can succeed as a pipeline and still not produce a usable
+    # result, so reading one for the other silently overstates the outcome.
+    assert result.status == "SUCCEEDED"
+    assert result.result_status == "OK"
+    assert result.topology == "parallel"
+
+
 def test_run_defaults_optional_fields_to_none() -> None:
     result = Run.from_payload({"run_id": "run-1", "status": "queued"})
 
@@ -58,6 +73,9 @@ def test_run_defaults_optional_fields_to_none() -> None:
     assert result.created_at is None
     assert result.policy_version is None
     assert result.links is None
+    # A queued run has no outcome yet; absent must not read as a value.
+    assert result.result_status is None
+    assert result.topology is None
 
 
 def test_run_tolerates_and_preserves_unknown_additive_fields() -> None:
