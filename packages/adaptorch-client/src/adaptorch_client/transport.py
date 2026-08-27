@@ -27,16 +27,32 @@ def _reject_json_constant(_value: str) -> Never:
 
 
 def _parse_finite_float(text: str) -> float:
-    value = float(text)
+    """Reject JSON numbers that are unparseable or not finite.
+
+    Raising ValueError is this hook's contract; _decode_mapping catches it and
+    reports AdaptOrchAPIError. As the parse_float hook the input is always a
+    valid number token, where overflow like 1e999 yields inf rather than an
+    exception, so the finiteness check carries the rejection. The parse guard
+    keeps the same single failure type if the helper is ever called directly.
+    """
+    try:
+        value = float(text)
+    except ValueError:
+        raise ValueError("unparseable JSON number") from None
     if not math.isfinite(value):
         raise ValueError("non-finite JSON number")
     return value
 
 
 class _ReadableResponse(Protocol):
-    headers: Message
+    # Both a success response and an HTTPError are read through this protocol.
+    # headers must be a read-only property: declaring it as a mutable attribute
+    # makes it invariant, which rejects HTTPError's property. read takes its
+    # size positionally because the standard library names that parameter n.
+    @property
+    def headers(self) -> Message: ...
 
-    def read(self, amount: int = -1) -> bytes: ...
+    def read(self, amount: int = -1, /) -> bytes: ...
 
 
 class _NoRedirectHandler(HTTPRedirectHandler):
