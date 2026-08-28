@@ -8,7 +8,7 @@ The package is currently distributed from this repository rather than PyPI. Inst
 it from the package subdirectory:
 
 ```bash
-pip install "adaptorch-client @ git+https://github.com/dmae97/Adaptorch-MCP.git#subdirectory=packages/adaptorch-client"
+pip install adaptorch-client
 ```
 
 ## First run
