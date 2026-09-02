@@ -125,6 +125,29 @@ claude mcp add --transport http adaptorch https://adaptorch.com/mcp \
 
 Cursor, Codex, Gemini CLI, VS Code and Windsurf snippets: <https://adaptorch.com/mcp-docs>.
 
+Clients that only speak stdio (Claude Desktop, older Cursor builds) reach the same
+endpoint through [`mcp-remote`](https://github.com/geelen/mcp-remote); no AdaptOrch
+install is involved:
+
+```json
+{
+  "mcpServers": {
+    "adaptorch": {
+      "command": "npx",
+      "args": [
+        "-y", "mcp-remote", "https://adaptorch.com/mcp",
+        "--transport", "http-only",
+        "--header", "Authorization:${ADAPTORCH_AUTH_HEADER}"
+      ],
+      "env": { "ADAPTORCH_AUTH_HEADER": "Bearer ado_..." }
+    }
+  }
+}
+```
+
+(`Authorization:${...}` without spaces and the value in `env` is the documented
+workaround for clients that mangle spaces in `args`.)
+
 ### 2. Python SDK — hosted API, standard library only
 
 ```bash
