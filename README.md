@@ -137,9 +137,9 @@ install is involved:
       "args": [
         "-y", "mcp-remote", "https://adaptorch.com/mcp",
         "--transport", "http-only",
-        "--header", "Authorization:${ADAPTORCH_AUTH_HEADER}"
+        "--header", "Authorization:${AUTH_HEADER}"
       ],
-      "env": { "ADAPTORCH_AUTH_HEADER": "Bearer ado_..." }
+      "env": { "AUTH_HEADER": "Bearer ado_..." }
     }
   }
 }
