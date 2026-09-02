@@ -29,9 +29,9 @@
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
 </p>
 
-**AdaptOrch MCP** is the public MCP wrapper for [AdaptOrch](https://adaptorch.com): a reliability kernel that lets Claude Code route tasks, launch orchestrated runs, and pull evidence artifacts back into the chat.
+**AdaptOrch MCP** is the official MCP server for [AdaptOrch](https://adaptorch.com), the service that checks AI-written code and hands back a replayable receipt. From Claude Code (or any MCP client) it submits work to the hosted control plane, routes it through the right topology, and pulls the receipt — run status, traces, artifacts — back into the chat.
 
-Use it when a coding task is too large, too ambiguous, or too expensive to trust to one single-pass response.
+Use it when your coding agent says a patch works and you want the receipt before you merge, or when a task is too large, too ambiguous, or too expensive to trust to one single-pass response.
 
 ```text
 Claude Code → AdaptOrch MCP → route topology → run with synthesis → retrieve artifacts
@@ -111,29 +111,38 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
 
 ## Install
 
-### pip
+There are three ways in. Pick by what you are: an agent, a program, or a terminal.
+
+### 1. Hosted MCP — nothing to install (recommended)
+
+The control plane serves MCP over HTTP at `https://adaptorch.com/mcp`. Any client
+that speaks HTTP MCP connects directly with your `ado_*` key:
 
 ```bash
-pip install adaptorch-mcp
+claude mcp add --transport http adaptorch https://adaptorch.com/mcp \
+  --header "Authorization: Bearer ${ADAPTORCH_API_KEY}"
 ```
 
-If AdaptOrch core is not yet on PyPI, install it from GitHub first:
+Cursor, Codex, Gemini CLI, VS Code and Windsurf snippets: <https://adaptorch.com/mcp-docs>.
+
+### 2. Python SDK — hosted API, standard library only
 
 ```bash
-pip install "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git"
-pip install adaptorch-mcp
+pip install adaptorch-client
 ```
 
-### uvx (one-shot, no install)
+`adaptorch-client` has no dependencies and covers every User API v1 endpoint
+(`contracts/openapi/adaptorch-user-api.v1.yaml`). See
+[packages/adaptorch-client](packages/adaptorch-client/README.md).
+
+### 3. This package — local engine required
+
+`adaptorch-mcp` wraps the AdaptOrch parent engine in-process; it is for
+environments where that engine is installed. The engine is not publicly
+distributed, so for everyone else the hosted endpoint above is the MCP path.
 
 ```bash
-uvx adaptorch-mcp --help
-```
-
-With the adaptorch dependency from GitHub:
-
-```bash
-uvx --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adaptorch-mcp --help
+uvx adaptorch-mcp --help   # only where the parent engine is importable
 ```
 
 ## Why Claude Code users feel it quickly
