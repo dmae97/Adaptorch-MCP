@@ -32,8 +32,11 @@ jobs:
       - name: Typecheck
         run: uv run mypy packages/adaptorch-mcp/src
       - name: Test
-        run: uv run pytest packages/adaptorch-mcp/tests -q
+        run: uv run pytest packages/adaptorch-mcp/tests packages/adaptorch/tests -q
       - name: Doctor
         run: uv run adaptorch-mcp-doctor --json
       - name: Build package
         run: uv run python -m build packages/adaptorch-mcp
+      - name: Public wheel gate
+        # No public wheel may carry engine code or depend on the private core.
+        run: uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli adaptorch-mcp

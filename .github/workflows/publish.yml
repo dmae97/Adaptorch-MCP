@@ -1,10 +1,27 @@
 name: publish
 
+# One workflow, one package per run. The tag names the package and the version:
+#   adaptorch-v0.2.0, adaptorch-client-v0.1.0, adaptorch-cli-v0.1.0, adaptorch-mcp-v0.5.0
+# The tag version must equal the package's pyproject version, and every wheel
+# passes scripts/check_public_wheels.py before it is uploaded.
 on:
   push:
     tags:
+      - 'adaptorch-v*'
+      - 'adaptorch-client-v*'
+      - 'adaptorch-cli-v*'
       - 'adaptorch-mcp-v*'
   workflow_dispatch:
+    inputs:
+      package:
+        description: Package directory under packages/ to build and publish
+        required: true
+        type: choice
+        options:
+          - adaptorch
+          - adaptorch-client
+          - adaptorch-cli
+          - adaptorch-mcp
 
 permissions:
   contents: read
@@ -20,6 +37,37 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Resolve package and version from the tag
+        id: target
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PACKAGE: ${{ inputs.package }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            package="$INPUT_PACKAGE"
+            version=""
+          else
+            package="${REF_NAME%-v*}"
+            version="${REF_NAME##*-v}"
+          fi
+          case "$package" in
+            adaptorch|adaptorch-client|adaptorch-cli|adaptorch-mcp) ;;
+            *) echo "unknown package '$package' from '$REF_NAME'"; exit 1 ;;
+          esac
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Tag version must match pyproject
+        if: github.event_name == 'push'
+        env:
+          PACKAGE: ${{ steps.target.outputs.package }}
+          VERSION: ${{ steps.target.outputs.version }}
+        run: |
+          declared="$(python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["project"]["version"])' "packages/$PACKAGE/pyproject.toml")"
+          if [ "$declared" != "$VERSION" ]; then
+            echo "tag says $VERSION but packages/$PACKAGE/pyproject.toml says $declared"
+            exit 1
+          fi
       - name: Install workspace
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -27,14 +75,30 @@ jobs:
           git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
           uv sync --all-packages --extra dev
       - name: Verify
+        env:
+          PACKAGE: ${{ steps.target.outputs.package }}
         run: |
-          uv run ruff check packages/adaptorch-mcp
-          uv run mypy packages/adaptorch-mcp/src
-          uv run pytest packages/adaptorch-mcp/tests -q
-          uv run adaptorch-mcp-doctor --json
+          pkg="packages/$PACKAGE"
+          if [ -d "$pkg/src" ]; then
+            uv run ruff check "$pkg"
+            uv run mypy "$pkg/src"
+          fi
+          if [ -d "$pkg/tests" ]; then
+            uv run pytest "$pkg/tests" -q
+          fi
+          if [ "$PACKAGE" = "adaptorch-mcp" ]; then
+            uv run adaptorch-mcp-doctor --json
+          fi
+      - name: Public wheel gate
+        env:
+          PACKAGE: ${{ steps.target.outputs.package }}
+        run: uv run python scripts/check_public_wheels.py --package "$PACKAGE"
       - name: Build
-        run: uv run python -m build packages/adaptorch-mcp --outdir dist
+        env:
+          PACKAGE: ${{ steps.target.outputs.package }}
+        run: uv run python -m build "packages/$PACKAGE" --outdir dist
       - name: Publish to PyPI
         env:
+          PACKAGE: ${{ steps.target.outputs.package }}
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: uv publish --check-url https://pypi.org/simple/adaptorch-mcp/ dist/*
+        run: uv publish --check-url "https://pypi.org/simple/$PACKAGE/" dist/*

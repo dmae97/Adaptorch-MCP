@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Meta-package. It carries no code: `pip install adaptorch` installs the hosted
+# API client and the adaptorchctl CLI. Releases 0.1.1 and 0.1.2 of this name
+# shipped the private engine and were deleted on 2026-09-02; the version starts
+# above them so no resolver ever prefers a cached copy of the old core.
+# scripts/check_public_wheels.py fails the build if this wheel ever grows a
+# module or a dependency on the core.
+[project]
+name = "adaptorch"
+version = "0.2.0"
+description = "AdaptOrch for Python: hosted-API client and adaptorchctl CLI. Receipts for AI-written code."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+authors = [{ name = "ClassicMate" }]
+dependencies = ["adaptorch-client>=0.1,<0.2", "adaptorch-cli>=0.1,<0.2"]
+keywords = [
+  "ai patch verification",
+  "ai code review",
+  "coding agent receipts",
+  "claude code",
+  "cursor",
+  "mcp",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Testing",
+]
+
+[project.urls]
+Homepage = "https://adaptorch.com"
+Documentation = "https://adaptorch.com/mcp-docs"
+Repository = "https://github.com/dmae97/Adaptorch-MCP"
+Issues = "https://github.com/dmae97/Adaptorch-MCP/issues"
+Security = "https://adaptorch.com/trust"
+
+[tool.setuptools]
+packages = []

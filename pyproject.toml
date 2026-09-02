@@ -46,6 +46,7 @@ files = [
 pythonpath = [
   "packages/adaptorch-client/src",
   "packages/adaptorch-cli/src",
+  "packages/adaptorch/tests",
 ]
 testpaths = [
   "packages/adaptorch-client/tests",

@@ -103,6 +103,27 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 4. Tag a release like `adaptorch-mcp-v0.5.0`.
 5. Let `.github/workflows/publish.yml` build and publish without storing a PyPI API token.
 
+## One workflow, four packages
+
+`publish.yml` reads the package and the version from the tag name:
+
+| Tag | Publishes | Notes |
+| --- | --- | --- |
+| `adaptorch-client-v<version>` | `packages/adaptorch-client` | stdlib-only hosted API client |
+| `adaptorch-cli-v<version>` | `packages/adaptorch-cli` | `adaptorchctl`; depends on `adaptorch-client` |
+| `adaptorch-v<version>` | `packages/adaptorch` | meta-package: installs client + cli, no code |
+| `adaptorch-mcp-v<version>` | `packages/adaptorch-mcp` | local-engine wrapper |
+
+The tag version must equal the package's `pyproject.toml` version, and every
+wheel passes `scripts/check_public_wheels.py` (no engine code, no dependency on
+the `adaptorch` core distribution) before upload. Order for a first release of
+the meta-package: `adaptorch-client` → `adaptorch-cli` → `adaptorch`, because
+the meta-package pins both. Run the gate locally first:
+
+```bash
+uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli
+```
+
 ## Post-publish smoke
 
 ```bash
