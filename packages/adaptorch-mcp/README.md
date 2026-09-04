@@ -102,7 +102,7 @@ For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this o
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch API key (`ado_live_*`/`ado_test_*`, legacy `ak_*`) from `/app/api-keys`. | Required unless `--api-token` is passed. |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | Base URL used when `--base-url` is omitted. | Trimmed and validated as HTTP(S); do not embed credentials. |
-| `ADAPTORCH_MCP_PROVIDER` | BYOK provider name. | Set with `ADAPTORCH_MCP_PROVIDER_MODEL`; run submission only. |
+| `ADAPTORCH_MCP_PROVIDER` | BYOK provider name, or `auto`. | Set with `ADAPTORCH_MCP_PROVIDER_MODEL`; run submission only. `auto` uses the one provider whose own key variable is set (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`) and fails closed otherwise. |
 | `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK provider model. | Set with `ADAPTORCH_MCP_PROVIDER`; run submission only. |
 | `ADAPTORCH_MCP_PROVIDER_API_KEY` | BYOK provider key. | Process-local and secret-safe; optional only for keyless providers. |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Required for HTTP and must differ from the upstream token. |

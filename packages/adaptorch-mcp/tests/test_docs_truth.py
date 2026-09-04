@@ -147,3 +147,35 @@ def test_env_example_uses_placeholders_for_all_secret_values() -> None:
             assert "://" not in value
 
     assert secret_assignments
+
+
+def test_auto_provider_docs_name_exactly_the_engine_key_variables() -> None:
+    """``ADAPTORCH_MCP_PROVIDER=auto`` docs list the engine's key variables, no more, no fewer.
+
+    The wrapper derives the list from ``adaptorch.providers.DEFAULT_API_KEY_ENV``;
+    this keeps the three places that spell it out for humans from drifting.
+    """
+    from adaptorch.providers import DEFAULT_API_KEY_ENV
+
+    from adaptorch_mcp.runtime import auto_provider_key_envs
+
+    engine_key_envs = set(DEFAULT_API_KEY_ENV.values())
+    assert set(auto_provider_key_envs()) == engine_key_envs
+
+    provider_key_pattern = re.compile(r"\b[A-Z][A-Z0-9]*_API_KEY\b")
+    for path in (
+        REPO_ROOT / "README.md",
+        PACKAGE_ROOT / "README.md",
+        REPO_ROOT / "docs" / "configuration.md",
+    ):
+        text = path.read_text(encoding="utf-8")
+        assert "`auto`" in text, f"{path.name} does not document ADAPTORCH_MCP_PROVIDER=auto"
+        documented = {
+            token
+            for token in provider_key_pattern.findall(text)
+            if not token.startswith("ADAPTORCH_")
+        }
+        assert documented == engine_key_envs, (
+            f"{path.name} names {sorted(documented)}; "
+            f"the engine executes {sorted(engine_key_envs)}"
+        )

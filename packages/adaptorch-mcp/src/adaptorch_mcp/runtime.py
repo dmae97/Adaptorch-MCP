@@ -15,6 +15,7 @@ from adaptorch.mcp_server import (
     create_mcp_http_app,
     serve_stdio,
 )
+from adaptorch.providers import DEFAULT_API_KEY_ENV
 
 from adaptorch_mcp.hardening import (
     HardenedMCPServer,
@@ -30,6 +31,25 @@ _STATUS_PATHS: Final = frozenset({"/mcp/health", "/mcp/metrics"})
 MCP_PROVIDER_ENV: Final = "ADAPTORCH_MCP_PROVIDER"
 MCP_PROVIDER_MODEL_ENV: Final = "ADAPTORCH_MCP_PROVIDER_MODEL"
 MCP_PROVIDER_API_KEY_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY"
+AUTO_PROVIDER: Final = "auto"
+
+
+def auto_provider_key_envs() -> tuple[str, ...]:
+    """The provider key variables ``auto`` inspects, in the order they are reported.
+
+    Derived from the engine's ``DEFAULT_API_KEY_ENV`` so the wrapper can never
+    advertise a provider the engine will not execute.
+    """
+    return tuple(sorted(DEFAULT_API_KEY_ENV.values()))
+
+
+def _discover_provider_keys(env: Mapping[str, str]) -> list[tuple[str, str]]:
+    """``(provider, key_env)`` pairs whose key is set and non-blank, provider-sorted."""
+    return [
+        (provider, key_env)
+        for provider, key_env in sorted(DEFAULT_API_KEY_ENV.items())
+        if env.get(key_env, "").strip()
+    ]
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +81,42 @@ class ProviderCredentialConfig:
         object.__setattr__(self, "api_key", api_key or None)
 
 
+def _resolve_auto_credential(
+    env: Mapping[str, str],
+    *,
+    model: str,
+    explicit_api_key: str | None,
+) -> ProviderCredentialConfig:
+    """Pick the one provider whose key is present in *env*; refuse anything else.
+
+    Mirrors the engine's ``ADAPTORCH_EXECUTION_PROVIDER=auto`` rule (exactly one
+    key, otherwise unresolved) but reads the tenant's own process environment,
+    so the credential that pays for a run is always the tenant's. Messages
+    name variables, never values.
+    """
+    checked = ", ".join(auto_provider_key_envs())
+    if explicit_api_key:
+        raise ValueError(
+            f"{MCP_PROVIDER_ENV}={AUTO_PROVIDER} reads the key from the provider's own "
+            f"variable ({checked}); name the provider in {MCP_PROVIDER_ENV} to pass "
+            f"{MCP_PROVIDER_API_KEY_ENV} explicitly"
+        )
+    found = _discover_provider_keys(env)
+    if not found:
+        raise ValueError(
+            f"{MCP_PROVIDER_ENV}={AUTO_PROVIDER} found no provider key; set exactly one "
+            f"of {checked}"
+        )
+    if len(found) > 1:
+        present = ", ".join(key_env for _provider, key_env in found)
+        raise ValueError(
+            f"{MCP_PROVIDER_ENV}={AUTO_PROVIDER} is ambiguous: {present} are all set; "
+            f"set {MCP_PROVIDER_ENV} to one provider"
+        )
+    provider, key_env = found[0]
+    return ProviderCredentialConfig(provider=provider, model=model, api_key=env[key_env])
+
+
 def resolve_provider_credential(
     env: Mapping[str, str],
 ) -> ProviderCredentialConfig | None:
@@ -72,6 +128,8 @@ def resolve_provider_credential(
         return None
     if not provider or not model:
         raise ValueError(f"{MCP_PROVIDER_ENV} and {MCP_PROVIDER_MODEL_ENV} must be set together")
+    if provider.lower() == AUTO_PROVIDER:
+        return _resolve_auto_credential(env, model=model, explicit_api_key=api_key or None)
     return ProviderCredentialConfig(provider=provider, model=model, api_key=api_key or None)
 
 

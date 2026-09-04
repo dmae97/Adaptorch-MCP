@@ -307,7 +307,7 @@ explicitly in checked-in MCP client configs for reproducible behavior.
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch token. | Required unless `--api-token` is passed. |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | Base URL used when `--base-url` is omitted. | Trimmed and validated as HTTP(S); do not embed credentials. |
-| `ADAPTORCH_MCP_PROVIDER` | BYOK provider name. | Set with `ADAPTORCH_MCP_PROVIDER_MODEL`; forwarded only on run submission. |
+| `ADAPTORCH_MCP_PROVIDER` | BYOK provider name, or `auto`. | Set with `ADAPTORCH_MCP_PROVIDER_MODEL`; forwarded only on run submission. `auto` uses the one provider whose own key variable is set (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`) and fails closed otherwise. |
 | `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK provider model. | Set with `ADAPTORCH_MCP_PROVIDER`; forwarded only on run submission. |
 | `ADAPTORCH_MCP_PROVIDER_API_KEY` | BYOK provider secret. | Process-local, omitted from tool schemas/bodies and non-run requests; optional only for keyless providers. |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Keep separate from the upstream control-plane token. |

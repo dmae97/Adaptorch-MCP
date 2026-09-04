@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | yes unless `--api-token` is passed | Upstream AdaptOrch bearer token or cloud API key |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | no | Base URL used when `--base-url` is omitted; surrounding whitespace is ignored and non-empty values must be HTTP(S) URLs with a host |
-| `ADAPTORCH_MCP_PROVIDER` | BYOK-only deployments | Provider name sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER_MODEL` |
+| `ADAPTORCH_MCP_PROVIDER` | BYOK-only deployments | Provider name sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER_MODEL`. `auto` picks the one provider whose key variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`) is set in the MCP process environment and fails closed, naming the variables, when none or more than one is |
 | `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK-only deployments | Provider model sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER` |
 | `ADAPTORCH_MCP_PROVIDER_API_KEY` | Credentialed BYOK providers | Process-local provider key; optional only for keyless CLI providers |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | HTTP only | Client-facing bearer token for MCP HTTP/SSE |
@@ -35,7 +35,19 @@ export ADAPTORCH_MCP_PROVIDER_MODEL="gpt-4.1-mini"
 export ADAPTORCH_MCP_PROVIDER_API_KEY="<provider-api-key>"
 ```
 
-The wrapper fails closed when provider/model are incomplete or when the installed engine is too old for provider-credential forwarding. The key is excluded from repr output, MCP schemas, JSON request bodies, status/artifact/usage requests, and error text. It is attached only to `POST /v1/runs` as `X-Provider-Key`; provider and model use `X-Provider` and `X-Provider-Model`. The control plane uses the credential for that request and does not store it, while the local MCP process retains its environment until shutdown.
+If the provider's own key variable is already in the environment, `auto` reads it
+instead of a copy. The model is still yours to name; `ADAPTORCH_MCP_PROVIDER_API_KEY`
+is refused alongside `auto` because the wrapper could not tell which provider it
+belongs to:
+
+```bash
+export OPENAI_API_KEY="<provider-api-key>"      # exactly one provider key present
+export ADAPTORCH_MCP_PROVIDER="auto"
+export ADAPTORCH_MCP_PROVIDER_MODEL="gpt-4.1-mini"
+```
+
+The wrapper fails closed when provider/model are incomplete, when `auto` finds no
+provider key or more than one (the message names the variables, never a value), or when the installed engine is too old for provider-credential forwarding. The key is excluded from repr output, MCP schemas, JSON request bodies, status/artifact/usage requests, and error text. It is attached only to `POST /v1/runs` as `X-Provider-Key`; provider and model use `X-Provider` and `X-Provider-Model`. The control plane uses the credential for that request and does not store it, while the local MCP process retains its environment until shutdown.
 
 For source parity against an unreleased engine checkout, run `make engine-local ENGINE_PATH=../adaptorch` before `make check`.
 

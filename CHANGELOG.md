@@ -8,6 +8,17 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ### Added
 
+- `ADAPTORCH_MCP_PROVIDER=auto` picks the tenant's own provider key from the MCP
+  process environment. Same rule as the engine's `ADAPTORCH_EXECUTION_PROVIDER=auto`
+  (exactly one of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`,
+  `OPENROUTER_API_KEY`, `GOOGLE_API_KEY` present), applied to the tenant's machine
+  instead of the operator's deployment, so a hosted control plane that refuses
+  keyless runs (`401 byok_credentials_required`) works without copying a key into
+  a second variable. `ADAPTORCH_MCP_PROVIDER_MODEL` is still required. Zero or
+  more than one key, or `ADAPTORCH_MCP_PROVIDER_API_KEY` set alongside `auto`,
+  fails closed with a message that names variables and never a value. The
+  provider list is derived from `adaptorch.providers.DEFAULT_API_KEY_ENV`; a
+  docs-truth test keeps the three places that spell it out from drifting.
 - Process-local MCP BYOK configuration via `ADAPTORCH_MCP_PROVIDER`, `ADAPTORCH_MCP_PROVIDER_MODEL`, and `ADAPTORCH_MCP_PROVIDER_API_KEY`. Provider credentials are forwarded only on run submission headers, never added to MCP tool arguments or JSON bodies, and provider keys are excluded from repr/error output and non-run requests.
 - Core/wrapper regression coverage for environment validation, secret non-persistence, run-only header forwarding, error redaction, and fail-closed behavior with an older installed engine.
 - `adaptorch_usage` is exposed in the default remote profile, so a client can read its own tenant usage window (plan level, period, used, limit, remaining, percentage) before starting expensive work. The tenant comes from `ADAPTORCH_CONTROL_PLANE_TOKEN`; the tool takes no arguments and a client-supplied tenant is rejected with `-32602`. The default remote surface is now nine tools.
@@ -16,6 +27,16 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 - `packages/adaptorch-mcp/tests/test_engine_algorithm_parity.py`: fails closed when the exposed run schema, remote tool acceptance, capability projection, or docs drift from the installed engine's synthesis/topology/extractor constants.
 - `packages/adaptorch-mcp/tests/test_tenant_usage_surface.py`: exposure, projection, sanitization, and client-supplied-tenant rejection for the usage surface.
 - `make engine-local ENGINE_PATH=../adaptorch` installs a local engine checkout over the git pin so parity gates validate the current algorithm rather than the last published revision.
+
+### Fixed
+
+- The remote profile collapsed a control-plane refusal into `unsupported tool
+  response format`, so a tenant whose MCP process had no provider credential saw
+  nothing about the `X-Provider`, `X-Provider-Model` and `X-Provider-Key` headers
+  the hosted deployment asks for. `CONTROL_PLANE_REJECTED` is now projected with
+  its `status_code`; the message is forwarded verbatim only for 401/403 (the
+  refusals whose detail is, by the control plane's contract, the instruction the
+  caller needs), and every other status keeps the code and drops operator text.
 
 ### Changed
 

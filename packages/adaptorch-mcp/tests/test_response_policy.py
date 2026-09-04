@@ -1,3 +1,5 @@
+# mypy: disable-error-code="import-not-found"
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import json
@@ -241,3 +243,104 @@ def test_sanitize_tool_response_removes_error_data_and_message() -> None:
         "id": 10,
         "error": {"code": -32603, "message": "Tool execution failed"},
     }
+
+
+def _control_plane_rejection(status_code: int, message: str) -> dict[str, Any]:
+    """The engine's shape for a control-plane HTTP refusal (adaptorch.mcp_server)."""
+    return {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "result": {
+            "isError": True,
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(
+                        {
+                            "error": "CONTROL_PLANE_REJECTED",
+                            "status_code": status_code,
+                            "message": message,
+                        }
+                    ),
+                }
+            ],
+        },
+    }
+
+
+class TestControlPlaneRefusalReachesTheTenant:
+    """A hosted deployment refuses keyless runs by naming the three provider headers.
+
+    That sentence is the remedy; the remote profile must carry it through
+    instead of collapsing it into "unsupported tool response format".
+    """
+
+    def test_a_401_byok_refusal_keeps_its_message(self) -> None:
+        message = (
+            "Control-plane HTTP error 401: byok_credentials_required: this deployment "
+            "does not spend its own provider keys on your runs. Send yours with the "
+            "X-Provider, X-Provider-Model and X-Provider-Key headers."
+        )
+
+        sanitized = _sanitize(_control_plane_rejection(401, message), "adaptorch_run")
+
+        assert sanitized["result"]["isError"] is True
+        body = json.loads(sanitized["result"]["content"][0]["text"])
+        assert body == {
+            "error": "CONTROL_PLANE_REJECTED",
+            "status_code": 401,
+            "message": message,
+        }
+
+    def test_a_403_plan_refusal_keeps_its_message(self) -> None:
+        message = "Control-plane HTTP error 403: starter plan requires your own provider key"
+
+        body = json.loads(
+            _sanitize(_control_plane_rejection(403, message), "adaptorch_run")["result"][
+                "content"
+            ][0]["text"]
+        )
+
+        assert body["status_code"] == 403
+        assert body["message"] == message
+
+    @pytest.mark.parametrize("status_code", [400, 404, 429, 500, 503])
+    def test_other_refusals_keep_the_code_but_not_the_operator_text(
+        self, status_code: int
+    ) -> None:
+        body = json.loads(
+            _sanitize(
+                _control_plane_rejection(status_code, "internal detail /srv/x traceback"),
+                "adaptorch_run",
+            )["result"]["content"][0]["text"]
+        )
+
+        assert body == {"error": "CONTROL_PLANE_REJECTED", "status_code": status_code}
+
+    def test_a_malformed_rejection_still_fails_closed(self) -> None:
+        response = _control_plane_rejection(401, "x")
+        response["result"]["content"][0]["text"] = json.dumps(
+            {"error": "CONTROL_PLANE_REJECTED", "status_code": "401", "message": ["x"]}
+        )
+
+        body = json.loads(_sanitize(response, "adaptorch_run")["result"]["content"][0]["text"])
+
+        assert body == {"error": "unsupported tool response format"}
+
+
+@pytest.mark.parametrize(
+    ("flag", "expected"),
+    [(True, True), (False, False), ("true", False), (1, False), (None, False)],
+    ids=["bool-true", "bool-false", "string-true", "int-one", "absent"],
+)
+def test_is_error_is_forwarded_only_for_a_real_boolean(flag: object, expected: bool) -> None:
+    """The parent's ``isError`` is untrusted input: only the boolean ``True`` marks an error."""
+    result: dict[str, Any] = {
+        "content": [{"type": "text", "text": json.dumps({"run_id": "r1", "status": "QUEUED"})}]
+    }
+    if flag is not None:
+        result["isError"] = flag
+
+    sanitized = _sanitize({"jsonrpc": "2.0", "id": 12, "result": result}, "adaptorch_run")
+
+    assert sanitized["result"]["isError"] is expected
