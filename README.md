@@ -48,9 +48,10 @@ Use that key as `ADAPTORCH_CONTROL_PLANE_TOKEN`:
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
+export ADAPTORCH_API_KEY="$ADAPTORCH_CONTROL_PLANE_TOKEN"
 ```
 
-If the control plane is BYOK-only, keep provider credentials in the local MCP process environment:
+Model-backed hosted runs require BYOK. Keep provider credentials in your local environment:
 
 ```bash
 export ADAPTORCH_MCP_PROVIDER="openai"
@@ -58,7 +59,7 @@ export ADAPTORCH_MCP_PROVIDER_MODEL="gpt-4.1-mini"
 export ADAPTORCH_MCP_PROVIDER_API_KEY="<provider-api-key>"
 ```
 
-These values are not MCP tool arguments or JSON body fields. They are attached only to run submission headers; the provider key is redacted from errors and omitted from status, artifact, and usage requests.
+These values are not MCP tool arguments or JSON body fields. The local wrapper attaches them only to run submission headers and redacts the provider key from errors. Direct HTTP clients may attach configured headers to other requests as well; check your client's secret-handling settings.
 
 ### Signup → MCP → dashboard run list
 
@@ -75,7 +76,7 @@ These values are not MCP tool arguments or JSON body fields. They are attached o
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | All AdaptOrch API calls (run, status, artifacts) | Dashboard after signup |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Protect your local HTTP MCP endpoint | You define it (any secure string) |
 
-Starter `$0` includes API key access, 1,000 calls/month, and shadow mode. See [adaptorch.com](https://adaptorch.com) for Pro/Team plans.
+Starter `$0` includes API key access and 5,000 platform calls/month. Model usage is billed separately by your BYOK provider. The [current plan catalog](https://adaptorch.com/v1/plans) is authoritative. Hosted run records and artifacts do not imply repository command checks: those require a separately configured execution environment.
 
 ### Engine-delegated optional algorithm controls (latest)
 
@@ -119,9 +120,18 @@ The control plane serves MCP over HTTP at `https://adaptorch.com/mcp`. Any clien
 that speaks HTTP MCP connects directly with your `ado_*` key:
 
 ```bash
+: "${ADAPTORCH_API_KEY:?Set your AdaptOrch API key}"
+: "${ADAPTORCH_MCP_PROVIDER:?Set your provider}"
+: "${ADAPTORCH_MCP_PROVIDER_MODEL:?Set your model}"
+: "${ADAPTORCH_MCP_PROVIDER_API_KEY:?Set your provider key}"
 claude mcp add --transport http adaptorch https://adaptorch.com/mcp \
-  --header "Authorization: Bearer ${ADAPTORCH_API_KEY}"
+  --header "Authorization: Bearer ${ADAPTORCH_API_KEY}" \
+  --header "X-Provider: ${ADAPTORCH_MCP_PROVIDER}" \
+  --header "X-Provider-Model: ${ADAPTORCH_MCP_PROVIDER_MODEL}" \
+  --header "X-Provider-Key: ${ADAPTORCH_MCP_PROVIDER_API_KEY}"
 ```
+
+Shell expansion may persist header values in client configuration. Keep that file private and never commit credentials. Tool discovery confirms connectivity, not a completed model run or a repository test pass.
 
 Cursor, Codex, Gemini CLI, VS Code and Windsurf snippets: <https://adaptorch.com/mcp-docs>.
 
@@ -178,7 +188,7 @@ uvx adaptorch-mcp --help   # only where the parent engine is importable
 | Safer setup support | `adaptorch-mcp-doctor` | Users can paste redacted diagnostics without leaking tokens. |
 | Fast install loop | `adaptorch-mcp-smoke` | Local MCP wiring is verified with `initialize` + `tools/list`. |
 
-## Measured: the verifier gate wins on identical tasks
+## Measured: a directional paired result with failed gates
 
 <p align="center">
   <a href="https://adaptorch.com"><img src="assets/benchmark-paired-banner.svg" alt="AdaptOrch measured paired run — baseline 86.7% vs verified 100.0% on 30 shared ledger tasks, +13.3pp, 95% CI [+3.3, +26.7]" width="100%"></a>
@@ -192,7 +202,11 @@ Cerebras), so the paired delta cancels run-to-run drift:
 | Baseline (robust, no verifier gate) | 86.7% |
 | **With AdaptOrch verifier gate** | **100.0%** |
 
-Paired delta **+13.3pp**, 95% CI **[+3.3, +26.7]** — significant.
+Paired delta **+13.3pp**, 95% CI **[+3.3, +26.7]** on this ledger family.
+The aggregate verdict and predefined family gate **did not pass**. The public
+[evidence JSON](https://adaptorch.com/data/adaptorch-benchmarks.json) records
+`significant=false`, `aggregate_significant=false`, `gate_passed=false` and
+`official_claim_allowed=false`. Treat this as directional, not proven.
 
 > Scope: internal reproducible regression evidence on a synthetic ledger
 > suite (evidence experiment `paired_confirmatory_ledger`, full run IDs and
@@ -201,7 +215,7 @@ Paired delta **+13.3pp**, 95% CI **[+3.3, +26.7]** — significant.
 
 Run your own workload through the hosted kernel at
 **[adaptorch.com](https://adaptorch.com)** — free starter includes an API key
-and 1,000 calls/month.
+and 5,000 platform calls/month. BYOK provider charges are separate.
 
 ## Scenario benchmark projection
 
