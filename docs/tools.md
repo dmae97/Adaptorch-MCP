@@ -25,6 +25,7 @@ installed `adaptorch` engine and are asserted by
 | Surface | Engine truth | Notes |
 | --- | --- | --- |
 | `synthesis_mode` (supported) | `paper`, `robust`, `robust_lite`, `stable_hybrid` | Distinct strategies executed by `adaptorch.synthesis`. Default is `robust`. |
+| `synthesis_mode` (serving selection) | `auto` | The control plane selects an engine mode; `synthesis_mode_requested` and `synthesis_mode_used` remain visible in run responses. Not a fifth engine algorithm. |
 | `synthesis_mode` (deprecated alias) | `fourier_aggressive` → `stable_hybrid` | Still accepted for compatibility; the engine resolves it to `stable_hybrid` and reports `mode_used`. |
 | `output_extractor` | `final_answer`, `multiple_choice_letter` | Engine extractor modes. `none` requests no extractor and is not forwarded to the engine. |
 | Topologies | `parallel`, `sequential`, `hierarchical`, `hybrid`, `multi_model_ensemble`, `multi_turn_debate` | Router-selectable topologies reported by `adaptorch_capabilities`. |

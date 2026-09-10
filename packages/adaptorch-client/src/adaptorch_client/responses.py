@@ -12,8 +12,10 @@ from adaptorch_client.models import (
     JSONValue,
     PayloadResult,
     Run,
+    contract_error,
     optional_string_at,
     require_array,
+    require_object,
     stored_copy,
     string_at,
 )
@@ -71,7 +73,16 @@ class ArtifactListResponse(PayloadResult):
     def from_payload(cls, payload: Mapping[str, JSONValue]) -> Self:
         """Validate one raw artifact listing against the v1 contract."""
         record = stored_copy(payload)
-        items = require_array(record.get("items"), "items")
+        if "items" not in record and "artifacts" in record:
+            references = require_object(record["artifacts"], "artifacts")
+            items: list[JSONValue] = []
+            for name, reference in references.items():
+                if not isinstance(reference, str):
+                    raise contract_error(f"artifacts.{name}", "a string")
+                # A storage reference is not a public download URL or measured file metadata.
+                items.append({"artifact_id": name, "name": name})
+        else:
+            items = require_array(record.get("items"), "items")
         return cls(
             record,
             run_id=string_at(record, "run_id", ""),

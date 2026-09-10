@@ -8,10 +8,11 @@ license = { text = "Proprietary — Copyright ClassicMate. All rights reserved."
 authors = [{ name = "AdaptOrch maintainers" }]
 
 [tool.uv.workspace]
-members = ["packages/adaptorch-mcp"]
+members = ["packages/adaptorch-mcp", "packages/adaptorch-client", "packages/adaptorch-cli"]
 
 [tool.uv.sources]
-adaptorch = { git = "https://github.com/dmae97/adaptorch.git" }
+adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "791c7bc5fb1eb80d1dee052fc895a289a0d09e50" }
+adaptorch-client = { workspace = true }
 
 [tool.ruff]
 line-length = 100

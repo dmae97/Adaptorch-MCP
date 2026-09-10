@@ -92,7 +92,7 @@ benchmark/eval or operator controls, not quickstart defaults.
 | `pass_rate_credit` / `quality_signal` | Online-router learning | `compute_quality` tries exact-answer token matching before fuzzy matching. `pass_rate_credit` is opt-in partial credit; do not claim it changes `AdaptOrchEngine` router feedback by default. |
 | `ADAPTORCH_PAPER_SEMANTIC_WEIGHT` | Synthesis | Default is `0.35`. Nonzero semantic weight, plus CJK/Hangul inputs, use Python scoring rather than the native fast path. |
 | `prefer_multi_model_ensemble_singleton` | Routing threshold | Auto-enables when at least two ensemble providers exist and synthesis mode is not `direct`, unless an explicit debate-singleton preference wins. The MCP hint `prefer_ensemble_singleton` can request the same preference manually. |
-| `synthesis_mode` | Synthesis | Supported modes are `paper`, `robust`, `robust_lite`, and `stable_hybrid`. `fourier_aggressive` is accepted but deprecated: the engine resolves it to `stable_hybrid` and reports the executed mode. |
+| `synthesis_mode` | Synthesis | Supported modes are `paper`, `robust`, `robust_lite`, and `stable_hybrid`. `fourier_aggressive` is accepted but deprecated. Serving-only `auto` asks the control plane to select a mode; run responses preserve requested and selected modes. |
 | `output_extractor` | Ensemble extraction | Engine extractors are `final_answer` and `multiple_choice_letter`. The MCP value `none` means "no extractor" and is not forwarded. |
 
 ## Research paper
@@ -164,9 +164,10 @@ workaround for clients that mangle spaces in `args`.)
 pip install adaptorch-client
 ```
 
-`adaptorch-client` has no dependencies and covers every User API v1 endpoint
-(`contracts/openapi/adaptorch-user-api.v1.yaml`). See
-[packages/adaptorch-client](packages/adaptorch-client/README.md).
+`adaptorch-client` has no runtime dependencies and supports capabilities, identity,
+run submission/list/detail/cancellation, evidence, and artifact listings. The current
+source adds per-submission `ProviderCredential` for hosted BYOK. A repository push
+is separate from a PyPI release; see the [source install and BYOK example](packages/adaptorch-client/README.md).
 
 ### 3. This package — local engine required
 

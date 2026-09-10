@@ -28,11 +28,11 @@ jobs:
           git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
           uv sync --all-packages --extra dev
       - name: Lint
-        run: uv run ruff check packages/adaptorch-mcp
+        run: uv run ruff check packages/adaptorch-mcp packages/adaptorch-client packages/adaptorch-cli
       - name: Typecheck
-        run: uv run mypy packages/adaptorch-mcp/src
+        run: uv run mypy
       - name: Test
-        run: uv run pytest packages/adaptorch-mcp/tests packages/adaptorch/tests -q
+        run: uv run pytest packages/adaptorch-mcp/tests packages/adaptorch-client/tests packages/adaptorch-cli/tests packages/adaptorch/tests -q
       - name: Doctor
         run: uv run adaptorch-mcp-doctor --json
       - name: Build package

@@ -14,6 +14,7 @@ from adaptorch_client import (
     AdaptOrchAPIError,
     AdaptOrchClient,
     ClientConfig,
+    ProviderCredential,
     validate_api_url,
 )
 
@@ -91,6 +92,15 @@ def _require_client(api_url: str) -> AdaptOrchClient:
     return AdaptOrchClient(ClientConfig(api_url=api_url, api_key=api_key))
 
 
+def _submission_credential() -> ProviderCredential | None:
+    provider = os.environ.get("ADAPTORCH_PROVIDER", "")
+    model = os.environ.get("ADAPTORCH_PROVIDER_MODEL", "")
+    key = os.environ.get("ADAPTORCH_PROVIDER_API_KEY", "")
+    if not provider and not model and not key:
+        return None
+    return ProviderCredential(provider, model, key)
+
+
 def _result_payload(result: PayloadResult) -> JSONMapping:
     return result.to_payload()
 
@@ -109,6 +119,7 @@ def _run_command(
             submit_result = _require_client(api_url).submit_run(
                 payload,
                 idempotency_key=request_id or str(uuid.uuid4()),
+                provider_credential=_submission_credential(),
             )
             return _result_payload(submit_result), False
         case "list":

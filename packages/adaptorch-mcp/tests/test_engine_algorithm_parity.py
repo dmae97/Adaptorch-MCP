@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 from adaptorch.mcp_server import AdaptOrchMCPServer
@@ -41,6 +41,16 @@ except ImportError:  # pragma: no cover - depends on the installed engine revisi
     resolve_synthesis_mode = None
 else:
     ENGINE_EXPORTS_SURFACE = True
+
+try:
+    from adaptorch.types import ServingSynthesisMode
+except ImportError:
+    SERVING_SYNTHESIS_MODES = SELECTABLE_SYNTHESIS_MODES
+else:
+    # ServingSynthesisMode is a union of the engine Literal and the auto Literal.
+    SERVING_SYNTHESIS_MODES = tuple(
+        value for variant in get_args(ServingSynthesisMode) for value in get_args(variant)
+    )
 
 requires_engine_surface = pytest.mark.skipif(
     not ENGINE_EXPORTS_SURFACE,
@@ -74,7 +84,7 @@ def _remote_run_schema() -> dict[str, Any]:
 def test_exposed_synthesis_modes_match_engine_selectable_modes() -> None:
     properties = _remote_run_schema()["properties"]
 
-    assert properties["synthesis_mode"]["enum"] == list(SELECTABLE_SYNTHESIS_MODES)
+    assert properties["synthesis_mode"]["enum"] == list(SERVING_SYNTHESIS_MODES)
     assert properties["synthesis_mode"]["default"] in SUPPORTED_SYNTHESIS_MODES
 
 
@@ -96,7 +106,7 @@ def test_exposed_output_extractor_enum_matches_engine_extractors() -> None:
 
 
 @requires_engine_surface
-@pytest.mark.parametrize("mode", SELECTABLE_SYNTHESIS_MODES or ["robust"])
+@pytest.mark.parametrize("mode", SERVING_SYNTHESIS_MODES or ["robust"])
 def test_remote_profile_accepts_every_engine_selectable_mode(mode: str) -> None:
     response = _remote_server().handle_message(
         {
@@ -152,13 +162,21 @@ def test_capabilities_projection_preserves_engine_algorithm_surface() -> None:
     projected = project_tool_output("adaptorch_capabilities", payload)
 
     assert projected is not None
-    assert projected["synthesis_modes"] == list(SELECTABLE_SYNTHESIS_MODES)
+    assert projected["synthesis_modes"] == list(SERVING_SYNTHESIS_MODES)
     assert projected["supported_synthesis_modes"] == list(SUPPORTED_SYNTHESIS_MODES)
-    assert projected["deprecated_synthesis_mode_aliases"] == dict(
-        DEPRECATED_SYNTHESIS_MODE_ALIASES
-    )
+    assert projected["deprecated_synthesis_mode_aliases"] == dict(DEPRECATED_SYNTHESIS_MODE_ALIASES)
     assert projected["topologies"] == list(TOPOLOGY_VALUES)
     assert projected["output_extractor_modes"] == list(OUTPUT_EXTRACTOR_MODES)
+
+
+def test_run_projection_preserves_requested_and_selected_serving_modes() -> None:
+    payload = {
+        "run_id": "fixture-run",
+        "status": "QUEUED",
+        "synthesis_mode_requested": "auto",
+        "synthesis_mode_used": "robust_lite",
+    }
+    assert project_tool_output("adaptorch_run", payload) == payload
 
 
 def test_capabilities_projection_tolerates_parent_without_algorithm_surface() -> None:

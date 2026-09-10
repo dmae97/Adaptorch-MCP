@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TypeAlias
@@ -31,7 +31,8 @@ class ResponsePlan:
 
 
 class LocalAPIServer:
-    def __init__(self) -> None:
+    def __init__(self, responder: Callable[[CapturedRequest], ResponsePlan] | None = None) -> None:
+        self._responder = responder
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -90,7 +91,11 @@ class LocalAPIServer:
                 body=handler.rfile.read(length),
             )
         )
-        response = self._responses.pop(0) if self._responses else ResponsePlan(500, b"{}", {})
+        response = (
+            self._responder(self.requests[-1])
+            if self._responder is not None
+            else self._responses.pop(0) if self._responses else ResponsePlan(500, b"{}", {})
+        )
         response_headers = {"Content-Length": str(len(response.body)), **response.headers}
         handler.send_response(response.status)
         for name, value in response_headers.items():

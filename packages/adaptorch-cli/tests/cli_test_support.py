@@ -76,6 +76,13 @@ class ClientConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ProviderCredential:
+    provider: str
+    model: str
+    api_key: str
+
+
+@dataclass(frozen=True, slots=True)
 class ApiResult:
     payload: dict
 
@@ -120,7 +127,7 @@ class AdaptOrchClient:
         _record("capabilities")
         return ApiResult({"capabilities": ["runs", "evidence", "artifacts"]})
 
-    def submit_run(self, payload, idempotency_key):
+    def submit_run(self, payload, idempotency_key, *, provider_credential=None):
         _fail_if_requested()
         if not 1 <= len(idempotency_key) <= 200:
             raise ValueError("invalid idempotency key")

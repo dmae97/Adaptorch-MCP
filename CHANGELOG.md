@@ -6,6 +6,17 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### Fixed — 2026-09-11 hosted wiring
+
+- Add per-submission SDK `ProviderCredential` and CLI BYOK environment support;
+  credentials are never attached to reads/cancellation or JSON request bodies.
+- Accept the hosted `artifacts` map without inventing download URLs or file metadata.
+- Preserve actionable FastAPI `detail` errors while redacting both authentication keys.
+- Preserve requested/selected serving modes through the MCP response projection and
+  distinguish serving-only `auto` from engine algorithms in parity tests.
+- Test SDK, CLI and the MCP wrapper against actual local engine HTTP routes;
+  include client/CLI in workspace and CI gates. No live model or account is used.
+
 ### Added
 
 - `ADAPTORCH_MCP_PROVIDER=auto` picks the tenant's own provider key from the MCP

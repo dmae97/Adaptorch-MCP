@@ -1,7 +1,7 @@
 """Public AdaptOrch API client."""
 
 from adaptorch_client.client import AdaptOrchClient
-from adaptorch_client.config import ClientConfig, validate_api_url
+from adaptorch_client.config import ClientConfig, ProviderCredential, validate_api_url
 from adaptorch_client.errors import AdaptOrchAPIError
 from adaptorch_client.models import (
     Artifact,
@@ -32,6 +32,7 @@ __all__ = [
     "JSONValue",
     "PayloadResult",
     "Principal",
+    "ProviderCredential",
     "Run",
     "RunListResponse",
     "validate_api_url",

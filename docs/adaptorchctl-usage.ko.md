@@ -1,12 +1,12 @@
 # `adaptorchctl` 한국어 사용 가이드
 
-`adaptorchctl`은 AdaptTorch SaaS의 User API를 호출하는 독립 CLI입니다. 현재 MVP는 실행 제출·조회·취소와 증거·아티팩트 목록 조회를 제공합니다.
+`adaptorchctl`은 AdaptOrch SaaS의 User API를 호출하는 독립 CLI입니다. 현재 MVP는 실행 제출·조회·취소와 증거·아티팩트 목록 조회를 제공합니다.
 
 ## 이름과 역할
 
 | 이름 | 역할 |
 | --- | --- |
-| `adaptorch` | 로컬 참조 엔진과 그 CLI입니다. SaaS User API CLI가 아닙니다. |
+| `adaptorch` | PyPI에서는 클라이언트·CLI를 설치하는 메타패키지명입니다. 별도로 설치한 참조 엔진의 동명 명령과 구분하세요. |
 | `adaptorch-mcp` | MCP 클라이언트와 AdaptOrch를 연결하는 MCP 서버 진입점입니다. |
 | `adaptorchctl` | `adaptorch-client`를 사용해 SaaS User API를 직접 호출하는 사용자·자동화용 CLI입니다. |
 
@@ -24,7 +24,7 @@ python -m pip install \
 adaptorchctl --help
 ```
 
-두 패키지가 PyPI에 게시된 뒤에는 다음 설치 방식을 사용할 예정입니다. **현재 PyPI 게시를 전제로 자동화하지 마세요.**
+다음 명령은 별도로 게시된 PyPI 버전을 설치합니다. 저장소 푸시만으로 PyPI 버전이 갱신되지는 않으므로, 최신 BYOK 변경은 위 소스 설치로 확인하세요.
 
 ```bash
 python -m pip install adaptorch-cli
@@ -83,6 +83,17 @@ adaptorchctl capabilities
 
 ## 실행 제출
 
+호스팅 모델 실행에는 본인의 공급자 인증을 별도로 전달합니다. 다음 세 변수를 함께 설정하세요.
+
+```bash
+export ADAPTORCH_PROVIDER="openai"
+export ADAPTORCH_PROVIDER_MODEL="gpt-4o-mini"
+export ADAPTORCH_PROVIDER_API_KEY="$OPENAI_API_KEY"
+```
+
+공급자 키는 `run submit`의 헤더에만 실립니다. JSON 본문·조회·취소 요청에는 넣지 않습니다.
+누락 시 서버의 `byok_credentials_required` 안내를 그대로 확인할 수 있습니다.
+
 요청 본문은 JSON 객체여야 합니다. 파일 또는 표준 입력을 사용할 수 있습니다.
 
 ```bash
@@ -91,7 +102,7 @@ cat > run-request.json <<'JSON'
   "subtasks": [
     {
       "id": "summarize-validation",
-      "prompt": "배포 후보의 검증 결과를 요약하고 각 결론에 증거를 연결합니다."
+      "description": "배포 후보의 검증 결과를 요약하고 각 결론에 증거를 연결합니다."
     }
   ],
   "dependencies": []
@@ -106,7 +117,7 @@ adaptorchctl run submit \
 표준 입력 예시:
 
 ```bash
-printf '%s\n' '{"subtasks":[{"id":"summarize","prompt":"검증 결과를 요약합니다."}],"dependencies":[]}' \
+printf '%s\n' '{"subtasks":[{"id":"summarize","description":"검증 결과를 요약합니다."}],"dependencies":[]}' \
   | adaptorchctl run submit --file - --request-id "22222222-2222-4222-8222-222222222222"
 ```
 

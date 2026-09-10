@@ -70,3 +70,32 @@ class ClientConfig:
         if self.api_key.startswith("ado_"):
             return {"X-API-Key": self.api_key}
         return {"Authorization": f"Bearer {self.api_key}"}
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCredential:
+    """BYOK headers for one submission; never reused for reads or cancellation."""
+
+    provider: str
+    model: str
+    api_key: str = field(repr=False)
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("provider", self.provider),
+            ("model", self.model),
+            ("api_key", self.api_key),
+        ):
+            if not value.strip() or any(
+                ord(char) < 32 or ord(char) == 127 or ord(char) > 255 for char in value
+            ):
+                raise ValueError(f"{name} must be a non-empty HTTP header value")
+
+    @property
+    def headers(self) -> Mapping[str, str]:
+        """Return the hosted API's request-scoped provider headers."""
+        return {
+            "X-Provider": self.provider,
+            "X-Provider-Model": self.model,
+            "X-Provider-Key": self.api_key,
+        }

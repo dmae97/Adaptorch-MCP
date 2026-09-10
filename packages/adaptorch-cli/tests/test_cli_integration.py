@@ -9,13 +9,13 @@ from pathlib import Path
 from queue import Queue
 from threading import Thread
 
+import pytest
+
 _TEST_TOKEN = "adaptorch-integration-placeholder"
 _REQUEST_ID = "33333333-3333-4333-8333-333333333333"
 _REQUEST_BODY = b'{"dependencies":[],"subtasks":[{"id":"verify","prompt":"verify composition"}]}'
 _RESPONSE_BODY = b'{"ok":true,"run_id":"run-real","status":"QUEUED"}'
-_REQUEST_INPUT = (
-    '{"subtasks":[{"id":"verify","prompt":"verify composition"}],"dependencies":[]}\n'
-)
+_REQUEST_INPUT = '{"subtasks":[{"id":"verify","prompt":"verify composition"}],"dependencies":[]}\n'
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +25,9 @@ class CapturedRequest:
     authorization: str
     idempotency_key: str
     body: bytes
+    provider: str | None = None
+    provider_model: str | None = None
+    provider_key: str | None = None
 
 
 class RunHandler(BaseHTTPRequestHandler):
@@ -39,6 +42,9 @@ class RunHandler(BaseHTTPRequestHandler):
                 authorization=self.headers["Authorization"],
                 idempotency_key=self.headers["Idempotency-Key"],
                 body=body,
+                provider=self.headers.get("X-Provider"),
+                provider_model=self.headers.get("X-Provider-Model"),
+                provider_key=self.headers.get("X-Provider-Key"),
             )
         )
         self.send_response(201)
@@ -51,12 +57,21 @@ class RunHandler(BaseHTTPRequestHandler):
         return
 
 
-def test_run_submit_composes_cli_with_real_client_over_loopback() -> None:
+@pytest.mark.parametrize("byok", [False, True])
+def test_run_submit_composes_cli_with_real_client_over_loopback(byok: bool) -> None:
     cli_source = Path(__file__).parents[1] / "src"
     client_source = Path(__file__).parents[2] / "adaptorch-client" / "src"
     env = os.environ.copy()
     env["PYTHONPATH"] = os.pathsep.join((str(cli_source), str(client_source)))
     env["ADAPTORCH_API_KEY"] = _TEST_TOKEN
+    for name in ("ADAPTORCH_PROVIDER", "ADAPTORCH_PROVIDER_MODEL", "ADAPTORCH_PROVIDER_API_KEY"):
+        env.pop(name, None)
+    if byok:
+        env.update(
+            ADAPTORCH_PROVIDER="openai",
+            ADAPTORCH_PROVIDER_MODEL="test-model",
+            ADAPTORCH_PROVIDER_API_KEY="test-provider-secret",
+        )
     proxy_names = (
         "ALL_PROXY",
         "HTTPS_PROXY",
@@ -106,9 +121,13 @@ def test_run_submit_composes_cli_with_real_client_over_loopback() -> None:
         authorization=f"Bearer {_TEST_TOKEN}",
         idempotency_key=_REQUEST_ID,
         body=_REQUEST_BODY,
+        provider="openai" if byok else None,
+        provider_model="test-model" if byok else None,
+        provider_key="test-provider-secret" if byok else None,
     )
     assert completed.returncode == 0
     assert completed.stdout == '{"ok":true,"run_id":"run-real","status":"QUEUED"}\n'
     assert completed.stderr == ""
     assert _TEST_TOKEN not in completed.stdout
     assert _TEST_TOKEN not in completed.stderr
+    assert "test-provider-secret" not in completed.stdout + completed.stderr

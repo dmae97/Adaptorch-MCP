@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from urllib.parse import quote, urlencode
 
-from adaptorch_client.config import ClientConfig
+from adaptorch_client.config import ClientConfig, ProviderCredential
 from adaptorch_client.models import CapabilitySet, JSONValue, Principal, Run
 from adaptorch_client.responses import (
     ArtifactListResponse,
@@ -44,6 +44,8 @@ class AdaptOrchClient:
         self,
         spec: Mapping[str, JSONValue],
         idempotency_key: str,
+        *,
+        provider_credential: ProviderCredential | None = None,
     ) -> Run:
         """Submit one run without retrying the POST request."""
         self._require_idempotency_key(idempotency_key)
@@ -53,7 +55,10 @@ class AdaptOrchClient:
                     "POST",
                     "/v1/runs",
                     payload=spec,
-                    headers={"Idempotency-Key": idempotency_key},
+                    headers={
+                        "Idempotency-Key": idempotency_key,
+                        **(provider_credential.headers if provider_credential is not None else {}),
+                    },
                 )
             )
         )

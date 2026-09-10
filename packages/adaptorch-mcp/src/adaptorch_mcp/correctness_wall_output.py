@@ -17,6 +17,8 @@ RUN_SCALAR_KEYS: Final = frozenset(
         "error_class",
         "model",
         "synthesis_mode",
+        "synthesis_mode_requested",
+        "synthesis_mode_used",
         "cse_state",
         "created_at",
         "started_at",

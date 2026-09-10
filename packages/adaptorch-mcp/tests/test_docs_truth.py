@@ -72,6 +72,8 @@ def _engine_env_tokens() -> set[str]:
 def test_documented_adaptorch_env_vars_match_installed_engine_or_wrapper_allowlist() -> None:
     doc_tokens = _env_tokens_by_path(_documentation_paths())
     engine_tokens = _engine_env_tokens()
+    cli_source = REPO_ROOT / "packages/adaptorch-cli/src/adaptorch_cli/cli.py"
+    cli_tokens = set(ENV_TOKEN_PATTERN.findall(cli_source.read_text(encoding="utf-8")))
 
     documented_tokens = set().union(*doc_tokens.values())
     missing = {
@@ -80,7 +82,7 @@ def test_documented_adaptorch_env_vars_match_installed_engine_or_wrapper_allowli
             for path, tokens in doc_tokens.items()
             if token in tokens
         )
-        for token in sorted(documented_tokens - engine_tokens - NON_ENGINE_DOC_TOKENS)
+        for token in sorted(documented_tokens - engine_tokens - cli_tokens - NON_ENGINE_DOC_TOKENS)
     }
 
     assert missing == {}

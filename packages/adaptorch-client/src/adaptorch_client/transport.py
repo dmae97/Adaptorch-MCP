@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from email.message import Message
 from http.client import HTTPException
 from typing import IO, Literal, Never, Protocol
@@ -74,7 +75,7 @@ class RequestSpec:
     method: Literal["GET", "POST", "PUT"]
     path: str
     payload: Mapping[str, JSONValue] | None = None
-    headers: Mapping[str, str] | None = None
+    headers: Mapping[str, str] | None = field(default=None, repr=False)
 
 
 class HTTPTransport:
@@ -113,7 +114,10 @@ class HTTPTransport:
             ) as response:
                 return self._decode_mapping(self._read_bounded(response))
         except HTTPError as error:
-            raise self._from_http_error(error) from None
+            secrets = tuple(
+                value for name, value in headers.items() if name.lower() == "x-provider-key"
+            )
+            raise self._from_http_error(error, secrets=secrets) from None
         except (HTTPException, URLError, TimeoutError, OSError):
             raise AdaptOrchAPIError("AdaptOrch network request failed") from None
 
@@ -165,7 +169,9 @@ class HTTPTransport:
             raise AdaptOrchAPIError("AdaptOrch returned a non-object JSON response")
         return decoded
 
-    def _from_http_error(self, error: HTTPError) -> AdaptOrchAPIError:
+    def _from_http_error(
+        self, error: HTTPError, *, secrets: tuple[str, ...] = ()
+    ) -> AdaptOrchAPIError:
         try:
             body = self._read_bounded(error)
             decoded = self._decode_mapping(body)
@@ -175,7 +181,16 @@ class HTTPTransport:
                 status_code=error.code,
             )
 
-        error_value = decoded.get("error")
+        error_value = decoded.get("error", decoded.get("detail"))
+        if isinstance(error_value, str):
+            message = self._sanitize(error_value, _MAX_ERROR_MESSAGE_LENGTH, secrets)
+            prefix, separator, _ = message.partition(":")
+            code = prefix if separator and re.fullmatch(r"[a-z][a-z0-9_]{0,99}", prefix) else None
+            return AdaptOrchAPIError(
+                f"AdaptOrch API request failed with HTTP {error.code}: {message}",
+                status_code=error.code,
+                code=code,
+            )
         if not isinstance(error_value, dict):
             return AdaptOrchAPIError(
                 f"AdaptOrch API request failed with HTTP {error.code}",
@@ -185,12 +200,12 @@ class HTTPTransport:
         code_value = error_value.get("code")
         message_value = error_value.get("message")
         code = (
-            self._sanitize(code_value, _MAX_ERROR_CODE_LENGTH)
+            self._sanitize(code_value, _MAX_ERROR_CODE_LENGTH, secrets)
             if isinstance(code_value, str)
             else None
         )
         message = (
-            self._sanitize(message_value, _MAX_ERROR_MESSAGE_LENGTH)
+            self._sanitize(message_value, _MAX_ERROR_MESSAGE_LENGTH, secrets)
             if isinstance(message_value, str)
             else "request failed"
         )
@@ -201,7 +216,10 @@ class HTTPTransport:
             code=code,
         )
 
-    def _sanitize(self, value: str, limit: int) -> str:
-        redacted = value.replace(self._config.api_key, "[redacted]")
+    def _sanitize(self, value: str, limit: int, secrets: tuple[str, ...] = ()) -> str:
+        redacted = value
+        for secret in (self._config.api_key, *secrets):
+            if secret:
+                redacted = redacted.replace(secret, "[redacted]")
         printable = "".join(character if character.isprintable() else " " for character in redacted)
         return printable[:limit]
