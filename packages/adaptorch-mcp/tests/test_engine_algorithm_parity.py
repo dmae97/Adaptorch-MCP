@@ -173,6 +173,8 @@ def test_run_projection_preserves_requested_and_selected_serving_modes() -> None
     payload = {
         "run_id": "fixture-run",
         "status": "QUEUED",
+        "model": "Tenant-Selected-Model",
+        "model_selection_source": "tenant_history",
         "synthesis_mode_requested": "auto",
         "synthesis_mode_used": "robust_lite",
     }

@@ -27,6 +27,7 @@ installed `adaptorch` engine and are asserted by
 | `synthesis_mode` (supported) | `paper`, `robust`, `robust_lite`, `stable_hybrid` | Distinct strategies executed by `adaptorch.synthesis`. Default is `robust`. |
 | `synthesis_mode` (serving selection) | `auto` | The control plane selects an engine mode; `synthesis_mode_requested` and `synthesis_mode_used` remain visible in run responses. Not a fifth engine algorithm. |
 | `synthesis_mode` (deprecated alias) | `fourier_aggressive` → `stable_hybrid` | Still accepted for compatibility; the engine resolves it to `stable_hybrid` and reports `mode_used`. |
+| `model` (control-plane Auto) | `auto` | Supporting deployments resolve from tenant provider defaults or confirmed history and return `model` + `model_selection_source`. Provider/key still required; unresolved requests are rejected before admission. Not automatic task submission or provider-key discovery. |
 | `output_extractor` | `final_answer`, `multiple_choice_letter` | Engine extractor modes. `none` requests no extractor and is not forwarded to the engine. |
 | Topologies | `parallel`, `sequential`, `hierarchical`, `hybrid`, `multi_model_ensemble`, `multi_turn_debate` | Router-selectable topologies reported by `adaptorch_capabilities`. |
 
@@ -39,6 +40,11 @@ installed `adaptorch` engine and are asserted by
 Provider credentials are process configuration, not part of the public `adaptorch_run` input schema. Set `ADAPTORCH_MCP_PROVIDER` and `ADAPTORCH_MCP_PROVIDER_MODEL` together, plus `ADAPTORCH_MCP_PROVIDER_API_KEY` for credentialed providers. The wrapper forwards them only as `X-Provider`, `X-Provider-Model`, and `X-Provider-Key` headers on `POST /v1/runs`.
 
 The key is omitted from tool arguments, request bodies, non-run requests, repr output, and errors. A partial configuration fails before the server starts, and an installed engine without provider-credential support fails closed rather than silently sending an unauthenticated run.
+
+Tenant Auto models require trusted selection storage on the control plane. The
+current shared-store path rejects tenant/deployment model resolution before charging
+until its schema supports that field; explicit models keep working without an
+unpersisted source annotation. Caller-provided payload annotations are not selection evidence.
 
 ## Tenant usage awareness
 

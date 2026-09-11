@@ -56,6 +56,16 @@ Cancellation status is backend-specific: local storage currently reports `FAILED
 
 See [`../../docs/adaptorchctl-usage.ko.md`](../../docs/adaptorchctl-usage.ko.md) for the current CLI and API usage guide.
 
+## Auto model IDs
+
+On control planes supporting tenant Auto models, use `model="auto"` in the
+per-submission `ProviderCredential` (and optionally `"model": "auto"` in the run
+body). Keep the actual provider and its key explicit. The server resolves the
+model from this tenant's provider default or confirmed history and returns
+`model` and `model_selection_source` in the raw result. If there is no candidate,
+configure a tenant default or name a model once; the server does not invent an ID.
+This does not automatically submit tasks, discover keys, or guarantee provider access.
+
 ## License
 
 Proprietary — Copyright ClassicMate. All rights reserved. See [LICENSE](https://github.com/dmae97/Adaptorch-MCP/blob/main/LICENSE).

@@ -16,6 +16,7 @@ RUN_SCALAR_KEYS: Final = frozenset(
         "consistency",
         "error_class",
         "model",
+        "model_selection_source",
         "synthesis_mode",
         "synthesis_mode_requested",
         "synthesis_mode_used",

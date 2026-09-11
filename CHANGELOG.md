@@ -6,6 +6,12 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### Added — tenant Auto model metadata
+
+- Preserve the control plane's `model_selection_source` alongside the selected
+  `model` in remote MCP results. On supporting control-plane deployments, model
+  `auto` resolves tenant defaults/history; provider authentication remains required.
+
 ### Fixed — 2026-09-11 hosted wiring
 
 - Add per-submission SDK `ProviderCredential` and CLI BYOK environment support;
