@@ -7,8 +7,14 @@ The package runs a hardened facade over `adaptorch.mcp_server`, so routing and s
 ## Install
 
 ```bash
-pip install adaptorch-mcp
+pip install --upgrade "adaptorch-mcp>=0.5.1,<0.6"
+adaptorch-mcp-client --help
 ```
+
+Use `adaptorch-mcp-client` to select this hardened wrapper explicitly. The legacy
+`adaptorch-mcp` name is retained, but the engine also installs that name and some
+installers can overwrite it. This release supports the `adaptorch` 0.1.x engine,
+not the planned code-free 0.2.x meta-package.
 
 If AdaptOrch is not published to your package index yet:
 
@@ -20,15 +26,15 @@ pip install adaptorch-mcp
 One-shot with `uvx`:
 
 ```bash
-uvx adaptorch-mcp --help
-uvx --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adaptorch-mcp --help
+uvx --from "adaptorch-mcp==0.5.1" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.5.1" --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adaptorch-mcp-client --help
 ```
 
 For contributors inside this monorepo:
 
 ```bash
 uv sync --all-packages --extra dev
-uv run adaptorch-mcp --help
+uv run adaptorch-mcp-client --help
 ```
 
 ## Run stdio MCP
@@ -37,7 +43,7 @@ Use stdio for Claude Code, Claude Desktop, and other local MCP hosts. The upstre
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<ado_live_your-key>"
-adaptorch-mcp --transport stdio --base-url https://adaptorch.com
+adaptorch-mcp-client --transport stdio --base-url https://adaptorch.com
 ```
 
 For a BYOK-only control plane, configure the provider credential in the MCP process environment:
@@ -60,7 +66,7 @@ Use HTTP for local gateways, reverse proxies, or remote MCP clients. Keep the cl
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<upstream-adaptorch-token>"
 export ADAPTORCH_MCP_HTTP_AUTH_TOKEN="<client-facing-mcp-token>"  # must differ from upstream
 
-adaptorch-mcp \
+adaptorch-mcp-client \
   --transport http \
   --base-url https://adaptorch.com \
   --http-host 127.0.0.1 \
@@ -90,7 +96,7 @@ The built-in HTTP listener is loopback-only. Put an authenticated TLS reverse pr
 
 | Command | Purpose | Important options |
 | --- | --- | --- |
-| `adaptorch-mcp` | Start the stdio or HTTP MCP server. | `--transport {stdio,http}`, `--base-url`, `--api-token`, `--timeout-seconds`, `--stdio-framing`, `--http-host`, `--http-port`, `--http-auth-token` |
+| `adaptorch-mcp-client` (`adaptorch-mcp` legacy alias) | Start the stdio or HTTP MCP server. | `--transport {stdio,http}`, `--base-url`, `--api-token`, `--timeout-seconds`, `--stdio-framing`, `--http-host`, `--http-port`, `--http-auth-token` |
 | `adaptorch-mcp-doctor` | Print redacted local diagnostics. | `--json`, `--strict` |
 | `adaptorch-mcp-smoke` | Verify stdio `initialize` + `tools/list`. | `--command`, `--base-url`, `--api-token`, `--timeout-seconds`, repeatable `--expected-tool` |
 

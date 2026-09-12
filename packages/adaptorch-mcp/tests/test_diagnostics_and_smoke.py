@@ -137,6 +137,7 @@ def test_pyproject_registers_console_scripts() -> None:
 
     assert project["project"]["scripts"] == {
         "adaptorch-mcp": "adaptorch_mcp.cli:main",
+        "adaptorch-mcp-client": "adaptorch_mcp.cli:main",
         "adaptorch-mcp-doctor": "adaptorch_mcp.doctor:main",
         "adaptorch-mcp-smoke": "adaptorch_mcp.stdio_smoke:main",
     }

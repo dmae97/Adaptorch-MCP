@@ -1,7 +1,7 @@
 name: publish
 
 # One workflow, one package per run. The tag names the package and the version:
-#   adaptorch-v0.2.0, adaptorch-client-v0.1.0, adaptorch-cli-v0.1.0, adaptorch-mcp-v0.5.0
+#   adaptorch-v0.2.0, adaptorch-client-v0.1.0, adaptorch-cli-v0.1.0, adaptorch-mcp-v0.5.1
 # The tag version must equal the package's pyproject version, and every wheel
 # passes scripts/check_public_wheels.py before it is uploaded.
 on:

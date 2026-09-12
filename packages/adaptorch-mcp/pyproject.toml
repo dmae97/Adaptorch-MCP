@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptorch-mcp"
-version = "0.5.0"
+version = "0.5.1"
 description = "Installable MCP bridge for AdaptOrch"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 license = { text = "Proprietary — Copyright ClassicMate. All rights reserved." }
 authors = [{ name = "AdaptOrch maintainers" }]
 keywords = ["mcp", "model-context-protocol", "adaptorch", "agent-orchestration"]
@@ -22,7 +22,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "adaptorch[api]>=0.1.0",
+  "adaptorch[api]>=0.1.2,<0.2",
 ]
 
 [project.optional-dependencies]
@@ -41,8 +41,12 @@ Documentation = "https://github.com/dmae97/adaptorch#readme"
 
 [project.scripts]
 adaptorch-mcp = "adaptorch_mcp.cli:main"
+adaptorch-mcp-client = "adaptorch_mcp.cli:main"
 adaptorch-mcp-doctor = "adaptorch_mcp.doctor:main"
 adaptorch-mcp-smoke = "adaptorch_mcp.stdio_smoke:main"
+
+[tool.setuptools]
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

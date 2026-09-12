@@ -61,6 +61,16 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 - Capability projection now preserves the engine-declared algorithm surface when the installed engine reports it: `supported_synthesis_modes`, `deprecated_synthesis_mode_aliases`, `topologies`, and `output_extractor_modes`. Parents without those fields still project cleanly, and malformed values fail closed as before.
 - Documentation states the engine truth instead of implying five peer synthesis modes: `paper`, `robust`, `robust_lite`, and `stable_hybrid` are executed strategies, `fourier_aggressive` is a deprecated alias resolved to `stable_hybrid`, engine extractors are `final_answer` and `multiple_choice_letter`, and the MCP `none` extractor value is not forwarded to the engine.
 
+## [0.5.1] - 2026-09-12
+
+- Publish the current verified MCP wrapper as a new release; leave `0.5.0` yanked.
+- Include the canonical ClassicMate proprietary `LICENSE` in wheel and sdist.
+- Add `adaptorch-mcp-client`, an unambiguous wrapper launcher that cannot be
+  overwritten by the engine's `adaptorch-mcp` console script. Retain the old name.
+- Bound the engine dependency to `adaptorch[api]>=0.1.2,<0.2` so the planned
+  code-free `adaptorch` meta-package cannot replace the required engine.
+- No private-engine, API client, or CLI distribution is published by this MCP release.
+
 ## [0.5.0] - 2026-07-14
 
 ### Added
