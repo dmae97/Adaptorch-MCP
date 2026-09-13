@@ -11,10 +11,9 @@ REPO_ROOT = PACKAGE_ROOT.parents[1]
 def test_distribution_ships_the_canonical_classicmate_license() -> None:
     metadata = tomllib.loads((PACKAGE_ROOT / "pyproject.toml").read_text())
     project = metadata["project"]
-    assert project["license"] == {
-        "text": "Proprietary — Copyright ClassicMate. All rights reserved."
-    }
-    assert metadata["tool"]["setuptools"]["license-files"] == ["LICENSE"]
+    assert project["license"] == "LicenseRef-Proprietary"
+    assert project["authors"] == [{"name": "ClassicMate"}]
+    assert project["license-files"] == ["LICENSE"]
     assert (PACKAGE_ROOT / "LICENSE").read_bytes() == (REPO_ROOT / "LICENSE").read_bytes()
 
 

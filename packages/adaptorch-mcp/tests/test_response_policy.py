@@ -296,18 +296,16 @@ class TestControlPlaneRefusalReachesTheTenant:
         message = "Control-plane HTTP error 403: starter plan requires your own provider key"
 
         body = json.loads(
-            _sanitize(_control_plane_rejection(403, message), "adaptorch_run")["result"][
-                "content"
-            ][0]["text"]
+            _sanitize(_control_plane_rejection(403, message), "adaptorch_run")["result"]["content"][
+                0
+            ]["text"]
         )
 
         assert body["status_code"] == 403
         assert body["message"] == message
 
     @pytest.mark.parametrize("status_code", [400, 404, 429, 500, 503])
-    def test_other_refusals_keep_the_code_but_not_the_operator_text(
-        self, status_code: int
-    ) -> None:
+    def test_other_refusals_keep_the_code_but_not_the_operator_text(self, status_code: int) -> None:
         body = json.loads(
             _sanitize(
                 _control_plane_rejection(status_code, "internal detail /srv/x traceback"),
@@ -330,11 +328,11 @@ class TestControlPlaneRefusalReachesTheTenant:
 
 @pytest.mark.parametrize(
     ("flag", "expected"),
-    [(True, True), (False, False), ("true", False), (1, False), (None, False)],
+    [(True, True), (False, False), ("true", True), (1, True), (None, False)],
     ids=["bool-true", "bool-false", "string-true", "int-one", "absent"],
 )
 def test_is_error_is_forwarded_only_for_a_real_boolean(flag: object, expected: bool) -> None:
-    """The parent's ``isError`` is untrusted input: only the boolean ``True`` marks an error."""
+    """Boolean flags are preserved; a present nonboolean flag is a format error."""
     result: dict[str, Any] = {
         "content": [{"type": "text", "text": json.dumps({"run_id": "r1", "status": "QUEUED"})}]
     }
@@ -344,3 +342,7 @@ def test_is_error_is_forwarded_only_for_a_real_boolean(flag: object, expected: b
     sanitized = _sanitize({"jsonrpc": "2.0", "id": 12, "result": result}, "adaptorch_run")
 
     assert sanitized["result"]["isError"] is expected
+    if flag is not None and not isinstance(flag, bool):
+        assert json.loads(sanitized["result"]["content"][0]["text"]) == {
+            "error": "unsupported tool response format"
+        }

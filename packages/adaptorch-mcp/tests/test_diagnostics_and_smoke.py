@@ -312,3 +312,53 @@ def test_stdio_smoke_main_redacts_failure_output(
     rendered = capsys.readouterr().out
     assert token not in rendered
     assert "[redacted]" in rendered
+
+
+def _doctor_payload(*, token_set: bool) -> dict[str, object]:
+    return {
+        "ok": True,
+        "environment": {
+            "tokens": {"ADAPTORCH_CONTROL_PLANE_TOKEN": {"set": token_set, "length": None}},
+        },
+    }
+
+
+def test_doctor_points_a_tokenless_operator_at_the_hosted_plan(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from adaptorch_mcp import doctor
+
+    pytest.importorskip("adaptorch.hosted_hint")
+    monkeypatch.delenv("ADAPTORCH_NO_HOSTED_HINT", raising=False)
+    monkeypatch.setattr(doctor, "collect_diagnostics", lambda: _doctor_payload(token_set=False))
+
+    assert doctor.main([]) == 0
+
+    out = capsys.readouterr().out
+    assert "No ADAPTORCH_CONTROL_PLANE_TOKEN set." in out
+    assert "utm_source=pypi" in out
+    assert "utm_medium=mcp-doctor" in out
+    # The plan facts are the engine's, not a copy kept here.
+    from adaptorch.hosted_hint import hosted_plan_sentence
+
+    assert hosted_plan_sentence() in out
+
+
+def test_doctor_pointer_stays_out_of_json_and_configured_or_opted_out_runs(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from adaptorch_mcp import doctor
+
+    monkeypatch.delenv("ADAPTORCH_NO_HOSTED_HINT", raising=False)
+
+    assert doctor.hosted_pointer(_doctor_payload(token_set=True)) is None
+    opted_out = {"ADAPTORCH_NO_HOSTED_HINT": "1"}
+    assert doctor.hosted_pointer(_doctor_payload(token_set=False), opted_out) is None
+
+    monkeypatch.setattr(doctor, "collect_diagnostics", lambda: _doctor_payload(token_set=False))
+    assert doctor.main(["--json"]) == 0
+    out = capsys.readouterr().out
+    json.loads(out)
+    assert "adaptorch.com" not in out

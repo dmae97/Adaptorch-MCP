@@ -4,14 +4,15 @@ version = "0.1.0"
 description = "Public monorepo for the AdaptOrch MCP bridge"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary — Copyright ClassicMate. All rights reserved." }
-authors = [{ name = "AdaptOrch maintainers" }]
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "ClassicMate" }]
 
 [tool.uv.workspace]
 members = ["packages/adaptorch-mcp", "packages/adaptorch-client", "packages/adaptorch-cli"]
 
 [tool.uv.sources]
-adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "791c7bc5fb1eb80d1dee052fc895a289a0d09e50" }
+adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "39bfeadd96e19348a6a98a1e3c7167c23f17e579" }
 adaptorch-client = { workspace = true }
 
 [tool.ruff]
@@ -43,13 +44,19 @@ files = [
   "packages/adaptorch-mcp/src",
 ]
 
-[tool.pytest.ini_options]
-pythonpath = [
+[tool.pyright]
+pythonVersion = "3.11"
+extraPaths = [
   "packages/adaptorch-client/src",
   "packages/adaptorch-cli/src",
-  "packages/adaptorch/tests",
+  "packages/adaptorch-mcp/src",
+  "../src",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["packages/adaptorch-client/src", "packages/adaptorch-cli/src"]
 testpaths = [
+  "packages/adaptorch/tests",
   "packages/adaptorch-client/tests",
   "packages/adaptorch-cli/tests",
   "packages/adaptorch-mcp/tests",

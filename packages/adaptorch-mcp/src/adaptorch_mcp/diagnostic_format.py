@@ -59,6 +59,14 @@ def format_diagnostics(payload: Mapping[str, Any]) -> str:
             "insecureControlPlaneAllowed",
         ):
             lines.append(f"- {name}: {security.get(name)}")
+    lines.extend(("", "Engine algorithm surface:"))
+    algorithm_surface = payload.get("algorithmSurface", {})
+    if isinstance(algorithm_surface, Mapping):
+        for name in ("engineExportsOrchestrationValue", "orchestrationValueParity"):
+            lines.append(f"- {name}: {algorithm_surface.get(name)}")
+        drifting = algorithm_surface.get("driftingFields")
+        if isinstance(drifting, list) and drifting:
+            lines.append(f"- driftingFields: {', '.join(str(item) for item in drifting)}")
     lines.extend(("", "Expected core MCP tools:"))
     for tool in payload.get("expectedTools", []):
         lines.append(f"- {tool}")

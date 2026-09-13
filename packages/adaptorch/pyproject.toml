@@ -4,8 +4,9 @@ build-backend = "setuptools.build_meta"
 
 # Meta-package. It carries no code: `pip install adaptorch` installs the hosted
 # API client and the adaptorchctl CLI. Releases 0.1.1 and 0.1.2 of this name
-# shipped the private engine and were deleted on 2026-09-02; the version starts
-# above them so no resolver ever prefers a cached copy of the old core.
+# shipped the private engine. Removal was planned on 2026-09-02, but PyPI JSON
+# still listed both on 2026-09-05. This client-only replacement is not published
+# yet; its higher version does not revoke earlier copies or override exact pins.
 # scripts/check_public_wheels.py fails the build if this wheel ever grows a
 # module or a dependency on the core.
 [project]

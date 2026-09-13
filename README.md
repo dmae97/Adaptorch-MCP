@@ -24,12 +24,12 @@
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-stdio%20%7C%20HTTP-22d3ee?style=flat-square">
   <img alt="License Proprietary" src="https://img.shields.io/badge/license-Proprietary-94a3b8?style=flat-square">
-  <img alt="Public ready" src="https://img.shields.io/badge/public--ready-yes-86efac?style=flat-square">
+  <img alt="Distribution migration pending" src="https://img.shields.io/badge/distribution-migration%20pending-yellow?style=flat-square">
   <a href="https://adaptorch.com"><img alt="Live on adaptorch.com" src="https://img.shields.io/badge/live-adaptorch.com-00d26a?style=flat-square"></a>
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
 </p>
 
-**AdaptOrch MCP** is the official MCP server for [AdaptOrch](https://adaptorch.com), the service that checks AI-written code and hands back a replayable receipt. From Claude Code (or any MCP client) it submits work to the hosted control plane, routes it through the right topology, and pulls the receipt — run status, traces, artifacts — back into the chat.
+**AdaptOrch MCP** is the MCP adapter for [AdaptOrch](https://adaptorch.com). From Claude Code or another MCP client it submits work to the hosted control plane and returns available run status, bounded observations and artifact references. The engine owns routing and execution. Trace access requires the explicit `full` profile; this adapter does not expose the research-only inference-tape replay API.
 
 Use it when your coding agent says a patch works and you want the receipt before you merge, or when a task is too large, too ambiguous, or too expensive to trust to one single-pass response.
 
@@ -76,7 +76,7 @@ These values are not MCP tool arguments or JSON body fields. The local wrapper a
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | All AdaptOrch API calls (run, status, artifacts) | Dashboard after signup |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Protect your local HTTP MCP endpoint | You define it (any secure string) |
 
-Starter `$0` includes API key access and 5,000 platform calls/month. Model usage is billed separately by your BYOK provider. The [current plan catalog](https://adaptorch.com/v1/plans) is authoritative. Hosted run records and artifacts do not imply repository command checks: those require a separately configured execution environment.
+Plan prices and monthly run quotas come from [the hosted plan catalog](https://adaptorch.com/v1/plans), not the installed package. BYOK provider charges are separate from the AdaptOrch subscription; an AdaptOrch key is not a provider key.
 
 ### Engine-delegated optional algorithm controls (latest)
 
@@ -92,7 +92,7 @@ benchmark/eval or operator controls, not quickstart defaults.
 | `pass_rate_credit` / `quality_signal` | Online-router learning | `compute_quality` tries exact-answer token matching before fuzzy matching. `pass_rate_credit` is opt-in partial credit; do not claim it changes `AdaptOrchEngine` router feedback by default. |
 | `ADAPTORCH_PAPER_SEMANTIC_WEIGHT` | Synthesis | Default is `0.35`. Nonzero semantic weight, plus CJK/Hangul inputs, use Python scoring rather than the native fast path. |
 | `prefer_multi_model_ensemble_singleton` | Routing threshold | Auto-enables when at least two ensemble providers exist and synthesis mode is not `direct`, unless an explicit debate-singleton preference wins. The MCP hint `prefer_ensemble_singleton` can request the same preference manually. |
-| `synthesis_mode` | Synthesis | Supported modes are `paper`, `robust`, `robust_lite`, and `stable_hybrid`. `fourier_aggressive` is accepted but deprecated. Serving-only `auto` asks the control plane to select a mode; run responses preserve requested and selected modes. |
+| `synthesis_mode` | Synthesis | Supported modes are `paper`, `robust`, `robust_lite`, and `stable_hybrid`. `fourier_aggressive` aliases `stable_hybrid`. Serving-only `auto` asks the control plane to choose; it is not an additional engine algorithm. |
 | `output_extractor` | Ensemble extraction | Engine extractors are `final_answer` and `multiple_choice_letter`. The MCP value `none` means "no extractor" and is not forwarded. |
 
 ## Research paper
@@ -114,6 +114,18 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
 
 There are three ways in. Pick by what you are: an agent, a program, or a terminal.
 
+> **Release status (2026-09-12):** `adaptorch-mcp` 0.5.1 is published with the
+> `adaptorch-mcp-client` launcher and `adaptorch[api]>=0.1.2,<0.2` dependency.
+> The client-only `adaptorch` 0.2.0 replacement is not published. New SDK polling
+> and response-safety features below describe this source revision; pushing it
+> does not republish any PyPI version or revoke an earlier license grant.
+
+**Source update (2026-09-08, not a publication):** this checkout adds request-scoped
+SDK BYOK, bounded read-only polling, subject-bound responses and typed algorithm
+observations. The local MCP facade uses a one-attempt, redirect-free transport and
+preserves requested/selected modes without exposing private diagnostics. See the
+[client contract and verification record](docs/2026-09-08-algorithm-client-contract.md).
+
 ### 1. Hosted MCP — nothing to install (recommended)
 
 The control plane serves MCP over HTTP at `https://adaptorch.com/mcp`. Any client
@@ -131,7 +143,16 @@ claude mcp add --transport http adaptorch https://adaptorch.com/mcp \
   --header "X-Provider-Key: ${ADAPTORCH_MCP_PROVIDER_API_KEY}"
 ```
 
-Shell expansion may persist header values in client configuration. Keep that file private and never commit credentials. Tool discovery confirms connectivity, not a completed model run or a repository test pass.
+Set all four environment variables above before configuring model-backed runs.
+The CLI uses `ADAPTORCH_API_KEY`, `ADAPTORCH_PROVIDER`,
+`ADAPTORCH_PROVIDER_MODEL`, and `ADAPTORCH_PROVIDER_API_KEY` for these roles.
+Shell expansion can persist header values in
+client configuration; keep that file private and never commit it.
+
+Tool discovery confirms connectivity, not model execution or a test pass.
+The hosted service provides supported run records and available artifacts;
+repository command checks require a separately configured execution environment.
+Shared hosted command verification is disabled by default.
 
 Cursor, Codex, Gemini CLI, VS Code and Windsurf snippets: <https://adaptorch.com/mcp-docs>.
 
@@ -172,11 +193,11 @@ is separate from a PyPI release; see the [source install and BYOK example](packa
 ### 3. This package — local engine required
 
 `adaptorch-mcp` wraps the AdaptOrch parent engine in-process; it is for
-environments where that engine is installed. The engine is not publicly
-distributed, so for everyone else the hosted endpoint above is the MCP path.
+environments where the compatible engine is installed. Its package dependency
+installs the published 0.1.x engine; the hosted endpoint above needs no local engine.
 
 ```bash
-uvx adaptorch-mcp --help   # only where the parent engine is importable
+uvx --python 3.12 --from adaptorch-mcp==0.5.1 adaptorch-mcp-client --help
 ```
 
 ## Why Claude Code users feel it quickly
@@ -184,12 +205,12 @@ uvx adaptorch-mcp --help   # only where the parent engine is importable
 | First-run win | Tool | What changes in the chat |
 | --- | --- | --- |
 | Less proof ambiguity | `adaptorch_get_run` | Claude can inspect a bounded Correctness Wall view without exposing selector internals or treating `PASS` as a proof. |
-| Fewer failed long tasks | `adaptorch_run` | Large goals move through AdaptOrch routing, synthesis, and telemetry instead of one brittle pass. |
-| Evidence without context switching | `adaptorch_get_artifacts` | Outputs, traces, and run proof come back into the Claude Code conversation. |
+| Multi-step execution | `adaptorch_run` | Delegate the task to the engine's routing and synthesis path, then inspect its reported outcome. |
+| Artifact discovery | `adaptorch_get_artifacts` | Retrieve available artifact references without treating them as a correctness proof. |
 | Safer setup support | `adaptorch-mcp-doctor` | Users can paste redacted diagnostics without leaking tokens. |
 | Fast install loop | `adaptorch-mcp-smoke` | Local MCP wiring is verified with `initialize` + `tools/list`. |
 
-## Measured: a directional paired result with failed gates
+## Measured: a directional paired result, with failed gates
 
 <p align="center">
   <a href="https://adaptorch.com"><img src="assets/benchmark-paired-banner.svg" alt="AdaptOrch measured paired run — baseline 86.7% vs verified 100.0% on 30 shared ledger tasks, +13.3pp, 95% CI [+3.3, +26.7]" width="100%"></a>
@@ -206,7 +227,7 @@ Cerebras), so the paired delta cancels run-to-run drift:
 Paired delta **+13.3pp**, 95% CI **[+3.3, +26.7]** on this ledger family.
 The aggregate verdict and predefined family gate **did not pass**. The public
 [evidence JSON](https://adaptorch.com/data/adaptorch-benchmarks.json) records
-`significant=false`, `aggregate_significant=false`, `gate_passed=false` and
+`significant=false`, `aggregate_significant=false`, `gate_passed=false`, and
 `official_claim_allowed=false`. Treat this as directional, not proven.
 
 > Scope: internal reproducible regression evidence on a synthetic ledger
@@ -216,7 +237,8 @@ The aggregate verdict and predefined family gate **did not pass**. The public
 
 Run your own workload through the hosted kernel at
 **[adaptorch.com](https://adaptorch.com)** — free starter includes an API key
-and 5,000 platform calls/month. BYOK provider charges are separate.
+and 5,000 platform calls/month. BYOK provider usage is billed separately;
+confirm current limits in the [plan catalog](https://adaptorch.com/v1/plans).
 
 ## Scenario benchmark projection
 
@@ -399,7 +421,7 @@ validating a specific hosted/core release.
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
 | `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router (`full` profile only). |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
-| `adaptorch_capabilities` | Read synthesis modes (with deprecated aliases), topologies, output extractors, connectors, and server features. |
+| `adaptorch_capabilities` | Read synthesis modes, topologies, extractors, verifier/VERA vocabularies, connectors, and server features. |
 | `adaptorch_usage` | Read the calling tenant's usage window (plan level, period, used, limit, remaining, percentage). |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
 
@@ -418,17 +440,21 @@ readers unless those payloads are already sanitized.
 
 ## Public release checklist
 
-Before publishing:
+**The current local MCP wrapper is blocked by the public-wheel gate because it
+depends on the private engine.** Build/test success and a publish dry-run are not
+permission to publish that wheel. The engine-free SDK/CLI have separate wheel gates.
+
+For local validation only:
 
 ```bash
 uv run ruff check packages/adaptorch-mcp
 uv run mypy packages/adaptorch-mcp/src
 uv run pytest packages/adaptorch-mcp/tests -q
 uv run python -m build packages/adaptorch-mcp --outdir dist
-uv publish --dry-run dist/*
 ```
 
-Then follow `docs/publishing.md` for PyPI Trusted Publishing or token-based `uv publish`.
+Publishing requires an independently passing public-wheel gate and explicit release
+approval. Only then follow `docs/publishing.md` for the applicable public package.
 
 ## Security
 

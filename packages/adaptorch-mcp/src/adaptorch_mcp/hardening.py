@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Final, Protocol
+from typing import Any, Final
 
-import adaptorch.n8n_connector as parent_n8n_connector
 from adaptorch.mcp_server import AdaptOrchMCPServer, MCPToolBackend, NotificationSink
-from adaptorch.n8n_connector import N8nConnectorConfig, N8nControlPlaneConnector
 
+from adaptorch_mcp.backend_config import ProviderCredentialConfig as ProviderCredentialConfig
+from adaptorch_mcp.backend_config import build_parent_config as _parent_connector_config
+from adaptorch_mcp.backend_config import parent_n8n_connector as parent_n8n_connector
+from adaptorch_mcp.backend_config import valid_wait_controls
+from adaptorch_mcp.control_plane_backend import (
+    SafeControlPlaneConnector as N8nControlPlaneConnector,
+)
 from adaptorch_mcp.public_schema import (
     ParentContractError,
     project_remote_tool,
@@ -61,20 +66,6 @@ _FULL_ONLY_TOOL_NAMES: Final = (
 )
 _REQUIRED_FULL_TOOL_NAMES: Final = (*REMOTE_TOOL_NAMES, *_FULL_ONLY_TOOL_NAMES)
 _REMOTE_RESOURCE_URIS: Final = frozenset({"adaptorch://server-info", "adaptorch://plans/cloud"})
-
-
-class ProviderCredentialConfig(Protocol):
-    @property
-    def provider(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def model(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def api_key(self) -> str | None:
-        raise NotImplementedError
 
 
 class _InvalidExposureProfileError(ValueError):
@@ -177,10 +168,13 @@ class HardenedMCPServer(AdaptOrchMCPServer):
         )
 
     def handle_message(self, message: Mapping[str, Any]) -> dict[str, Any] | None:
+        method = message.get("method")
+        if method == "tools/call" and _tool_name(message) == "adaptorch_run":
+            if not valid_wait_controls(_run_arguments(message)):
+                return _jsonrpc_error(message, -32602, "Invalid tool arguments")
         if self._exposure_profile == FULL_EXPOSURE_PROFILE:
             return super().handle_message(message)
 
-        method = message.get("method")
         if method == "tools/call":
             params = message.get("params")
             if not isinstance(params, Mapping):
@@ -214,7 +208,12 @@ class HardenedMCPServer(AdaptOrchMCPServer):
             tool_name = _tool_name(message)
             if tool_name is None:
                 return _jsonrpc_error(message, -32602, "Invalid tool arguments")
-            return sanitize_tool_response(response, tool_name=tool_name)
+            run_id = _run_arguments(message).get("run_id")
+            return sanitize_tool_response(
+                response,
+                tool_name=tool_name,
+                expected_run_id=run_id.strip() if isinstance(run_id, str) else None,
+            )
         if method == "resources/read":
             params = message.get("params")
             uri = params.get("uri") if isinstance(params, Mapping) else None
@@ -244,38 +243,6 @@ class HardenedMCPServer(AdaptOrchMCPServer):
             if isinstance(capabilities, dict):
                 capabilities.pop("completions", None)
         return response
-
-
-def _parent_connector_config(
-    *,
-    base_url: str,
-    api_token: str,
-    timeout_seconds: float,
-    provider_credential: ProviderCredentialConfig | None,
-) -> N8nConnectorConfig:
-    config_kwargs: dict[str, Any] = {
-        "base_url": base_url,
-        "api_token": api_token.strip(),
-        "timeout_seconds": timeout_seconds,
-    }
-    if provider_credential is not None:
-        credential_type = getattr(
-            parent_n8n_connector,
-            "ControlPlaneProviderCredential",
-            None,
-        )
-        config_fields = getattr(N8nConnectorConfig, "__dataclass_fields__", {})
-        if credential_type is None or "provider_credential" not in config_fields:
-            raise RuntimeError(
-                "installed adaptorch engine is too old for MCP provider credentials; "
-                "install an engine revision with ControlPlaneProviderCredential support"
-            )
-        config_kwargs["provider_credential"] = credential_type(
-            provider=provider_credential.provider,
-            model=provider_credential.model,
-            api_key=provider_credential.api_key,
-        )
-    return N8nConnectorConfig(**config_kwargs)
 
 
 def build_hardened_mcp_server(

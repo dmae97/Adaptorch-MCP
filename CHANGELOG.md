@@ -23,6 +23,46 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 - Test SDK, CLI and the MCP wrapper against actual local engine HTTP routes;
   include client/CLI in workspace and CI gates. No live model or account is used.
 
+### Added (2026-09-10) — ModelStudio Token Plan connection
+
+- Document request-scoped `modelstudio-maas` credentials for MCP and SDK clients
+  talking to a control plane with the new provider. Client code keeps using its
+  existing transport; no engine code or new dependency is copied into the SDK.
+- Add an SDK/MCP → local control-plane → simulated provider HTTP test, skipped
+  unless that engine exposes the provider. It is not in the current default
+  auto-provider map; hosted deployment and automated-batch permission are not implied.
+
+### Changed (2026-09-09) — verifier and VERA discovery
+
+- `adaptorch_capabilities` projection now preserves engine-declared `verifier_types`,
+  `verification_outcome_kinds`, `verification_decisions`, and `evidence_causalities`
+  when present. Older engines that omit them still project; malformed lists fail closed.
+  Listed values are discovery, not a correctness proof.
+
+### Changed (2026-09-08) — MCP and SDK algorithm boundaries
+
+- Preserve serving-only `auto`, requested/selected synthesis modes, and independent
+  result/evaluation observations without inferring correctness or final execution.
+- Add explicit request-scoped SDK BYOK, bounded GET polling and response run-ID
+  checks. The SDK remains standard-library-only and never imports the private engine.
+- Route the MCP facade through a one-attempt parent-compatible HTTP boundary:
+  no redirects or ambient proxies, bounded strict JSON, run-only provider headers,
+  and subject validation before collection. Engine task/routing logic is unchanged.
+- Reject duplicate keys, non-finite numbers, malformed error flags and invalid
+  observation types. Preserve validated quota counters with a fixed public error,
+  not arbitrary operator text; error results do not claim successful structured output.
+- Expose REST schema/build observations and preserve artifact reference maps separately
+  from structured artifact IDs. Add source-path configuration for editor type checking.
+- These are source changes, not a package publication or hosted inference-tape API.
+  See [client contract and evidence](docs/2026-09-08-algorithm-client-contract.md).
+
+### Security (2026-09-05)
+
+- The proposed stricter wheel policy is held for a separate release decision:
+  it conflicts with the published 0.5.1 in-process wrapper. This integration keeps
+  the current gate, dependency cap and launcher, and does not publish a package.
+- Earlier license grants are unaffected by future releases.
+
 ### Added
 
 - `ADAPTORCH_MCP_PROVIDER=auto` picks the tenant's own provider key from the MCP
@@ -36,6 +76,20 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
   fails closed with a message that names variables and never a value. The
   provider list is derived from `adaptorch.providers.DEFAULT_API_KEY_ENV`; a
   docs-truth test keeps the three places that spell it out from drifting.
+
+- `adaptorch-mcp-doctor` (text mode only) ends with one pointer to the free hosted Starter plan when `ADAPTORCH_CONTROL_PLANE_TOKEN` is not set — the moment an operator is asking how to connect. The sentence and its plan facts are the engine's own `adaptorch.hosted_hint` (engine >= 0.1.3); an older engine prints nothing rather than a retyped number. `--json` output, exit codes, and a configured token are untouched; `ADAPTORCH_NO_HOSTED_HINT=1` silences it. The link carries `utm_source=pypi&utm_medium=mcp-doctor` and nothing else.
+
+- Consumer run receipt on the remote surface. `adaptorch_get_run` now projects `first_run_receipt` and declares it in the advertised `outputSchema`, so an MCP client answers the buyer's question directly: `verdict` (`OK` / `DEGRADED` / `FAILED`), `budget_state` (`within_cap` … `cap_exceeded`), `verification_state` (`passed` / `failed` / `not_run` / `error`), and the beta `claims` block. `correctness_wall` remains the auditor's view; this is the consumer's.
+- The receipt is built from the user's prompt and persisted beside a server artifact path and a keyed digest. The wrapper republishes four fields and drops everything else — `artifact_path`, `prompt_sha256`, `prompt_hmac_sha256`, and the redacted preview never reach a client, and the projection re-validates rather than trusting the parent to have stripped them.
+- A receipt claiming `b2c_launch_ready`, `full50_claimed`, or `official_correctness_claimed` is projected as `null` instead of forwarded: a beta must not tell a paying consumer it is finished. A malformed receipt nulls the same way and leaves the run summary intact, so a client keeps status without receiving an unvalidated verdict.
+- `packages/adaptorch-mcp/tests/test_first_run_receipt_output.py`: 40 cases covering every verdict/state value, the closed key set, overclaim rejection, malformed-claims rejection, `get_run` wiring, and agreement between the projection and the advertised schema.
+- Parity coverage extended to the receipt: wrapper vocabulary must equal the installed engine's enums, the wrapper's claim defaults must equal `ClaimBoundary()`, engine-authored projections must survive the wrapper byte-for-byte, and `docs/tools.md` must declare the vocabulary.
+- Orchestration cost advisory on the local planning surface. `adaptorch_route_topology` now returns an additive `orchestration_value` block projected through a closed schema: verdict, recommended action, cost/latency ratio against the `sequential` baseline, token and optional USD estimates, the caller's measured gain and acceptance bar, and a `claim_boundary`. It answers "is this orchestration worth paying for" before a run pays for it — and it is a disclosure, never a selector.
+- The wrapper adds no thresholds and no accuracy claims. Replication topologies (`multi_model_ensemble`, `multi_turn_debate`) project as `replication_unproven` unless the caller supplies both `measured_quality_gain` and `min_quality_gain`; the engine owns that logic and the wrapper only republishes it.
+- `adaptorch_route_topology` output is now projected at all. It previously fell through to "unsupported tool response format" in any sanitizing path; the projection bounds routing stages, reason length, and the feature key set, and rejects unknown feature keys so router internals cannot widen the surface.
+- Engine-skew disclosure in `adaptorch-mcp-doctor` (diagnostics `v3`). The new `algorithmSurface` section reports `engineExportsOrchestrationValue`, `orchestrationValueParity` (`match` / `drift` / `unavailable`), and `driftingFields`. A published wrapper meeting an older engine reads `unavailable` and stays OK; a genuine vocabulary mismatch reads `drift` and fails the doctor closed, so a wrapper/engine pin gap is visible instead of silent.
+- `packages/adaptorch-mcp/tests/test_orchestration_value_output.py`: 40 projection cases covering accepted shapes and every fail-closed rejection (unknown verdict, mutated claim boundary, non-finite ratio, out-of-range gain, a measured-flag that disagrees with the reported gain).
+- Parity coverage extended: wrapper verdict/action/claim-boundary constants must equal the installed engine's, live engine advisories must survive projection byte-for-byte, `docs/tools.md` must declare the engine vocabulary, and the remote profile must still withhold the local router.
 - Process-local MCP BYOK configuration via `ADAPTORCH_MCP_PROVIDER`, `ADAPTORCH_MCP_PROVIDER_MODEL`, and `ADAPTORCH_MCP_PROVIDER_API_KEY`. Provider credentials are forwarded only on run submission headers, never added to MCP tool arguments or JSON bodies, and provider keys are excluded from repr/error output and non-run requests.
 - Core/wrapper regression coverage for environment validation, secret non-persistence, run-only header forwarding, error redaction, and fail-closed behavior with an older installed engine.
 - `adaptorch_usage` is exposed in the default remote profile, so a client can read its own tenant usage window (plan level, period, used, limit, remaining, percentage) before starting expensive work. The tenant comes from `ADAPTORCH_CONTROL_PLANE_TOKEN`; the tool takes no arguments and a client-supplied tenant is rejected with `-32602`. The default remote surface is now nine tools.

@@ -1,3 +1,5 @@
+# mypy: disable-error-code="import-not-found"
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import importlib.metadata
@@ -11,6 +13,11 @@ from urllib.parse import urlsplit, urlunsplit
 
 from adaptorch_mcp.cli import _CONTROL_PLANE_BASE_URL_ENV, _HOSTED_BASE_URL, _normalize_env_base_url
 from adaptorch_mcp.diagnostic_format import format_diagnostics
+from adaptorch_mcp.orchestration_value_output import (
+    CLAIM_BOUNDARY_FIELDS,
+    ORCHESTRATION_VALUE_ACTIONS,
+    ORCHESTRATION_VALUE_VERDICTS,
+)
 from adaptorch_mcp.security_policy import (
     ALLOW_INSECURE_ENV,
     EXPOSURE_PROFILE_ENV,
@@ -166,6 +173,48 @@ def _control_plane_status(env: Mapping[str, str]) -> dict[str, Any]:
     }
 
 
+def _algorithm_surface_status() -> dict[str, Any]:
+    """Report engine algorithm-surface availability and wrapper/engine parity.
+
+    A published wrapper can run against an engine older or newer than the pin it
+    was tested against. Silence would hide that skew, so the doctor states
+    whether the installed engine declares the surface at all, and whether its
+    vocabulary still matches the copy this wrapper validates with. Real drift
+    fails closed; a missing surface is reported as unavailable, not as drift.
+    """
+    try:
+        from adaptorch.orchestration_value import (
+            ORCHESTRATION_VALUE_ACTIONS as engine_actions,
+        )
+        from adaptorch.orchestration_value import (
+            ORCHESTRATION_VALUE_CLAIM_BOUNDARY as engine_claim_boundary,
+        )
+        from adaptorch.orchestration_value import (
+            ORCHESTRATION_VALUE_VERDICTS as engine_verdicts,
+        )
+    except ImportError:
+        return {
+            "engineExportsOrchestrationValue": False,
+            "orchestrationValueParity": "unavailable",
+            "driftingFields": [],
+        }
+
+    drifting = [
+        name
+        for name, engine_value, wrapper_value in (
+            ("verdicts", tuple(engine_verdicts), ORCHESTRATION_VALUE_VERDICTS),
+            ("actions", tuple(engine_actions), ORCHESTRATION_VALUE_ACTIONS),
+            ("claimBoundary", dict(engine_claim_boundary), CLAIM_BOUNDARY_FIELDS),
+        )
+        if engine_value != wrapper_value
+    ]
+    return {
+        "engineExportsOrchestrationValue": True,
+        "orchestrationValueParity": "drift" if drifting else "match",
+        "driftingFields": drifting,
+    }
+
+
 def _security_status(env: Mapping[str, str]) -> dict[str, Any]:
     raw_profile = env.get(EXPOSURE_PROFILE_ENV, "remote").strip().lower()
     profile_valid = raw_profile in {"", "remote", "full"}
@@ -193,13 +242,14 @@ def collect_diagnostics(env: Mapping[str, str] | None = None) -> dict[str, Any]:
     }
     security = _security_status(resolved_env)
     control_plane = _control_plane_status(resolved_env)
+    algorithm_surface = _algorithm_surface_status()
     expected_tools = (
         _FULL_CORE_TOOLS
         if security["exposureProfile"] == "full" and security["profileValid"]
         else EXPECTED_CORE_TOOLS
     )
     return {
-        "schemaVersion": "adaptorch_mcp.diagnostics.v2",
+        "schemaVersion": "adaptorch_mcp.diagnostics.v3",
         "python": {
             "version": platform.python_version(),
             "implementation": platform.python_implementation(),
@@ -214,11 +264,13 @@ def collect_diagnostics(env: Mapping[str, str] | None = None) -> dict[str, Any]:
         "environment": _env_status(resolved_env),
         "controlPlane": control_plane,
         "security": security,
+        "algorithmSurface": algorithm_surface,
         "expectedTools": list(expected_tools),
         "ok": (
             packages["adaptorch"]["importable"]
             and security["profileValid"]
             and not control_plane["invalidEnvUrl"]
             and control_plane["policyValid"]
+            and algorithm_surface["orchestrationValueParity"] != "drift"
         ),
     }

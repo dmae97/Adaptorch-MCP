@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
-from adaptorch.types import SynthesisMode
+from adaptorch.types import ServingSynthesisMode
 
 
 class FakeBackend:
@@ -11,24 +11,26 @@ class FakeBackend:
         self,
         *,
         payload: Mapping[str, Any],
-        synthesis_mode: SynthesisMode = "robust",
+        synthesis_mode: ServingSynthesisMode = "robust",
         model: str | None = None,
         budget_policy: Mapping[str, int | float | str | bool] | None = None,
         trace: bool = False,
+        ensemble_members: Sequence[str] | None = None,
     ) -> dict[str, Any]:
-        del payload, synthesis_mode, model, budget_policy, trace
+        del payload, synthesis_mode, model, budget_policy, trace, ensemble_members
         return {"run_id": "r1", "status": "QUEUED", "diagnostics": {"width": 2}}
 
     def run_task_and_collect(
         self,
         *,
         payload: Mapping[str, Any],
-        synthesis_mode: SynthesisMode = "robust",
+        synthesis_mode: ServingSynthesisMode = "robust",
         model: str | None = None,
         budget_policy: Mapping[str, int | float | str | bool] | None = None,
         trace: bool = False,
         timeout_seconds: float = 120.0,
         poll_interval_seconds: float = 1.0,
+        ensemble_members: Sequence[str] | None = None,
     ) -> dict[str, Any]:
         del (
             payload,
@@ -38,6 +40,7 @@ class FakeBackend:
             trace,
             timeout_seconds,
             poll_interval_seconds,
+            ensemble_members,
         )
         return {
             "run_id": "r1",

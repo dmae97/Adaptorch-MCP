@@ -3,30 +3,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Final
 
+from adaptorch_mcp.first_run_receipt_output import first_run_receipt_output_schema
+from adaptorch_mcp.run_output import RUN_SCALAR_KEYS as RUN_SCALAR_KEYS
+from adaptorch_mcp.run_output import run_scalar_schema
+
 MAX_CONTEXT_ITEMS: Final = 16
 MAX_CONTEXT_LENGTH: Final = 256
-RUN_SCALAR_KEYS: Final = frozenset(
-    {
-        "run_id",
-        "status",
-        "result_status",
-        "evaluation_status",
-        "score_validity_status",
-        "topology",
-        "consistency",
-        "error_class",
-        "model",
-        "model_selection_source",
-        "synthesis_mode",
-        "synthesis_mode_requested",
-        "synthesis_mode_used",
-        "cse_state",
-        "created_at",
-        "started_at",
-        "finished_at",
-        "duration_ms",
-    }
-)
 _VERDICTS: Final = frozenset({"PASS", "ADVISORY", "INCONCLUSIVE", "BLOCKED"})
 _RECOMMENDED_ACTIONS: Final = frozenset({"observe", "deep_check", "human_review"})
 _CONTEXT_FIELDS: Final = ("blockers", "advisories", "evidence_notes")
@@ -41,9 +23,7 @@ _CLAIM_BOUNDARY_FIELDS: Final = {
 def _project_context(value: Any) -> list[str] | None:
     if not isinstance(value, list) or len(value) > MAX_CONTEXT_ITEMS:
         return None
-    if not all(
-        isinstance(item, str) and 0 < len(item) <= MAX_CONTEXT_LENGTH for item in value
-    ):
+    if not all(isinstance(item, str) and 0 < len(item) <= MAX_CONTEXT_LENGTH for item in value):
         return None
     return list(value)
 
@@ -63,12 +43,14 @@ def project_correctness_wall(value: Any) -> dict[str, Any] | None:
     verdict = value.get("verdict")
     recommended_action = value.get("recommended_action")
     selection_mutated = value.get("selection_mutated")
+    correctness_claim = value.get("correctness_claim")
     if (
         not isinstance(verdict, str)
         or verdict not in _VERDICTS
         or not isinstance(recommended_action, str)
         or recommended_action not in _RECOMMENDED_ACTIONS
-        or value.get("correctness_claim") is not False
+        or not isinstance(correctness_claim, bool)
+        or correctness_claim
         or not isinstance(selection_mutated, bool)
     ):
         return None
@@ -116,8 +98,7 @@ def correctness_wall_output_schema() -> dict[str, Any]:
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
-                    key: {"const": expected}
-                    for key, expected in _CLAIM_BOUNDARY_FIELDS.items()
+                    key: {"const": expected} for key, expected in _CLAIM_BOUNDARY_FIELDS.items()
                 },
                 "required": list(_CLAIM_BOUNDARY_FIELDS),
             },
@@ -137,17 +118,13 @@ def correctness_wall_output_schema() -> dict[str, Any]:
 
 def get_run_output_schema() -> dict[str, Any]:
     """Return the closed structured-output schema for remote get-run results."""
-    scalar_types = ["string", "number", "integer", "boolean", "null"]
-    properties: dict[str, Any] = {
-        key: {"type": scalar_types} for key in RUN_SCALAR_KEYS
-    }
-    properties["run_id"] = {"type": "string"}
-    properties["status"] = {"type": "string"}
+    properties: dict[str, Any] = run_scalar_schema()
     properties["artifact_urls"] = {
         "type": "object",
         "additionalProperties": {"type": "string"},
     }
     properties["correctness_wall"] = correctness_wall_output_schema()
+    properties["first_run_receipt"] = first_run_receipt_output_schema()
     return {
         "type": "object",
         "additionalProperties": False,

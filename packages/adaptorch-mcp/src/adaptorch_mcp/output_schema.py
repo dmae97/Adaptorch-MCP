@@ -5,35 +5,36 @@ from collections.abc import Callable, Mapping
 from typing import Any, Final
 from urllib.parse import urlsplit
 
-from adaptorch_mcp.correctness_wall_output import RUN_SCALAR_KEYS, project_correctness_wall
+from adaptorch_mcp.correctness_wall_output import project_correctness_wall
+from adaptorch_mcp.discovery_output import project_capabilities as _project_capabilities
+from adaptorch_mcp.discovery_output import project_catalog as project_catalog
+from adaptorch_mcp.discovery_output import project_server_info as project_server_info
+from adaptorch_mcp.first_run_receipt_output import project_first_run_receipt
+from adaptorch_mcp.orchestration_value_output import project_orchestration_value
+from adaptorch_mcp.projection_values import project_scalars as _project_scalars
+from adaptorch_mcp.run_output import project_run_scalars
 
-_PLAN_SCALAR_KEYS: Final = frozenset(
-    {"level", "name", "positioning", "monthly_price_usd", "monthly_calls", "badge", "cta"}
+MAX_ROUTING_STAGES: Final = 64
+MAX_ROUTING_STAGE_WIDTH: Final = 256
+MAX_ROUTING_REASON_LENGTH: Final = 512
+_ROUTING_FEATURE_KEYS: Final = frozenset(
+    {
+        "width",
+        "width_mode",
+        "critical_depth",
+        "coupling_density",
+        "parallel_ratio",
+        "node_count",
+        "edge_count",
+        "feature_schema_version",
+        "critical_depth_semantics",
+        "structural_depth",
+        "token_weighted_critical_path",
+        "legacy_critical_path_depth",
+    }
 )
 _ARTIFACT_NAME: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 _ARTIFACT_URI_SCHEMES: Final = frozenset({"adaptorch", "gs", "https", "s3"})
-
-
-def _is_scalar(value: Any) -> bool:
-    return value is None or isinstance(value, str | int | float | bool)
-
-
-def _project_scalars(value: Mapping[str, Any], keys: frozenset[str]) -> dict[str, Any] | None:
-    projected: dict[str, Any] = {}
-    for key in keys:
-        if key not in value:
-            continue
-        item = value[key]
-        if not _is_scalar(item):
-            return None
-        projected[key] = item
-    return projected
-
-
-def _project_string_list(value: Any) -> list[str] | None:
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        return None
-    return list(value)
 
 
 def _is_artifact_reference(value: str) -> bool:
@@ -44,28 +45,30 @@ def _is_artifact_reference(value: str) -> bool:
 
 
 def _project_artifact_map(value: Any) -> dict[str, str] | None:
-    if not isinstance(value, Mapping) or not all(
-        isinstance(key, str)
-        and _ARTIFACT_NAME.fullmatch(key) is not None
-        and isinstance(item, str)
-        and _is_artifact_reference(item)
-        for key, item in value.items()
-    ):
+    if not isinstance(value, Mapping):
         return None
-    return dict(value)
+    references: dict[str, str] = {}
+    for key, item in value.items():
+        if (
+            not isinstance(key, str)
+            or _ARTIFACT_NAME.fullmatch(key) is None
+            or not isinstance(item, str)
+            or not _is_artifact_reference(item)
+        ):
+            return None
+        references[key] = item
+    return references
 
 
 def _project_run(value: Mapping[str, Any]) -> dict[str, Any] | None:
-    if not isinstance(value.get("run_id"), str) or not isinstance(value.get("status"), str):
-        return None
-    projected = _project_scalars(value, RUN_SCALAR_KEYS)
+    projected = project_run_scalars(value)
     if projected is None:
         return None
     if "artifact_urls" in value:
         artifact_urls = _project_artifact_map(value["artifact_urls"])
         if artifact_urls is None:
             return None
-        projected["artifact_urls"] = artifact_urls
+        return {**projected, "artifact_urls": artifact_urls}
     return projected
 
 
@@ -75,6 +78,57 @@ def _project_get_run(value: Mapping[str, Any]) -> dict[str, Any] | None:
         return None
     if "correctness_wall" in value:
         projected["correctness_wall"] = project_correctness_wall(value["correctness_wall"])
+    if "first_run_receipt" in value:
+        # A malformed receipt projects to null rather than voiding the run
+        # summary: the consumer still needs status, but must never receive an
+        # unvalidated verdict.
+        projected["first_run_receipt"] = project_first_run_receipt(value["first_run_receipt"])
+    return projected
+
+
+def _project_routing_stages(value: Any) -> list[list[str]] | None:
+    if not isinstance(value, list) or len(value) > MAX_ROUTING_STAGES:
+        return None
+    stages: list[list[str]] = []
+    for stage in value:
+        if not isinstance(stage, list) or len(stage) > MAX_ROUTING_STAGE_WIDTH:
+            return None
+        if not all(isinstance(item, str) and item for item in stage):
+            return None
+        stages.append(list(stage))
+    return stages
+
+
+def _project_route_topology(value: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Project the local router decision plus its cost/evidence advisory."""
+    topology = value.get("topology")
+    reason = value.get("reason")
+    features = value.get("features")
+    stages = _project_routing_stages(value.get("stages"))
+    if (
+        not isinstance(topology, str)
+        or not topology
+        or not isinstance(reason, str)
+        or not 0 < len(reason) <= MAX_ROUTING_REASON_LENGTH
+        or stages is None
+        or not isinstance(features, Mapping)
+        or bool(set(features) - _ROUTING_FEATURE_KEYS)
+    ):
+        return None
+    projected_features = _project_scalars(features, _ROUTING_FEATURE_KEYS)
+    if projected_features is None:
+        return None
+    projected: dict[str, Any] = {
+        "topology": topology,
+        "reason": reason,
+        "stages": stages,
+        "features": projected_features,
+    }
+    if "orchestration_value" in value:
+        advisory = project_orchestration_value(value["orchestration_value"])
+        if advisory is None:
+            return None
+        projected["orchestration_value"] = advisory
     return projected
 
 
@@ -84,8 +138,10 @@ def _project_artifacts(value: Mapping[str, Any]) -> dict[str, Any] | None:
         return None
     raw_artifacts = value.get("artifacts")
     artifacts: dict[str, str] | list[str] | None = _project_artifact_map(raw_artifacts)
-    if artifacts is None and isinstance(raw_artifacts, list) and all(
-        isinstance(item, str) and _is_artifact_reference(item) for item in raw_artifacts
+    if (
+        artifacts is None
+        and isinstance(raw_artifacts, list)
+        and all(isinstance(item, str) and _is_artifact_reference(item) for item in raw_artifacts)
     ):
         artifacts = list(raw_artifacts)
     if artifacts is None:
@@ -117,8 +173,12 @@ def _project_metrics(value: Mapping[str, Any]) -> dict[str, Any] | None:
         return None
     projected = _project_scalars(value, keys)
     status_counts = value.get("status_counts")
-    if projected is None or not isinstance(status_counts, Mapping) or not all(
-        isinstance(key, str) and isinstance(item, int) for key, item in status_counts.items()
+    if (
+        projected is None
+        or not isinstance(status_counts, Mapping)
+        or not all(
+            isinstance(key, str) and isinstance(item, int) for key, item in status_counts.items()
+        )
     ):
         return None
     projected["status_counts"] = dict(status_counts)
@@ -143,118 +203,6 @@ def _project_usage(value: Mapping[str, Any]) -> dict[str, Any] | None:
     return _project_scalars(value, keys)
 
 
-def _project_plan(value: Mapping[str, Any]) -> dict[str, Any] | None:
-    projected = _project_scalars(value, _PLAN_SCALAR_KEYS)
-    features = _project_string_list(value.get("features"))
-    if projected is None or features is None:
-        return None
-    projected["features"] = features
-    return projected
-
-
-def project_catalog(value: Mapping[str, Any]) -> dict[str, Any] | None:
-    scalar_keys = frozenset({"schemaVersion", "catalogVersion", "billingCycle", "currency"})
-    projected = _project_scalars(value, scalar_keys)
-    sources = _project_string_list(value.get("sourceOfTruth"))
-    notes = _project_string_list(value.get("notes"))
-    plans = value.get("plans")
-    if projected is None or sources is None or notes is None or not isinstance(plans, list):
-        return None
-    projected_plans: list[dict[str, Any]] = []
-    for plan in plans:
-        if not isinstance(plan, Mapping):
-            return None
-        projected_plan = _project_plan(plan)
-        if projected_plan is None:
-            return None
-        projected_plans.append(projected_plan)
-    return {**projected, "sourceOfTruth": sources, "plans": projected_plans, "notes": notes}
-
-
-def _project_string_map(value: Any) -> dict[str, str] | None:
-    if not isinstance(value, Mapping) or not all(
-        isinstance(key, str) and isinstance(item, str) for key, item in value.items()
-    ):
-        return None
-    return {str(key): str(item) for key, item in value.items()}
-
-
-def _project_algorithm_surface(value: Mapping[str, Any]) -> dict[str, Any] | None:
-    """Project engine-declared algorithm surface fields when the parent sends them."""
-    projected: dict[str, Any] = {}
-    for key in ("supported_synthesis_modes", "topologies", "output_extractor_modes"):
-        if key not in value:
-            continue
-        items = _project_string_list(value[key])
-        if items is None:
-            return None
-        projected[key] = items
-    if "deprecated_synthesis_mode_aliases" in value:
-        aliases = _project_string_map(value["deprecated_synthesis_mode_aliases"])
-        if aliases is None:
-            return None
-        projected["deprecated_synthesis_mode_aliases"] = aliases
-    return projected
-
-
-def _project_capabilities(value: Mapping[str, Any]) -> dict[str, Any] | None:
-    synthesis_modes = _project_string_list(value.get("synthesis_modes"))
-    connectors = _project_string_list(value.get("connectors"))
-    algorithm_surface = _project_algorithm_surface(value)
-    raw_catalog = value.get("cloud_plan_catalog")
-    raw_server = value.get("server_capabilities")
-    if (
-        synthesis_modes is None
-        or connectors is None
-        or algorithm_surface is None
-        or not isinstance(raw_catalog, Mapping)
-        or not isinstance(raw_server, Mapping)
-    ):
-        return None
-    catalog = project_catalog(raw_catalog)
-    server_keys = ("tools", "resources", "prompts", "logging")
-    if catalog is None or not all(isinstance(raw_server.get(key), bool) for key in server_keys):
-        return None
-    return {
-        "synthesis_modes": synthesis_modes,
-        **algorithm_surface,
-        "connectors": connectors,
-        "cloud_plan_catalog": catalog,
-        "server_capabilities": {
-            **{key: raw_server[key] for key in server_keys},
-            "completions": False,
-            "verification_commands_enabled": False,
-        },
-    }
-
-
-def project_server_info(value: Mapping[str, Any]) -> dict[str, Any] | None:
-    protocol_version = value.get("protocolVersion")
-    server_info = value.get("serverInfo")
-    capabilities = value.get("capabilities")
-    if (
-        not isinstance(protocol_version, str)
-        or not isinstance(server_info, Mapping)
-        or not isinstance(server_info.get("name"), str)
-        or not isinstance(server_info.get("version"), str)
-        or not isinstance(capabilities, Mapping)
-    ):
-        return None
-    allowed_capabilities = {
-        key: capabilities[key]
-        for key in ("tools", "resources", "prompts", "logging")
-        if isinstance(capabilities.get(key), Mapping)
-    }
-    return {
-        "protocolVersion": protocol_version,
-        "capabilities": allowed_capabilities,
-        "serverInfo": {"name": server_info["name"], "version": server_info["version"]},
-        "initialized": value.get("initialized") is True,
-        "shutdownReceived": value.get("shutdownReceived") is True,
-        "logLevel": value.get("logLevel") if isinstance(value.get("logLevel"), str) else "info",
-    }
-
-
 _Projector = Callable[[Mapping[str, Any]], dict[str, Any] | None]
 _PROJECTORS: Final[dict[str, _Projector]] = {
     "adaptorch_run": _project_run,
@@ -262,6 +210,7 @@ _PROJECTORS: Final[dict[str, _Projector]] = {
     "adaptorch_get_artifacts": _project_artifacts,
     "adaptorch_list_runs": _project_run_list,
     "adaptorch_cancel_run": _project_run,
+    "adaptorch_route_topology": _project_route_topology,
     "adaptorch_server_metrics": _project_metrics,
     "adaptorch_capabilities": _project_capabilities,
     "adaptorch_usage": _project_usage,

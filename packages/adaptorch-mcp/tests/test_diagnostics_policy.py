@@ -1,7 +1,11 @@
+# mypy: disable-error-code="import-not-found"
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -36,9 +40,7 @@ def test_control_plane_token_format_recognition_matches_dashboard_contract() -> 
 def test_diagnostics_fail_closed_for_remote_plaintext_control_plane() -> None:
     from adaptorch_mcp.diagnostics import collect_diagnostics
 
-    payload = collect_diagnostics(
-        {"ADAPTORCH_CONTROL_PLANE_BASE_URL": "http://api.example.com"}
-    )
+    payload = collect_diagnostics({"ADAPTORCH_CONTROL_PLANE_BASE_URL": "http://api.example.com"})
 
     assert payload["controlPlane"]["policyValid"] is False
     assert payload["security"]["remoteControlPlaneRequiresHttps"] is True
@@ -66,6 +68,68 @@ def test_diagnostics_reports_hardened_posture_without_token_length() -> None:
         "httpTokensMustBeDistinct": True,
     }
     assert payload["expectedTools"] == list(REMOTE_TOOL_NAMES)
+
+
+def test_diagnostics_report_engine_algorithm_surface_parity() -> None:
+    """A published wrapper can meet an older or newer engine; say which one."""
+    from adaptorch_mcp.diagnostics import collect_diagnostics
+
+    payload = collect_diagnostics({})
+
+    assert payload["schemaVersion"] == "adaptorch_mcp.diagnostics.v3"
+    assert payload["algorithmSurface"] == {
+        "engineExportsOrchestrationValue": True,
+        "orchestrationValueParity": "match",
+        "driftingFields": [],
+    }
+    assert payload["ok"] is True
+
+
+def test_diagnostics_fail_closed_when_the_engine_vocabulary_drifts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import adaptorch.orchestration_value as engine_surface
+
+    from adaptorch_mcp.diagnostics import collect_diagnostics
+
+    monkeypatch.setattr(
+        engine_surface,
+        "ORCHESTRATION_VALUE_VERDICTS",
+        (*engine_surface.ORCHESTRATION_VALUE_VERDICTS, "definitely_worth_it"),
+    )
+
+    payload = collect_diagnostics({})
+
+    assert payload["algorithmSurface"]["orchestrationValueParity"] == "drift"
+    assert payload["algorithmSurface"]["driftingFields"] == ["verdicts"]
+    assert payload["ok"] is False
+
+
+def test_diagnostics_report_unavailable_surface_without_calling_it_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An engine older than the surface is a skew report, not a failure."""
+    from adaptorch_mcp.diagnostics import collect_diagnostics
+
+    monkeypatch.setitem(sys.modules, "adaptorch.orchestration_value", None)
+
+    payload = collect_diagnostics({})
+
+    assert payload["algorithmSurface"] == {
+        "engineExportsOrchestrationValue": False,
+        "orchestrationValueParity": "unavailable",
+        "driftingFields": [],
+    }
+    assert payload["ok"] is True
+
+
+def test_formatted_diagnostics_surface_the_parity_line() -> None:
+    from adaptorch_mcp.diagnostics import collect_diagnostics, format_diagnostics
+
+    rendered = format_diagnostics(collect_diagnostics({}))
+
+    assert "Engine algorithm surface:" in rendered
+    assert "orchestrationValueParity: match" in rendered
 
 
 def test_diagnostics_full_profile_is_explicit_and_invalid_profile_fails_closed() -> None:

@@ -4,11 +4,9 @@ import json
 from collections.abc import Mapping
 from typing import Any, Final
 
-from adaptorch_mcp.output_schema import (
-    project_catalog,
-    project_server_info,
-    project_tool_output,
-)
+from adaptorch_mcp.discovery_output import project_catalog, project_server_info
+from adaptorch_mcp.output_schema import project_tool_output
+from adaptorch_mcp.response_json import decode_response_text
 
 _UNSUPPORTED_RESPONSE_TEXT: Final = json.dumps(
     {"error": "unsupported tool response format"},
@@ -56,11 +54,7 @@ def _decoded_text_content(result: Any) -> Mapping[str, Any] | None:
     text = item.get("text")
     if not isinstance(text, str):
         return None
-    try:
-        decoded = json.loads(text)
-    except json.JSONDecodeError:
-        return None
-    return decoded if isinstance(decoded, Mapping) else None
+    return decode_response_text(text)
 
 
 def _projected_control_plane_rejection(decoded: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -79,7 +73,44 @@ def _projected_control_plane_rejection(decoded: Mapping[str, Any]) -> dict[str, 
     return projected
 
 
-def sanitize_tool_response(response: dict[str, Any], *, tool_name: str) -> dict[str, Any]:
+def _projected_quota_rejection(decoded: Mapping[str, Any]) -> dict[str, Any] | None:
+    usage = decoded.get("usage")
+    if decoded.get("error") != "QUOTA_EXCEEDED" or not isinstance(usage, Mapping):
+        return None
+    safe: dict[str, Any] = {}
+    for key in ("limit", "used", "remaining"):
+        if key in usage:
+            item = usage[key]
+            if isinstance(item, bool) or not isinstance(item, int) or item < 0:
+                return None
+            safe[key] = item
+    for key in ("plan_level", "period", "upgrade_url"):
+        if key in usage:
+            item = usage[key]
+            if not isinstance(item, str) or not 0 < len(item) <= 2048 or not item.isprintable():
+                return None
+            if key == "upgrade_url" and (
+                not item.startswith("/") or item.startswith("//") or "\\" in item
+            ):
+                return None
+            safe[key] = item
+    if "grace_exhausted" in usage:
+        if not isinstance(usage["grace_exhausted"], bool):
+            return None
+        safe["grace_exhausted"] = usage["grace_exhausted"]
+    return {
+        "error": "QUOTA_EXCEEDED",
+        "message": "Tenant quota exhausted for the current period",
+        "usage": safe,
+    }
+
+
+def sanitize_tool_response(
+    response: dict[str, Any],
+    *,
+    tool_name: str,
+    expected_run_id: str | None = None,
+) -> dict[str, Any]:
     """Project a parent tool response onto its remote-safe public contract."""
     error = response.get("error")
     if isinstance(error, Mapping):
@@ -94,13 +125,20 @@ def sanitize_tool_response(response: dict[str, Any], *, tool_name: str) -> dict[
     # Only a real boolean counts: the parent's output is untrusted, so a
     # string "true" or a 1 must not be read as an error flag (or as its absence).
     error_flag = result.get("isError") if isinstance(result, Mapping) else None
+    if isinstance(result, Mapping) and "isError" in result and not isinstance(error_flag, bool):
+        return _unsupported_result(response)
     is_error = isinstance(error_flag, bool) and error_flag
     decoded = _decoded_text_content(result)
     projected: Mapping[str, Any] | None = None
     if decoded is not None and is_error:
         projected = _projected_control_plane_rejection(decoded)
+        if projected is None:
+            projected = _projected_quota_rejection(decoded)
     if projected is None and decoded is not None:
         projected = project_tool_output(tool_name, decoded)
+        if projected is not None and expected_run_id is not None:
+            if projected.get("run_id") != expected_run_id:
+                return _unsupported_result(response)
     if projected is None:
         return _unsupported_result(response)
     sanitized_result: dict[str, Any] = {
@@ -112,7 +150,7 @@ def sanitize_tool_response(response: dict[str, Any], *, tool_name: str) -> dict[
         ],
         "isError": is_error,
     }
-    if tool_name == "adaptorch_get_run":
+    if tool_name == "adaptorch_get_run" and not is_error:
         sanitized_result["structuredContent"] = projected
     return {
         "jsonrpc": "2.0",
@@ -133,11 +171,8 @@ def sanitize_resource_response(response: dict[str, Any], *, uri: str) -> dict[st
     text = item.get("text")
     if not isinstance(text, str):
         return _error_envelope(response, -32603, "Resource projection failed")
-    try:
-        decoded = json.loads(text)
-    except json.JSONDecodeError:
-        return _error_envelope(response, -32603, "Resource projection failed")
-    if not isinstance(decoded, Mapping):
+    decoded = decode_response_text(text)
+    if decoded is None:
         return _error_envelope(response, -32603, "Resource projection failed")
 
     projector = _RESOURCE_PROJECTORS.get(uri)

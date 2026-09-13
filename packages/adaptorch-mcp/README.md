@@ -142,13 +142,17 @@ and MCP `prefer_ensemble_singleton`.
 | `adaptorch_list_runs` | List recent runs. |
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
-| `adaptorch_capabilities` | Read synthesis modes (with deprecated aliases), topologies, output extractors, connectors, and server features. |
+| `adaptorch_capabilities` | Read synthesis modes, topologies, extractors, verifier/VERA vocabularies, connectors, and server features. |
 | `adaptorch_usage` | Read the calling tenant's usage window (plan level, period, used, limit, remaining, percentage). |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
 
 `adaptorch_get_traces` and `adaptorch_route_topology` are available only when `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`. In the default profile, run diagnostics and telemetry are redacted, run-resource templates are hidden, completions are disabled, and server events are not broadcast to SSE subscribers.
 
 For modern MCP clients, `adaptorch_get_run` advertises a closed `outputSchema` and returns `structuredContent` reconstructed from the wrapper's own allowlist projection. Its optional `correctness_wall` is bounded advisory observability from the installed parent AdaptOrch engine. Even a `PASS` verdict is not a correctness proof, active-selector decision, or authorization to apply a candidate; inspect its `claim_boundary` and `recommended_action`.
+
+For a control plane with the new `modelstudio-maas` provider, see
+[ModelStudio Token Plan](../../docs/modelstudio-token-plan.md). This is a
+source-checkout integration, not a claim that the hosted service has been upgraded.
 
 ## Security boundary
 
@@ -196,3 +200,7 @@ from adaptorch_mcp import create_default_mcp_http_app
 
 app = create_default_mcp_http_app()
 ```
+
+## License
+
+Proprietary — Copyright ClassicMate. All rights reserved. See [LICENSE](https://github.com/dmae97/Adaptorch-MCP/blob/main/LICENSE).

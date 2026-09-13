@@ -25,6 +25,10 @@ Pass `--base-url` explicitly in checked-in MCP client configs for reproducible b
 
 The connector sends `ado_*` tenant keys as `X-API-Key`; other control-plane tokens use `Authorization: Bearer <token>`. Provider credentials are separate from tenant authentication.
 
+For the Singapore subscription endpoint, see [ModelStudio Token Plan](modelstudio-token-plan.md).
+It requires a control-plane engine with the `modelstudio-maas` provider; a client upgrade
+alone does not upgrade the server.
+
 ## BYOK provider credentials
 
 A BYOK-only control plane returns `401 byok_credentials_required` unless run submission includes provider credentials. Configure them in the MCP process environment rather than in a tool argument:
