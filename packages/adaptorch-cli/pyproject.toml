@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,8 +9,15 @@ description = "Command-line client for AdaptOrch"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "LicenseRef-Proprietary"
-authors = [{ name = "AdaptOrch maintainers" }]
+license-files = ["LICENSE"]
+authors = [{ name = "ClassicMate" }]
 dependencies = ["adaptorch-client>=0.1,<0.2"]
+
+[project.urls]
+Homepage = "https://adaptorch.com"
+Repository = "https://github.com/dmae97/Adaptorch-MCP"
+Issues = "https://github.com/dmae97/Adaptorch-MCP/issues"
+Documentation = "https://adaptorch.com/mcp-docs"
 
 [project.scripts]
 adaptorchctl = "adaptorch_cli.cli:entrypoint"

@@ -11,11 +11,13 @@ from email.message import Message
 from http.client import HTTPException
 from typing import IO, Literal, Never, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 from adaptorch_client.config import ClientConfig
 from adaptorch_client.errors import AdaptOrchAPIError
+from adaptorch_client.json_limits import require_json_depth
 from adaptorch_client.models import JSONMapping, JSONValue
+from adaptorch_client.provider import ProviderCredential, sanitize_error
 
 _MAX_REQUEST_BYTES = 8 * 1024 * 1024
 _MAX_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -43,6 +45,15 @@ def _parse_finite_float(text: str) -> float:
     if not math.isfinite(value):
         raise ValueError("non-finite JSON number")
     return value
+
+
+def _unique_object(pairs: list[tuple[str, JSONValue]]) -> JSONMapping:
+    result: JSONMapping = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
 
 
 class _ReadableResponse(Protocol):
@@ -76,6 +87,24 @@ class RequestSpec:
     path: str
     payload: Mapping[str, JSONValue] | None = None
     headers: Mapping[str, str] | None = field(default=None, repr=False)
+    provider_credential: ProviderCredential | None = None
+    timeout_seconds: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.provider_credential is not None and (self.method, self.path) != (
+            "POST",
+            "/v1/runs",
+        ):
+            raise ValueError("provider_credential is allowed only for POST /v1/runs")
+        if self.timeout_seconds is not None:
+            if type(self.timeout_seconds) not in (int, float):
+                raise ValueError("timeout_seconds must be positive and finite")
+            try:
+                valid_timeout = self.timeout_seconds > 0 and math.isfinite(self.timeout_seconds)
+            except OverflowError:
+                valid_timeout = False
+            if not valid_timeout:
+                raise ValueError("timeout_seconds must be positive and finite")
 
 
 class HTTPTransport:
@@ -94,10 +123,19 @@ class HTTPTransport:
             **{
                 name: value
                 for name, value in (spec.headers or {}).items()
-                if name.lower() not in {"authorization", "x-api-key"}
+                if name.lower() not in {"authorization", "x-api-key", "x-provider"}
+                and not name.lower().startswith("x-provider-")
             },
             **self._config.auth_headers,
         }
+        if spec.provider_credential is not None:
+            headers.update(
+                {
+                    "X-Provider": spec.provider_credential.provider,
+                    "X-Provider-Model": spec.provider_credential.model,
+                    "X-Provider-Key": spec.provider_credential.api_key,
+                }
+            )
         if body is not None:
             headers["Content-Type"] = "application/json"
 
@@ -107,17 +145,18 @@ class HTTPTransport:
             headers=headers,
             method=spec.method,
         )
+        timeout = self._config.timeout_seconds
+        if spec.timeout_seconds is not None:
+            timeout = min(timeout, spec.timeout_seconds)
         try:
-            with build_opener(_NoRedirectHandler()).open(
+            with build_opener(ProxyHandler({}), _NoRedirectHandler()).open(
                 request,
-                timeout=self._config.timeout_seconds,
+                timeout=timeout,
             ) as response:
                 return self._decode_mapping(self._read_bounded(response))
         except HTTPError as error:
-            secrets = tuple(
-                value for name, value in headers.items() if name.lower() == "x-provider-key"
-            )
-            raise self._from_http_error(error, secrets=secrets) from None
+            with error:
+                raise self._from_http_error(error, spec.provider_credential) from None
         except (HTTPException, URLError, TimeoutError, OSError):
             raise AdaptOrchAPIError("AdaptOrch network request failed") from None
 
@@ -126,14 +165,16 @@ class HTTPTransport:
         if payload is None:
             return None
         try:
-            encoded = json.dumps(
+            text = json.dumps(
                 dict(payload),
                 allow_nan=False,
                 ensure_ascii=False,
                 separators=(",", ":"),
                 sort_keys=True,
-            ).encode("utf-8")
-        except (TypeError, ValueError, UnicodeError):
+            )
+            require_json_depth(text)
+            encoded = text.encode("utf-8")
+        except (TypeError, ValueError, UnicodeError, RecursionError):
             raise AdaptOrchAPIError("AdaptOrch request JSON could not be encoded") from None
         if len(encoded) > _MAX_REQUEST_BYTES:
             raise AdaptOrchAPIError("AdaptOrch request JSON exceeds the size limit")
@@ -158,10 +199,13 @@ class HTTPTransport:
     @staticmethod
     def _decode_mapping(body: bytes) -> JSONMapping:
         try:
+            text = body.decode("utf-8-sig")
+            require_json_depth(text)
             decoded: JSONValue = json.loads(
-                body,
+                text,
                 parse_constant=_reject_json_constant,
                 parse_float=_parse_finite_float,
+                object_pairs_hook=_unique_object,
             )
         except (ValueError, UnicodeDecodeError, RecursionError):
             raise AdaptOrchAPIError("AdaptOrch returned invalid JSON") from None
@@ -170,20 +214,25 @@ class HTTPTransport:
         return decoded
 
     def _from_http_error(
-        self, error: HTTPError, *, secrets: tuple[str, ...] = ()
+        self,
+        error: HTTPError,
+        credential: ProviderCredential | None,
     ) -> AdaptOrchAPIError:
         try:
             body = self._read_bounded(error)
             decoded = self._decode_mapping(body)
-        except AdaptOrchAPIError:
+        except (AdaptOrchAPIError, HTTPException, OSError):
             return AdaptOrchAPIError(
                 f"AdaptOrch API request failed with HTTP {error.code}",
                 status_code=error.code,
             )
 
+        secrets: tuple[str, ...] = (self._config.api_key,)
+        if credential is not None:
+            secrets += (credential.api_key,)
         error_value = decoded.get("error", decoded.get("detail"))
         if isinstance(error_value, str):
-            message = self._sanitize(error_value, _MAX_ERROR_MESSAGE_LENGTH, secrets)
+            message = sanitize_error(error_value, secrets, _MAX_ERROR_MESSAGE_LENGTH)
             prefix, separator, _ = message.partition(":")
             code = prefix if separator and re.fullmatch(r"[a-z][a-z0-9_]{0,99}", prefix) else None
             return AdaptOrchAPIError(
@@ -200,12 +249,12 @@ class HTTPTransport:
         code_value = error_value.get("code")
         message_value = error_value.get("message")
         code = (
-            self._sanitize(code_value, _MAX_ERROR_CODE_LENGTH, secrets)
+            sanitize_error(code_value, secrets, _MAX_ERROR_CODE_LENGTH)
             if isinstance(code_value, str)
             else None
         )
         message = (
-            self._sanitize(message_value, _MAX_ERROR_MESSAGE_LENGTH, secrets)
+            sanitize_error(message_value, secrets, _MAX_ERROR_MESSAGE_LENGTH)
             if isinstance(message_value, str)
             else "request failed"
         )
@@ -215,11 +264,3 @@ class HTTPTransport:
             status_code=error.code,
             code=code,
         )
-
-    def _sanitize(self, value: str, limit: int, secrets: tuple[str, ...] = ()) -> str:
-        redacted = value
-        for secret in (self._config.api_key, *secrets):
-            if secret:
-                redacted = redacted.replace(secret, "[redacted]")
-        printable = "".join(character if character.isprintable() else " " for character in redacted)
-        return printable[:limit]

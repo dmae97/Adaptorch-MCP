@@ -1,7 +1,7 @@
 """Public AdaptOrch API client."""
 
 from adaptorch_client.client import AdaptOrchClient
-from adaptorch_client.config import ClientConfig, ProviderCredential, validate_api_url
+from adaptorch_client.config import ClientConfig, validate_api_url
 from adaptorch_client.errors import AdaptOrchAPIError
 from adaptorch_client.models import (
     Artifact,
@@ -13,6 +13,8 @@ from adaptorch_client.models import (
     Principal,
     Run,
 )
+from adaptorch_client.polling import PollPolicy, PollStopReason, RunPollResult
+from adaptorch_client.provider import ProviderCredential
 from adaptorch_client.responses import (
     ArtifactListResponse,
     EvidenceReport,
@@ -33,6 +35,9 @@ __all__ = [
     "PayloadResult",
     "Principal",
     "ProviderCredential",
+    "PollPolicy",
+    "PollStopReason",
+    "RunPollResult",
     "Run",
     "RunListResponse",
     "validate_api_url",

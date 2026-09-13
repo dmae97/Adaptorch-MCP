@@ -75,6 +75,7 @@ def _read_submit_payload(file_name: str, parser: argparse.ArgumentParser) -> JSO
             parse_constant=_reject_json_constant,
             parse_float=_finite_float,
         )
+    # pi-lens-ignore: unreachable-except
     except RecursionError:
         parser.error("submit input JSON is too deeply nested")
     except ValueError:
@@ -222,9 +223,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             print("response contained non-encodable JSON values", file=sys.stderr)
             return 7
         return _run_status_exit(payload) if check_run_status else 0
+    # pi-lens-ignore: unreachable-except
     except KeyboardInterrupt:
         print("interrupted", file=sys.stderr)
         return 130
+    # pi-lens-ignore: unreachable-except
     except AdaptOrchAPIError as error:
         code = _api_exit_code(error)
         print(f"request failed (HTTP {error.status_code})", file=sys.stderr)

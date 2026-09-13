@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from threading import TIMEOUT_MAX
 from urllib.parse import urlsplit
+
+from adaptorch_client.provider import ProviderCredential as ProviderCredential
 
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 _UNSAFE_URL_CHARACTERS = frozenset({"\\", "?", "#"})
@@ -61,8 +63,11 @@ class ClientConfig:
             for character in self.api_key
         ):
             raise ValueError("api_key must be a non-empty HTTP header value")
-        if not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0:
-            raise ValueError("timeout_seconds must be positive and finite")
+        if (
+            type(self.timeout_seconds) not in (int, float)
+            or not 0 < self.timeout_seconds <= TIMEOUT_MAX
+        ):
+            raise ValueError("timeout_seconds must be positive and within the platform wait limit")
 
     @property
     def auth_headers(self) -> Mapping[str, str]:
@@ -70,32 +75,3 @@ class ClientConfig:
         if self.api_key.startswith("ado_"):
             return {"X-API-Key": self.api_key}
         return {"Authorization": f"Bearer {self.api_key}"}
-
-
-@dataclass(frozen=True, slots=True)
-class ProviderCredential:
-    """BYOK headers for one submission; never reused for reads or cancellation."""
-
-    provider: str
-    model: str
-    api_key: str = field(repr=False)
-
-    def __post_init__(self) -> None:
-        for name, value in (
-            ("provider", self.provider),
-            ("model", self.model),
-            ("api_key", self.api_key),
-        ):
-            if not value.strip() or any(
-                ord(char) < 32 or ord(char) == 127 or ord(char) > 255 for char in value
-            ):
-                raise ValueError(f"{name} must be a non-empty HTTP header value")
-
-    @property
-    def headers(self) -> Mapping[str, str]:
-        """Return the hosted API's request-scoped provider headers."""
-        return {
-            "X-Provider": self.provider,
-            "X-Provider-Model": self.model,
-            "X-Provider-Key": self.api_key,
-        }

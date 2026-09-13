@@ -6,8 +6,12 @@ import re
 from collections.abc import Mapping
 from urllib.parse import quote, urlencode
 
-from adaptorch_client.config import ClientConfig, ProviderCredential
-from adaptorch_client.models import CapabilitySet, JSONValue, Principal, Run
+from adaptorch_client.config import ClientConfig
+from adaptorch_client.errors import AdaptOrchAPIError
+from adaptorch_client.models import CapabilitySet, JSONMapping, JSONValue, Principal, Run
+from adaptorch_client.polling import PollPolicy, RunPollResult
+from adaptorch_client.polling import wait_for_run as poll_run
+from adaptorch_client.provider import ProviderCredential
 from adaptorch_client.responses import (
     ArtifactListResponse,
     EvidenceReport,
@@ -36,9 +40,7 @@ class AdaptOrchClient:
 
     def whoami(self) -> Principal:
         """Return the authenticated principal."""
-        return Principal.from_payload(
-            self._transport.request(RequestSpec("GET", "/v1/whoami"))
-        )
+        return Principal.from_payload(self._transport.request(RequestSpec("GET", "/v1/whoami")))
 
     def submit_run(
         self,
@@ -55,10 +57,8 @@ class AdaptOrchClient:
                     "POST",
                     "/v1/runs",
                     payload=spec,
-                    headers={
-                        "Idempotency-Key": idempotency_key,
-                        **(provider_credential.headers if provider_credential is not None else {}),
-                    },
+                    headers={"Idempotency-Key": idempotency_key},
+                    provider_credential=provider_credential,
                 )
             )
         )
@@ -80,39 +80,60 @@ class AdaptOrchClient:
         )
 
     def get_run(self, run_id: str) -> Run:
-        """Return one run."""
+        """Return one subject-bound run."""
+        return self._get_run(run_id, None)
+
+    def _get_run(self, run_id: str, timeout_seconds: float | None) -> Run:
         return Run.from_payload(
-            self._transport.request(RequestSpec("GET", f"/v1/runs/{self._segment(run_id)}"))
+            self._resource(
+                RequestSpec(
+                    "GET", f"/v1/runs/{self._segment(run_id)}", timeout_seconds=timeout_seconds
+                ),
+                run_id,
+            )
+        )
+
+    def wait_for_run(self, run_id: str, *, policy: PollPolicy | None = None) -> RunPollResult:
+        """Read until terminal or a polling bound, never resubmit or cancel the run."""
+        self._segment(run_id)
+        return poll_run(
+            lambda remaining: self._get_run(run_id, remaining),
+            policy if policy is not None else PollPolicy(),
         )
 
     def cancel_run(self, run_id: str, reason: str | None = None) -> Run:
         """Cancel one run with an optional reason."""
         payload: dict[str, JSONValue] = {} if reason is None else {"reason": reason}
         return Run.from_payload(
-            self._transport.request(
+            self._resource(
                 RequestSpec(
                     "PUT",
                     f"/v1/runs/{self._segment(run_id)}/cancel",
                     payload=payload,
-                )
+                ),
+                run_id,
             )
         )
 
     def get_evidence(self, run_id: str) -> EvidenceReport:
         """Return the evidence report for one run."""
         return EvidenceReport.from_payload(
-            self._transport.request(
-                RequestSpec("GET", f"/v1/runs/{self._segment(run_id)}/evidence")
-            )
+            self._resource(RequestSpec("GET", f"/v1/runs/{self._segment(run_id)}/evidence"), run_id)
         )
 
     def list_artifacts(self, run_id: str) -> ArtifactListResponse:
         """List artifacts for one run."""
         return ArtifactListResponse.from_payload(
-            self._transport.request(
-                RequestSpec("GET", f"/v1/runs/{self._segment(run_id)}/artifacts")
+            self._resource(
+                RequestSpec("GET", f"/v1/runs/{self._segment(run_id)}/artifacts"), run_id
             )
         )
+
+    def _resource(self, request: RequestSpec, run_id: str) -> JSONMapping:
+        payload = self._transport.request(request)
+        if payload.get("run_id") != run_id:
+            raise AdaptOrchAPIError("AdaptOrch response belongs to a different run")
+        return payload
 
     @staticmethod
     def _segment(value: str) -> str:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Self
 
 from adaptorch_client.models import (
@@ -64,25 +65,34 @@ class EvidenceReport(PayloadResult):
 
 @dataclass(frozen=True, slots=True)
 class ArtifactListResponse(PayloadResult):
-    """Direct ``GET /v1/runs/{run_id}/artifacts`` listing: ``run_id`` plus ``items``."""
+    """Structured v1 items or a control-plane reference map; neither is fetched automatically."""
 
     run_id: str
     items: tuple[Artifact, ...]
+    artifact_urls: Mapping[str, str] | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, JSONValue]) -> Self:
         """Validate one raw artifact listing against the v1 contract."""
         record = stored_copy(payload)
-        if "items" not in record and "artifacts" in record:
-            references = require_object(record["artifacts"], "artifacts")
-            items: list[JSONValue] = []
-            for name, reference in references.items():
-                if not isinstance(reference, str):
-                    raise contract_error(f"artifacts.{name}", "a string")
-                # A storage reference is not a public download URL or measured file metadata.
-                items.append({"artifact_id": name, "name": name})
-        else:
-            items = require_array(record.get("items"), "items")
+        if "artifacts" in record:
+            if "items" in record:
+                raise contract_error("artifacts", "a single unambiguous representation")
+            references: dict[str, str] = {}
+            for name, target in require_object(record["artifacts"], "artifacts").items():
+                if not isinstance(target, str):
+                    raise contract_error("artifacts", "a string reference map")
+                references[name] = target
+            return cls(
+                record,
+                run_id=string_at(record, "run_id", ""),
+                items=tuple(
+                    Artifact.parse_at({"artifact_id": name, "name": name}, f"artifacts.{name}")
+                    for name in references
+                ),
+                artifact_urls=MappingProxyType(references),
+            )
+        items = require_array(record.get("items"), "items")
         return cls(
             record,
             run_id=string_at(record, "run_id", ""),

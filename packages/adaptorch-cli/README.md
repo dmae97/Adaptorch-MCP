@@ -11,3 +11,7 @@ Install the current `adaptorch-client` and `adaptorch-cli` source packages toget
 A git push does not replace a previously published PyPI version.
 
 See [`../../docs/adaptorchctl-usage.ko.md`](../../docs/adaptorchctl-usage.ko.md) for usage.
+
+## License
+
+Proprietary — Copyright ClassicMate. All rights reserved. See [LICENSE](https://github.com/dmae97/Adaptorch-MCP/blob/main/LICENSE).

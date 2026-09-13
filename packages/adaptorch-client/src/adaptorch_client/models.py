@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
@@ -39,7 +40,10 @@ def require_array(value: JSONValue, path: str) -> list[JSONValue]:
 
 def stored_copy(payload: Mapping[str, JSONValue]) -> JSONMapping:
     """Return an independent deep copy of a raw response payload."""
-    return deepcopy(dict(payload))
+    try:
+        return deepcopy(dict(payload))
+    except RecursionError:
+        raise AdaptOrchAPIError("AdaptOrch response nesting exceeds supported limits") from None
 
 
 def string_at(record: JSONMapping, key: str, path: str) -> str:
@@ -76,6 +80,17 @@ def _optional_size_at(record: JSONMapping, key: str, path: str) -> int | None:
     return value
 
 
+def _optional_probability_at(record: JSONMapping, key: str, path: str) -> float | None:
+    value = record.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | float) or not 0 <= value <= 1:
+        raise contract_error(field_path(path, key), "a finite probability or null")
+    if not math.isfinite(value):
+        raise contract_error(field_path(path, key), "a finite probability or null")
+    return float(value)
+
+
 def _optional_links_at(record: JSONMapping, key: str, path: str) -> dict[str, str] | None:
     value = record.get(key)
     if value is None:
@@ -84,7 +99,7 @@ def _optional_links_at(record: JSONMapping, key: str, path: str) -> dict[str, st
     links: dict[str, str] = {}
     for relation, target in require_object(value, links_path).items():
         if not isinstance(target, str):
-            raise contract_error(f"{links_path}.{relation}", "a string")
+            raise contract_error(links_path, "a string reference map")
         links[relation] = target
     return links
 
@@ -97,7 +112,7 @@ class PayloadResult:
 
     def to_payload(self) -> JSONMapping:
         """Return an independent JSON-compatible payload."""
-        return deepcopy(self._payload)
+        return stored_copy(self._payload)
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +122,11 @@ class CapabilitySet(PayloadResult):
     api_version: str
     run_types: tuple[str, ...]
     features: tuple[str, ...]
+    server_build: str | None = None
+    receipt_schema_version: str | None = None
+    evidence_schema_version: str | None = None
+    mcp_toolset_version: str | None = None
+    supported_mcp_protocols: tuple[str, ...] = ()
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, JSONValue]) -> Self:
@@ -117,6 +137,15 @@ class CapabilitySet(PayloadResult):
             api_version=string_at(record, "api_version", ""),
             run_types=_string_tuple_at(record, "run_types", "") if "run_types" in record else (),
             features=_string_tuple_at(record, "features", ""),
+            server_build=optional_string_at(record, "server_build", ""),
+            receipt_schema_version=optional_string_at(record, "receipt_schema_version", ""),
+            evidence_schema_version=optional_string_at(record, "evidence_schema_version", ""),
+            mcp_toolset_version=optional_string_at(record, "mcp_toolset_version", ""),
+            supported_mcp_protocols=(
+                _string_tuple_at(record, "supported_mcp_protocols", "")
+                if "supported_mcp_protocols" in record
+                else ()
+            ),
         )
 
 
@@ -154,6 +183,15 @@ class Run(PayloadResult):
     created_at: str | None
     policy_version: str | None
     links: dict[str, str] | None
+    model: str | None = None
+    synthesis_mode: str | None = None
+    synthesis_mode_requested: str | None = None
+    synthesis_mode_used: str | None = None
+    auto_synthesis_reason: str | None = None
+    evaluation_status: str | None = None
+    score_validity_status: str | None = None
+    consistency: float | None = None
+    duration_ms: int | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, JSONValue]) -> Self:
@@ -163,7 +201,7 @@ class Run(PayloadResult):
     @classmethod
     def parse_at(cls, value: JSONValue, path: str) -> Self:
         """Parse one nested run record located at ``path``."""
-        return cls._parse(deepcopy(require_object(value, path)), path)
+        return cls._parse(stored_copy(require_object(value, path)), path)
 
     @classmethod
     def _parse(cls, record: JSONMapping, path: str) -> Self:
@@ -178,6 +216,15 @@ class Run(PayloadResult):
             created_at=optional_string_at(record, "created_at", path),
             policy_version=optional_string_at(record, "policy_version", path),
             links=_optional_links_at(record, "links", path),
+            model=optional_string_at(record, "model", path),
+            synthesis_mode=optional_string_at(record, "synthesis_mode", path),
+            synthesis_mode_requested=optional_string_at(record, "synthesis_mode_requested", path),
+            synthesis_mode_used=optional_string_at(record, "synthesis_mode_used", path),
+            auto_synthesis_reason=optional_string_at(record, "auto_synthesis_reason", path),
+            evaluation_status=optional_string_at(record, "evaluation_status", path),
+            score_validity_status=optional_string_at(record, "score_validity_status", path),
+            consistency=_optional_probability_at(record, "consistency", path),
+            duration_ms=_optional_size_at(record, "duration_ms", path),
         )
 
 

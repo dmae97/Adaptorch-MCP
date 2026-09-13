@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,7 +9,8 @@ description = "Typed standard-library client for the AdaptOrch API"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "LicenseRef-Proprietary"
-authors = [{ name = "AdaptOrch maintainers" }]
+license-files = ["LICENSE"]
+authors = [{ name = "ClassicMate" }]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
@@ -18,13 +19,14 @@ classifiers = [
 ]
 dependencies = []
 
+[project.urls]
+Homepage = "https://adaptorch.com"
+Repository = "https://github.com/dmae97/Adaptorch-MCP"
+Issues = "https://github.com/dmae97/Adaptorch-MCP/issues"
+Documentation = "https://adaptorch.com/mcp-docs"
+
 [project.optional-dependencies]
-dev = [
-  "build>=1.2",
-  "mypy>=1.10",
-  "pytest>=8.2",
-  "ruff>=0.6",
-]
+dev = ["build>=1.2", "mypy>=1.10", "pytest>=8.2", "ruff>=0.6"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -39,6 +41,10 @@ src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+pythonVersion = "3.11"
+extraPaths = ["src"]
 
 [tool.mypy]
 python_version = "3.11"
