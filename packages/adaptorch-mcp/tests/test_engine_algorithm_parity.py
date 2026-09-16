@@ -562,6 +562,104 @@ def test_local_route_topology_prices_replication_end_to_end() -> None:
     )
 
 
+class _RecordingBackend(FakeBackend):
+    """FakeBackend drops the payload; the tri-state contract is carried in it."""
+
+    def __init__(self) -> None:
+        self.payloads: list[Mapping[str, Any]] = []
+
+    def run_task(self, *, payload: Mapping[str, Any], **kwargs: Any) -> dict[str, Any]:
+        self.payloads.append(payload)
+        return super().run_task(payload=payload, **kwargs)
+
+    def run_task_and_collect(
+        self, *, payload: Mapping[str, Any], **kwargs: Any
+    ) -> dict[str, Any]:
+        # adaptorch_run waits for a terminal state by default, so this is the
+        # path a plain call actually takes.
+        self.payloads.append(payload)
+        return super().run_task_and_collect(payload=payload, **kwargs)
+
+
+def _remote_singleton_hint(arguments: Mapping[str, Any]) -> Any:
+    """Run through the remote profile; return the forwarded hint or the error code."""
+    from adaptorch_mcp.hardening import HardenedMCPServer
+
+    backend = _RecordingBackend()
+    server = HardenedMCPServer(
+        backend=backend,
+        exposure_profile=REMOTE_EXPOSURE_PROFILE,
+    )
+    response = server.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {
+                "name": "adaptorch_run",
+                "arguments": {
+                    "payload": {"subtasks": [{"id": "v1", "description": "x"}]},
+                    **arguments,
+                },
+            },
+        }
+    )
+    assert response is not None
+    if "error" in response:
+        return response["error"]["code"]
+    metadata = backend.payloads[0]["metadata"]
+    assert isinstance(metadata, Mapping)
+    return metadata.get("mcp")
+
+
+def test_remote_profile_carries_every_tristate_singleton_value() -> None:
+    """The engine's hint is tri-state; the hardened surface must not flatten it.
+
+    `false` disables the ensemble auto preference, omission leaves it in charge,
+    and an explicit `null` says so on the record. A wrapper that coerced the
+    argument to a plain bool would turn everyone who omitted it into someone who
+    opted out, and no schema check would notice.
+    """
+    assert _remote_singleton_hint({"prefer_ensemble_singleton": True}) == {
+        "prefer_ensemble_singleton": True
+    }
+    assert _remote_singleton_hint({"prefer_ensemble_singleton": False}) == {
+        "prefer_ensemble_singleton": False
+    }
+    assert _remote_singleton_hint({"prefer_ensemble_singleton": None}) == {
+        "prefer_ensemble_singleton": None
+    }
+    assert _remote_singleton_hint({}) is None
+    # Invalid params, not a silent coercion to truthiness.
+    assert _remote_singleton_hint({"prefer_ensemble_singleton": "yes"}) == -32602
+
+
+def test_remote_run_schema_declares_the_tristate_singleton() -> None:
+    """A caller reads the schema before calling, so it has to state all three."""
+    hint = _remote_run_schema()["properties"]["prefer_ensemble_singleton"]
+
+    assert hint["type"] == ["boolean", "null"]
+    # Not `default: false`, which would advertise omission as an opt-out.
+    assert hint["default"] is None
+    description = hint["description"].lower()
+    assert "false" in description
+    assert "auto" in description
+
+
+def test_docs_declare_the_tristate_singleton_contract() -> None:
+    """Docs are a surface too: they must not describe a boolean flag."""
+    for relative in ("docs/tools.md", "docs/configuration.md", "README.md"):
+        text = (REPO_ROOT / relative).read_text(encoding="utf-8")
+        stated = [
+            line
+            for line in text.splitlines()
+            if "prefer_ensemble_singleton" in line
+            and "`false`" in line
+            and "`null`" in line
+        ]
+        assert stated, f"{relative} does not state the tri-state singleton contract"
+
+
 def test_remote_profile_still_withholds_the_local_router() -> None:
     """The advisory is additive; it must not widen the remote exposure surface."""
     response = _remote_server().handle_message(

@@ -6,6 +6,17 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### Fixed — tri-state ensemble singleton hint
+
+- The engine's `prefer_ensemble_singleton` is tri-state: `true` forces the
+  ensemble preference on, `false` disables the auto preference explicitly, and
+  `null`/omitted leaves the auto policy in charge. Docs described a boolean
+  flag, and the parity gate only exercised `true`, so a wrapper that coerced the
+  argument to a bool would have turned every omission into an opt-out without
+  failing a test. `docs/tools.md`, `docs/configuration.md` and `README.md` now
+  state all three values, and `test_engine_algorithm_parity.py` asserts the
+  remote profile forwards each one distinctly and rejects a non-boolean.
+
 ### Added — tenant Auto model metadata
 
 - Preserve the control plane's `model_selection_source` alongside the selected

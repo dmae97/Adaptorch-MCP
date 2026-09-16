@@ -87,8 +87,8 @@ algorithms itself.
 | `manifest_canonical_sha256` | Benchmark manifest | Importable as `adaptorch.benchmarking.manifest_canonical_sha256`; hashes canonical nonvolatile manifest fields. |
 | `pass_rate_credit` | Quality signal | Opt-in partial credit in `adaptorch.quality_signal.compute_quality`; do not claim it changes `AdaptOrchEngine` router feedback by default. |
 | `quality_signal` | Online-router learning | Exact-answer tokens are compared before fuzzy gold-label matching. |
-| `prefer_multi_model_ensemble_singleton` | Routing threshold | Auto-enables when at least two ensemble providers exist and synthesis mode is not `direct`, unless an explicit debate-singleton preference wins. |
-| `prefer_ensemble_singleton` | MCP run hint | Manual hint forwarded by MCP/benchmark run options. |
+| `prefer_multi_model_ensemble_singleton` | Routing threshold | Tri-state: unset auto-enables when at least two ensemble providers exist and synthesis mode is not `direct`, unless an explicit debate-singleton preference wins; explicit `false` disables the auto preference. |
+| `prefer_ensemble_singleton` | MCP run hint | Tri-state hint (`true`/`false`/`null`) forwarded by MCP/benchmark run options; `false` is an explicit opt-out, `null`/omitted leaves the auto policy in charge. |
 | Online-router knobs | Operator tuning | `retrain_window`, `min_loo_accuracy`, `min_posterior`, `quality_floor`, `use_quality_weights`, `use_failure_evidence`, `exploration_rate`, `max_observations`, `cv`, and `kfold_k`. |
 
 ## Common Flags

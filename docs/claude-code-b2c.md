@@ -6,7 +6,7 @@ This package should feel useful to individual Claude Code users before they lear
 
 1. Sign up at [adaptorch.com/app/signup](https://adaptorch.com/app/signup)
 2. Open [adaptorch.com/app/api-keys](https://adaptorch.com/app/api-keys) and generate a key (starts with `ado_`)
-3. Starter `$0` includes API key access, 1,000 calls/month, and shadow mode
+3. Starter `$0` includes API key access, 5,000 calls/month, and shadow mode
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."

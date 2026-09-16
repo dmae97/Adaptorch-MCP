@@ -53,7 +53,7 @@ decision **before** a run pays for it.
 
 | Argument | Effect |
 | --- | --- |
-| `prefer_ensemble_singleton` | Routes single-node DAGs to `multi_model_ensemble` — the same flag `adaptorch_run` accepts, priced here first. |
+| `prefer_ensemble_singleton` | Routes single-node DAGs to `multi_model_ensemble` — the same flag `adaptorch_run` accepts, priced here first. `true` forces it on, `false` opts out explicitly, `null`/omitted leaves the auto policy in charge. |
 | `model` | Adds USD estimates. An unpriced model reports `null` instead of a guessed price. |
 | `measured_quality_gain` | Accuracy gain **you measured** for the routed topology versus the baseline. Never inferred. |
 | `min_quality_gain` | The acceptance bar that gain must clear. You pay for the spend, so you own the bar. |
