@@ -572,9 +572,7 @@ class _RecordingBackend(FakeBackend):
         self.payloads.append(payload)
         return super().run_task(payload=payload, **kwargs)
 
-    def run_task_and_collect(
-        self, *, payload: Mapping[str, Any], **kwargs: Any
-    ) -> dict[str, Any]:
+    def run_task_and_collect(self, *, payload: Mapping[str, Any], **kwargs: Any) -> dict[str, Any]:
         # adaptorch_run waits for a terminal state by default, so this is the
         # path a plain call actually takes.
         self.payloads.append(payload)
@@ -653,9 +651,7 @@ def test_docs_declare_the_tristate_singleton_contract() -> None:
         stated = [
             line
             for line in text.splitlines()
-            if "prefer_ensemble_singleton" in line
-            and "`false`" in line
-            and "`null`" in line
+            if "prefer_ensemble_singleton" in line and "`false`" in line and "`null`" in line
         ]
         assert stated, f"{relative} does not state the tri-state singleton contract"
 
