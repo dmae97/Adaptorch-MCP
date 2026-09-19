@@ -84,10 +84,13 @@ provider name and auth form are what differ:
 
 | auth.json account | `ADAPTORCH_MCP_PROVIDER` | Credential form sent |
 | --- | --- | --- |
-| `anthropic` | `anthropic` | `sk-ant-oat*` → Bearer + OAuth beta flag |
+| `anthropic` | `anthropic` | `sk-ant-oat*` → Bearer + Claude Code identity (verified) |
+| `xai` | `xai` | OAuth access token → Bearer on the OpenAI-compatible surface (verified) |
 | Google OAuth account | `google` | `ya29.*` → Bearer |
-| `xai`, `openai-codex`, `meta`, `cursor`, `devin`, `opencode-go` | none — OAuth for a product surface, not an engine-supported LLM API | n/a |
-| `deepseek`, `zai`, `kimi-coding`, `xiaomi`, `crofai`, `commandcode`, `freellmpool` | none — OpenAI-compatible vendor keys whose base URLs the control plane does not expose over BYOK | n/a |
+| `openai-codex` | none | Codex speaks a bespoke SSE Responses protocol at `chatgpt.com/backend-api/codex/responses` with a `chatgpt-account-id` header — not the OpenAI chat-completions contract, so it needs its own provider rather than a credential mapping |
+| `cursor` | none | Connect-framed protobuf over HTTP/2 at `api2.cursor.sh` — not an HTTP+JSON LLM API |
+| `meta`, `devin`, `opencode-go` | none | OAuth for a product surface, not an engine-supported LLM API |
+| `deepseek`, `zai`, `kimi-coding`, `xiaomi`, `crofai`, `commandcode`, `freellmpool` | none | OpenAI-compatible vendor keys whose base URLs the control plane does not expose over BYOK |
 
 An account that does not map to an engine provider fails closed — the run
 never reaches the control plane with a credential the server cannot use.
