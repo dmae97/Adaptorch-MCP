@@ -14,6 +14,10 @@ _UNSUPPORTED_RESPONSE_TEXT: Final = json.dumps(
 )
 # The engine's envelope for a control-plane HTTP refusal (adaptorch.mcp_server).
 _CONTROL_PLANE_REJECTED: Final = "CONTROL_PLANE_REJECTED"
+# The engine's envelope for a non-4xx control-plane status: the deployment is
+# unavailable (a Railway redeploy returns 502/503). It carries the status and a
+# retry hint so an agent can decide to retry instead of giving up blind.
+_CONTROL_PLANE_UNAVAILABLE: Final = "CONTROL_PLANE_UNAVAILABLE"
 # Refusals the caller can fix themselves. By the control plane's contract their
 # detail string is a stable code followed by the instruction a human needs (for
 # 401 byok_credentials_required: the three X-Provider header names), so it is
@@ -71,6 +75,32 @@ def _projected_control_plane_rejection(decoded: Mapping[str, Any]) -> dict[str, 
     if status_code in _CALLER_FIXABLE_STATUSES:
         projected["message"] = message
     return projected
+
+
+def _projected_control_plane_unavailable(decoded: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Bounded projection of an availability failure; ``None`` unless well-formed.
+
+    Without this the remote profile replaced the whole envelope with
+    "unsupported tool response format", which is strictly less useful than the
+    opaque engine message it replaced.
+    """
+    if decoded.get("error") != _CONTROL_PLANE_UNAVAILABLE:
+        return None
+    status_code = decoded.get("status_code")
+    retryable = decoded.get("retryable")
+    message = decoded.get("message")
+    if isinstance(status_code, bool) or not isinstance(status_code, int):
+        return None
+    if not isinstance(retryable, bool):
+        return None
+    if not isinstance(message, str) or not message:
+        return None
+    return {
+        "error": _CONTROL_PLANE_UNAVAILABLE,
+        "status_code": status_code,
+        "retryable": retryable,
+        "message": message,
+    }
 
 
 def _projected_quota_rejection(decoded: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -132,6 +162,8 @@ def sanitize_tool_response(
     projected: Mapping[str, Any] | None = None
     if decoded is not None and is_error:
         projected = _projected_control_plane_rejection(decoded)
+        if projected is None:
+            projected = _projected_control_plane_unavailable(decoded)
         if projected is None:
             projected = _projected_quota_rejection(decoded)
     if projected is None and decoded is not None:

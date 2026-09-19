@@ -346,3 +346,86 @@ def test_is_error_is_forwarded_only_for_a_real_boolean(flag: object, expected: b
         assert json.loads(sanitized["result"]["content"][0]["text"]) == {
             "error": "unsupported tool response format"
         }
+
+
+def _control_plane_unavailable(status_code: int, retryable: bool) -> dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "result": {
+            "isError": True,
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(
+                        {
+                            "error": "CONTROL_PLANE_UNAVAILABLE",
+                            "status_code": status_code,
+                            "retryable": retryable,
+                            "message": (
+                                f"Control plane unavailable (HTTP {status_code}): "
+                                "the control plane was temporarily unavailable; retrying is safe."
+                            ),
+                        }
+                    ),
+                }
+            ],
+        },
+    }
+
+
+class TestControlPlaneAvailabilityReachesTheTenant:
+    """A restarting deployment must not read as an unsupported response format.
+
+    The engine reports a non-4xx status as CONTROL_PLANE_UNAVAILABLE with the
+    status and a retry hint. Without a projector for that code the remote
+    profile replaced the whole thing with "unsupported tool response format",
+    which tells an agent nothing about whether retrying can help.
+    """
+
+    def test_a_retryable_5xx_keeps_status_and_hint(self) -> None:
+        sanitized = _sanitize(_control_plane_unavailable(502, retryable=True), "adaptorch_run")
+
+        assert sanitized["result"]["isError"] is True
+        body = json.loads(sanitized["result"]["content"][0]["text"])
+        assert body["error"] == "CONTROL_PLANE_UNAVAILABLE"
+        assert body["status_code"] == 502
+        assert body["retryable"] is True
+        assert "HTTP 502" in body["message"]
+
+    def test_a_non_retryable_status_is_projected_too(self) -> None:
+        body = json.loads(
+            _sanitize(_control_plane_unavailable(301, retryable=False), "adaptorch_run")["result"][
+                "content"
+            ][0]["text"]
+        )
+
+        assert body["error"] == "CONTROL_PLANE_UNAVAILABLE"
+        assert body["status_code"] == 301
+        assert body["retryable"] is False
+
+    @pytest.mark.parametrize(
+        "broken",
+        [
+            {"error": "CONTROL_PLANE_UNAVAILABLE", "status_code": "502", "retryable": True},
+            {"error": "CONTROL_PLANE_UNAVAILABLE", "status_code": 502, "retryable": "yes"},
+            {"error": "CONTROL_PLANE_UNAVAILABLE", "status_code": 502, "retryable": True},
+            {
+                "error": "CONTROL_PLANE_UNAVAILABLE",
+                "status_code": 502,
+                "retryable": True,
+                "message": "",
+            },
+        ],
+    )
+    def test_a_malformed_availability_envelope_fails_closed(
+        self, broken: dict[str, Any]
+    ) -> None:
+        response = _control_plane_unavailable(502, retryable=True)
+        response["result"]["content"][0]["text"] = json.dumps(broken)
+
+        body = json.loads(
+            _sanitize(response, "adaptorch_run")["result"]["content"][0]["text"]
+        )
+
+        assert body == {"error": "unsupported tool response format"}
