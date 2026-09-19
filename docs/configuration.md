@@ -68,14 +68,29 @@ Mutually exclusive with `ADAPTORCH_MCP_PROVIDER_API_KEY` and refused with
 # current access token from ~/.omk/agent/auth.json; OMK owns refresh).
 export ADAPTORCH_MCP_PROVIDER="anthropic"
 export ADAPTORCH_MCP_PROVIDER_MODEL="claude-opus-5"
-export ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND="$HOME/.config/omk/adaptorch_anthropic_token.py"
+export ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND="$HOME/.config/omk/adaptorch_token.py anthropic"
 ```
 
 OAuth access tokens (`sk-ant-oat*`) are sent to Anthropic as
 `Authorization: Bearer` with `anthropic-beta: oauth-2025-04-20` by the
 control-plane engine; a static `x-api-key` credential keeps the `x-api-key`
-header. That Bearer mapping ships with the control-plane release — an older
-deployment cannot accept OAuth tokens no matter how they are supplied.
+header. Google OAuth tokens (`ya29.*`) likewise go through `Bearer` instead of
+the `?key=` API-key parameter. That Bearer mapping ships with the
+control-plane release — an older deployment cannot accept OAuth tokens no
+matter how they are supplied.
+
+The command can resolve any subscription account in the store — the engine
+provider name and auth form are what differ:
+
+| auth.json account | `ADAPTORCH_MCP_PROVIDER` | Credential form sent |
+| --- | --- | --- |
+| `anthropic` | `anthropic` | `sk-ant-oat*` → Bearer + OAuth beta flag |
+| Google OAuth account | `google` | `ya29.*` → Bearer |
+| `xai`, `openai-codex`, `meta`, `cursor`, `devin`, `opencode-go` | none — OAuth for a product surface, not an engine-supported LLM API | n/a |
+| `deepseek`, `zai`, `kimi-coding`, `xiaomi`, `crofai`, `commandcode`, `freellmpool` | none — OpenAI-compatible vendor keys whose base URLs the control plane does not expose over BYOK | n/a |
+
+An account that does not map to an engine provider fails closed — the run
+never reaches the control plane with a credential the server cannot use.
 
 For source parity against an unreleased engine checkout, run `make engine-local ENGINE_PATH=../adaptorch` before `make check`.
 
