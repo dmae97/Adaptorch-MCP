@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import sys
 import uuid
 from collections.abc import Sequence
@@ -18,6 +17,7 @@ from adaptorch_client import (
     validate_api_url,
 )
 
+from adaptorch_cli import config_store
 from adaptorch_cli.parser import build_parser, parse_args
 
 JSONValue: TypeAlias = bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"] | None
@@ -86,24 +86,131 @@ def _read_submit_payload(file_name: str, parser: argparse.ArgumentParser) -> JSO
 
 
 def _require_client(api_url: str) -> AdaptOrchClient:
-    api_key = os.environ.get("ADAPTORCH_API_KEY")
+    api_key, _source = config_store.resolve_api_key()
     if not api_key:
-        print("authentication required: set ADAPTORCH_API_KEY", file=sys.stderr)
+        print(
+            "authentication required: run `adaptorchctl auth login` or set ADAPTORCH_API_KEY",
+            file=sys.stderr,
+        )
         raise SystemExit(3)
     return AdaptOrchClient(ClientConfig(api_url=api_url, api_key=api_key))
 
 
 def _submission_credential() -> ProviderCredential | None:
-    provider = os.environ.get("ADAPTORCH_PROVIDER", "")
-    model = os.environ.get("ADAPTORCH_PROVIDER_MODEL", "")
-    key = os.environ.get("ADAPTORCH_PROVIDER_API_KEY", "")
-    if not provider and not model and not key:
+    resolved, _source = config_store.resolve_provider_credential()
+    if resolved is None:
         return None
+    provider, model, key = resolved
     return ProviderCredential(provider, model, key)
+
+
+def _read_secret(prompt: str, *, stdin_flag: bool) -> str:
+    """Read a secret from stdin (piped or --value-stdin) or a hidden prompt.
+
+    Never echoed: values on argv are rejected upstream by _CREDENTIAL_FLAGS.
+    """
+    if stdin_flag or not sys.stdin.isatty():
+        value = sys.stdin.read().strip()
+    else:
+        import getpass
+
+        value = getpass.getpass(prompt).strip()
+    return value
 
 
 def _result_payload(result: PayloadResult) -> JSONMapping:
     return result.to_payload()
+
+
+def _auth_command(
+    args: argparse.Namespace,
+    api_url: str,
+    parser: argparse.ArgumentParser,
+) -> JSONMapping:
+    sub: str = args.auth_command
+    if sub == "status":
+        api_key, source = config_store.resolve_api_key()
+        return {
+            "authenticated": api_key is not None,
+            "credential_source": source,
+            "api_url": api_url,
+        }
+    if sub == "logout":
+        removed = config_store.clear_credentials()
+        return {"logged_out": True, "removed_stored_key": removed}
+    if sub == "login":
+        login_url = getattr(args, "login_api_url", None) or api_url
+        try:
+            login_url = validate_api_url(login_url)
+        except ValueError:
+            parser.error(
+                "invalid --api-url: expected an https:// origin (or exact loopback http://)"
+            )
+        key = _read_secret("AdaptOrch API key: ", stdin_flag=False)
+        if not key:
+            parser.error("no API key provided on stdin or at the prompt")
+        verified: bool | None = None
+        if not args.no_verify:
+            try:
+                whoami = AdaptOrchClient(ClientConfig(api_url=login_url, api_key=key)).whoami()
+                verified = True
+                _ = whoami
+            except AdaptOrchAPIError as error:
+                print(
+                    f"login verification failed (HTTP {error.status_code}); "
+                    "key not saved. Retry with --no-verify to store anyway.",
+                    file=sys.stderr,
+                )
+                raise SystemExit(3) from error
+        config_store.store_credentials(api_key=key, api_url=login_url)
+        return {
+            "logged_in": True,
+            "api_url": login_url,
+            "verified": bool(verified),
+            "config_path": str(config_store.config_path()),
+        }
+    parser.error("unknown auth command")
+
+
+def _config_command(
+    args: argparse.Namespace,
+    api_url: str,
+    parser: argparse.ArgumentParser,
+) -> JSONMapping:
+    sub: str = args.config_command
+    if sub == "get":
+        view = config_store.config_view()
+        view["api_url"] = api_url
+        return view
+    if sub == "set":
+        key: str = args.key
+        if key not in config_store.configurable_keys():
+            parser.error(
+                "unknown config key; expected one of: "
+                + ", ".join(config_store.configurable_keys())
+            )
+        value = getattr(args, "value", None)
+        if config_store.is_secret_key(key):
+            if value is not None:
+                parser.error(f"{key} is a secret; pass it via --value-stdin or a piped stdin")
+            value = _read_secret("Value: ", stdin_flag=args.value_stdin)
+        elif args.value_stdin:
+            value = sys.stdin.read().strip()
+        elif value is None:
+            parser.error("config set requires a value (or --value-stdin)")
+        if key == "api_url":
+            try:
+                value = validate_api_url(value)
+            except ValueError:
+                parser.error(
+                    "invalid api_url: expected an https:// origin (or exact loopback http://)"
+                )
+        config_store.set_config_value(key, value)
+        return {"set": key, "config_path": str(config_store.config_path())}
+    if sub == "unset":
+        removed = config_store.unset_config_value(args.key)
+        return {"unset": args.key, "removed": removed}
+    parser.error("unknown config command")
 
 
 def _run_command(
@@ -154,9 +261,9 @@ def _execute(
     command: str = args.command
     match command:
         case "auth":
-            return {"authenticated": bool(os.environ.get("ADAPTORCH_API_KEY"))}, False
+            return _auth_command(args, api_url, parser), False
         case "config":
-            return {"api_url": api_url}, False
+            return _config_command(args, api_url, parser), False
         case "whoami":
             return _result_payload(_require_client(api_url).whoami()), False
         case "capabilities":
@@ -214,7 +321,11 @@ def _run_status_exit(payload: JSONMapping) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parse_args(argv)
-    api_url = _validated_api_url(str(args.api_url), parser)
+    flag_url = getattr(args, "api_url", None)
+    if flag_url is not None and not flag_url.strip():
+        parser.error("invalid --api-url: expected an https:// origin (or exact loopback http://)")
+    resolved_url, _url_source = config_store.resolve_api_url(flag_url)
+    api_url = _validated_api_url(resolved_url, parser)
     try:
         payload, check_run_status = _execute(args, api_url, parser)
         try:

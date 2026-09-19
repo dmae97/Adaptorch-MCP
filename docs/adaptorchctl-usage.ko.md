@@ -34,7 +34,19 @@ python -m pip install adaptorch-cli
 
 ## 인증과 API 주소
 
-API 키는 환경 변수로만 전달합니다.
+가장 쉬운 방법은 로그인입니다. 키를 한 번 저장하면 이후 명령이 알아서 사용합니다.
+
+```bash
+adaptorchctl auth login        # 키를 표준 입력/프롬프트로 입력 (화면에 남지 않음)
+adaptorchctl auth status
+adaptorchctl whoami            # 저장된 키로 바로 동작
+```
+
+로그인은 `whoami`로 키를 검증한 뒤 `~/.config/adaptorch/config.json`(권한 0600)에
+저장합니다. 네트워크 없이 저장만 하려면 `auth login --no-verify`를 사용합니다.
+제거는 `adaptorchctl auth logout`입니다.
+
+자동화·CI에서는 환경 변수로 전달합니다. **환경 변수가 저장된 키보다 항상 우선**합니다.
 
 ```bash
 export ADAPTORCH_API_KEY="<secret-store에서-주입할-값>"
@@ -43,6 +55,7 @@ export ADAPTORCH_API_URL="https://adaptorch.com"
 
 - `ADAPTORCH_API_KEY`: 인증된 명령에 필요합니다.
 - `ADAPTORCH_API_URL`: 선택 사항입니다. 기본값은 `https://adaptorch.com`입니다.
+- `ADAPTORCH_CONFIG_DIR`: 선택 사항입니다. 설정 디렉터리를 옮길 때만 지정합니다.
 - 대시보드에서 발급한 문서화된 `ado_` 접두사 키는 이 CLI에서 **`X-API-Key`로만** 전송합니다. 이 경우 `Authorization` 헤더는 보내지 않습니다. gateway는 이전 호출자 호환성 때문에 Bearer `ado_` 키도 일시적으로 수용할 수 있지만, 새 통합은 그 경로를 사용하면 안 됩니다.
 - `ado_` 접두사가 없는 서비스 자격 증명은 기존처럼 `Authorization: Bearer <credential>`로 전송합니다.
 - `--api-url`도 사용할 수 있지만 전역 옵션이므로 하위 명령보다 앞에 둡니다.
@@ -62,15 +75,31 @@ export ADAPTORCH_API_URL="http://127.0.0.1:8000"  # 로컬 개발 전용
 
 ## 상태와 서버 정보 확인
 
-다음 두 명령은 로컬 환경만 확인하며 API 요청을 보내지 않습니다.
+다음 두 명령은 로컬 환경만 확인하며 API 요청을 보내지 않습니다. 비밀 값은 마스킹되어
+표시되고 원문이 출력되지 않습니다.
 
 ```bash
 adaptorchctl auth status
-# {"authenticated":true}
+# {"authenticated":true,"credential_source":"env","api_url":"https://adaptorch.com"}
 
 adaptorchctl config get
-# {"api_url":"https://adaptorch.com"}
+# {"api_key":null,"api_url":"https://adaptorch.com","config_path":"~/.config/adaptorch/config.json",...}
 ```
+
+`config set`/`config unset`으로 영구 설정을 바꿉니다.
+
+```bash
+adaptorchctl config set api_url https://adaptorch.com
+adaptorchctl config set provider.name openai
+adaptorchctl config set provider.model gpt-4o-mini
+printf '%s' "$OPENAI_API_KEY" | adaptorchctl config set provider.api_key --value-stdin
+adaptorchctl config unset provider.model
+```
+
+저장된 `provider.*` 값은 `run submit`의 BYOK 헤더로 사용됩니다. 환경 변수
+`ADAPTORCH_PROVIDER`/`ADAPTORCH_PROVIDER_MODEL`/`ADAPTORCH_PROVIDER_API_KEY`가 있으면
+저장값보다 우선합니다. 비밀 키(`api_key`, `provider.api_key`)는 `--value-stdin`으로만
+받고 명령행 인자로는 거부합니다.
 
 서버가 인식한 사용자와 공개 기능은 인증된 API 요청으로 확인합니다.
 

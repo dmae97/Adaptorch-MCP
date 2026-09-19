@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import sys
 from collections.abc import Sequence
@@ -43,16 +42,54 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="adaptorchctl")
     parser.add_argument(
         "--api-url",
-        default=os.environ.get("ADAPTORCH_API_URL", _DEFAULT_API_URL),
+        default=None,
+        help=(
+            "Control-plane origin. Resolution order: this flag, "
+            "ADAPTORCH_API_URL, the stored config (auth login), then "
+            f"{_DEFAULT_API_URL}."
+        ),
     )
     parser.add_argument("--output", choices=("json",), default="json")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    auth = commands.add_parser("auth", help="Inspect authentication")
-    auth.add_subparsers(dest="auth_command", required=True).add_parser("status")
+    auth = commands.add_parser("auth", help="Manage authentication")
+    auth_commands = auth.add_subparsers(dest="auth_command", required=True)
+    auth_commands.add_parser("status", help="Show the effective credential source")
+    login = auth_commands.add_parser(
+        "login",
+        help="Store a tenant API key (reads it from the prompt or piped stdin)",
+    )
+    login.add_argument(
+        "--api-url",
+        dest="login_api_url",
+        help="Control-plane origin to persist (default: current --api-url resolution)",
+    )
+    login.add_argument(
+        "--no-verify",
+        action="store_true",
+        help="Skip the whoami check before saving (offline login)",
+    )
+    auth_commands.add_parser("logout", help="Remove the stored API key")
 
-    config = commands.add_parser("config", help="Inspect configuration")
-    config.add_subparsers(dest="config_command", required=True).add_parser("get")
+    config = commands.add_parser("config", help="Inspect and update configuration")
+    config_commands = config.add_subparsers(dest="config_command", required=True)
+    config_commands.add_parser("get", help="Show the merged configuration (secrets masked)")
+    config_set = config_commands.add_parser(
+        "set",
+        help="Set api_url, provider.name, provider.model, or provider.api_key",
+    )
+    config_set.add_argument("key")
+    config_set.add_argument("value", nargs="?")
+    config_set.add_argument(
+        "--value-stdin",
+        action="store_true",
+        help="Read the value from stdin (required for secrets)",
+    )
+    config_unset = config_commands.add_parser(
+        "unset",
+        help="Remove api_url, api_key, provider, or a provider.* field",
+    )
+    config_unset.add_argument("key")
 
     commands.add_parser("whoami", help="Show the authenticated identity")
     commands.add_parser("capabilities", help="Show server capabilities")
@@ -73,10 +110,6 @@ def build_parser() -> argparse.ArgumentParser:
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     arguments = list(argv) if argv is not None else None
     inspected = arguments if arguments is not None else sys.argv[1:]
-    if any(
-        argument.startswith(flag)
-        for argument in inspected
-        for flag in _CREDENTIAL_FLAGS
-    ):
+    if any(argument.startswith(flag) for argument in inspected for flag in _CREDENTIAL_FLAGS):
         build_parser().error("credential flags are not supported; use ADAPTORCH_API_KEY")
     return build_parser().parse_args(arguments)

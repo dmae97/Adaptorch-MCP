@@ -9,7 +9,7 @@ from typing import Protocol
 
 import pytest
 
-_FAKE_CLIENT = '''\
+_FAKE_CLIENT = """\
 from __future__ import annotations
 
 import json
@@ -131,7 +131,18 @@ class AdaptOrchClient:
         _fail_if_requested()
         if not 1 <= len(idempotency_key) <= 200:
             raise ValueError("invalid idempotency key")
-        _record("submit_run", [payload], {"idempotency_key": idempotency_key})
+        credential = None
+        if provider_credential is not None:
+            credential = {
+                "provider": provider_credential.provider,
+                "model": provider_credential.model,
+                "api_key": provider_credential.api_key,
+            }
+        _record(
+            "submit_run",
+            [payload],
+            {"idempotency_key": idempotency_key, "provider_credential": credential},
+        )
         return ApiResult({"id": "run-1", "status": "QUEUED"})
 
     def list_runs(self, status=None, project_id=None):
@@ -161,7 +172,7 @@ class AdaptOrchClient:
         _fail_if_requested()
         _record("list_artifacts", [run_id])
         return ApiResult({"artifacts": [{"name": "result.json", "run_id": run_id}]})
-'''
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,6 +206,9 @@ def run_cli(
     monkeypatch.setenv("PYTHONPATH", python_path)
     monkeypatch.setenv("FAKE_CLIENT_LOG", str(log_path))
     monkeypatch.setenv("ADAPTORCH_API_KEY", "env-test-key")
+    # Isolate the persisted config so tests never touch ~/.config/adaptorch
+    # and never pick up a real login from the developer's machine.
+    monkeypatch.setenv("ADAPTORCH_CONFIG_DIR", str(tmp_path / "adaptorch-config"))
 
     def invoke(args: list[str], input_text: str | None = None) -> CliResult:
         completed = subprocess.run(
