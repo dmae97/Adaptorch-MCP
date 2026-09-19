@@ -221,3 +221,85 @@ def test_byok_fails_closed_when_installed_engine_is_too_old(
                 api_key="provider-secret-value",
             ),
         )
+
+
+def test_provider_credential_command_resolves_per_call(tmp_path: Any) -> None:
+    import sys
+
+    key_file = tmp_path / "key.txt"
+    key_file.write_text("oauth-token-v1")
+    reader = tmp_path / "reader.py"
+    reader.write_text(
+        "import pathlib, sys\nprint(pathlib.Path(sys.argv[1]).read_text().strip())\n"
+    )
+    env = {
+        "ADAPTORCH_MCP_PROVIDER": "anthropic",
+        "ADAPTORCH_MCP_PROVIDER_MODEL": "claude-opus-5",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND": f"{sys.executable} {reader} {key_file}",
+    }
+    credential = runtime.resolve_provider_credential(env)
+    assert credential is not None
+    assert credential.provider == "anthropic"
+    assert credential.api_key is None
+    assert credential.resolve_api_key() == "oauth-token-v1"
+
+    # Rotating the underlying file changes the next submission's key.
+    key_file.write_text("oauth-token-v2")
+    assert credential.resolve_api_key() == "oauth-token-v2"
+
+
+def test_provider_credential_rejects_static_key_and_command() -> None:
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        runtime.ProviderCredentialConfig(
+            provider="anthropic",
+            model="claude-opus-5",
+            api_key="sk-ant-static",
+            api_key_command="/bin/echo key",
+        )
+
+
+def test_provider_credential_command_failure_names_env_not_output() -> None:
+    env = {
+        "ADAPTORCH_MCP_PROVIDER": "anthropic",
+        "ADAPTORCH_MCP_PROVIDER_MODEL": "claude-opus-5",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND": "/definitely/missing/token-reader",
+    }
+    credential = runtime.resolve_provider_credential(env)
+    assert credential is not None
+    with pytest.raises(ValueError, match="ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND"):
+        credential.resolve_api_key()
+
+
+def test_auto_provider_rejects_key_command() -> None:
+    env = {
+        "ADAPTORCH_MCP_PROVIDER": "auto",
+        "ADAPTORCH_MCP_PROVIDER_MODEL": "claude-opus-5",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND": "/bin/echo key",
+    }
+    with pytest.raises(ValueError, match="explicit"):
+        runtime.resolve_provider_credential(env)
+
+
+def test_command_credential_reaches_parent_connector(tmp_path: Any) -> None:
+    import sys
+
+    reader = tmp_path / "reader.py"
+    reader.write_text("print('resolved-oauth-token')\n")
+    credential = runtime.ProviderCredentialConfig(
+        provider="anthropic",
+        model="claude-opus-5",
+        api_key_command=f"{sys.executable} {reader}",
+    )
+    config = hardening._parent_connector_config(
+        base_url="https://adaptorch.com",
+        api_token="tenant-token",
+        timeout_seconds=10.0,
+        provider_credential=credential,
+    )
+    parent = config.provider_credential
+    assert parent is not None
+    assert parent.provider == "anthropic"
+    assert parent.api_key is None
+    resolve = getattr(parent, "resolve_api_key", None)
+    if resolve is not None:
+        assert resolve() == "resolved-oauth-token"

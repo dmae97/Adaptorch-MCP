@@ -28,6 +28,8 @@ NON_ENGINE_DOC_TOKENS = frozenset(
         # Independent SaaS CLI configuration.
         "ADAPTORCH_API_KEY",
         "ADAPTORCH_API_URL",
+        # CLI persisted-config directory override (config_store.py).
+        "ADAPTORCH_CONFIG_DIR",
         # Wrapper-only shell/template names that map to CLI flags.
         "ADAPTORCH_MCP_HTTP_HOST",
         "ADAPTORCH_MCP_HTTP_PORT",
@@ -36,6 +38,7 @@ NON_ENGINE_DOC_TOKENS = frozenset(
         "ADAPTORCH_MCP_PROVIDER",
         "ADAPTORCH_MCP_PROVIDER_MODEL",
         "ADAPTORCH_MCP_PROVIDER_API_KEY",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND",
         # Line-wrapped diagram fragment for ADAPTORCH_CONTROL_PLANE_TOKEN.
         "ADAPTORCH_CONTROL",
     }
@@ -72,8 +75,9 @@ def _engine_env_tokens() -> set[str]:
 def test_documented_adaptorch_env_vars_match_installed_engine_or_wrapper_allowlist() -> None:
     doc_tokens = _env_tokens_by_path(_documentation_paths())
     engine_tokens = _engine_env_tokens()
-    cli_source = REPO_ROOT / "packages/adaptorch-cli/src/adaptorch_cli/cli.py"
-    cli_tokens = set(ENV_TOKEN_PATTERN.findall(cli_source.read_text(encoding="utf-8")))
+    cli_tokens: set[str] = set()
+    for cli_source in (REPO_ROOT / "packages/adaptorch-cli/src/adaptorch_cli").glob("*.py"):
+        cli_tokens.update(ENV_TOKEN_PATTERN.findall(cli_source.read_text(encoding="utf-8")))
 
     documented_tokens = set().union(*doc_tokens.values())
     missing = {

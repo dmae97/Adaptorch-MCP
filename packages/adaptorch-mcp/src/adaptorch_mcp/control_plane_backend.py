@@ -109,8 +109,14 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
             return "Control-plane request rejected"
         secrets = [self._config.api_token]
         credential = self._config.provider_credential
-        if credential is not None and credential.api_key:
-            secrets.append(credential.api_key)
+        if credential is not None:
+            resolve = getattr(credential, "resolve_api_key", None)
+            try:
+                resolved = resolve() if callable(resolve) else credential.api_key
+            except Exception:
+                resolved = credential.api_key
+            if isinstance(resolved, str) and resolved:
+                secrets.append(resolved)
         for secret in sorted(set(secrets), key=len, reverse=True):
             value = value.replace(secret, "[redacted]")
         value = "".join(char if char.isprintable() else " " for char in value)
@@ -147,8 +153,13 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
                 if credential is not None:
                     headers[PROVIDER_HEADER] = credential.provider
                     headers[MODEL_HEADER] = credential.model
-                    if credential.api_key is not None:
-                        headers[KEY_HEADER] = credential.api_key
+                    resolve = getattr(credential, "resolve_api_key", None)
+                    try:
+                        resolved = resolve() if callable(resolve) else credential.api_key
+                    except ValueError as exc:
+                        raise N8nConnectorError("Provider credential resolution failed") from exc
+                    if isinstance(resolved, str) and resolved:
+                        headers[KEY_HEADER] = resolved
             if any(
                 not value.isascii() or any(ord(char) < 32 or ord(char) == 127 for char in value)
                 for value in headers.values()

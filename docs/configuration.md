@@ -10,7 +10,8 @@
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | no | Base URL used when `--base-url` is omitted; surrounding whitespace is ignored and non-empty values must be HTTP(S) URLs with a host |
 | `ADAPTORCH_MCP_PROVIDER` | BYOK-only deployments | Provider name sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER_MODEL`. `auto` picks the one provider whose key variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`) is set in the MCP process environment and fails closed, naming the variables, when none or more than one is |
 | `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK-only deployments | Provider model sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER` |
-| `ADAPTORCH_MCP_PROVIDER_API_KEY` | Credentialed BYOK providers | Process-local provider key; optional only for keyless CLI providers |
+| `ADAPTORCH_MCP_PROVIDER_API_KEY` | Credentialed BYOK providers | Process-local provider key; optional only for keyless CLI providers. Mutually exclusive with `ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND` |
+| `ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND` | Rotating BYOK credentials | Local command (no shell) whose stdout is the provider key, resolved per run submission — for expiring credentials such as OAuth access tokens |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | HTTP only | Client-facing bearer token for MCP HTTP/SSE |
 
 Base-url resolution differs by entrypoint:
@@ -52,6 +53,29 @@ export ADAPTORCH_MCP_PROVIDER_MODEL="gpt-4.1-mini"
 
 The wrapper fails closed when provider/model are incomplete, when `auto` finds no
 provider key or more than one (the message names the variables, never a value), or when the installed engine is too old for provider-credential forwarding. The key is excluded from repr output, MCP schemas, JSON request bodies, status/artifact/usage requests, and error text. It is attached only to `POST /v1/runs` as `X-Provider-Key`; provider and model use `X-Provider` and `X-Provider-Model`. The control plane uses the credential for that request and does not store it, while the local MCP process retains its environment until shutdown.
+
+`ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND` covers credentials that rotate faster
+than a process lifetime — OAuth access tokens read from a local credential
+store. The command is tokenized with `shlex.split`, executed without a shell,
+and must print exactly the key on stdout; stderr and exit details never reach
+tool responses. It is re-resolved on every run submission, so a token that
+expires mid-session is picked up fresh instead of failing until restart.
+Mutually exclusive with `ADAPTORCH_MCP_PROVIDER_API_KEY` and refused with
+`ADAPTORCH_MCP_PROVIDER=auto`.
+
+```bash
+# Claude subscription via an OAuth credential store (the reader prints the
+# current access token from ~/.omk/agent/auth.json; OMK owns refresh).
+export ADAPTORCH_MCP_PROVIDER="anthropic"
+export ADAPTORCH_MCP_PROVIDER_MODEL="claude-opus-5"
+export ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND="$HOME/.config/omk/adaptorch_anthropic_token.py"
+```
+
+OAuth access tokens (`sk-ant-oat*`) are sent to Anthropic as
+`Authorization: Bearer` with `anthropic-beta: oauth-2025-04-20` by the
+control-plane engine; a static `x-api-key` credential keeps the `x-api-key`
+header. That Bearer mapping ships with the control-plane release — an older
+deployment cannot accept OAuth tokens no matter how they are supplied.
 
 For source parity against an unreleased engine checkout, run `make engine-local ENGINE_PATH=../adaptorch` before `make check`.
 

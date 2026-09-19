@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hmac
 import os
+import shlex
+import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final
@@ -31,6 +33,7 @@ _STATUS_PATHS: Final = frozenset({"/mcp/health", "/mcp/metrics"})
 MCP_PROVIDER_ENV: Final = "ADAPTORCH_MCP_PROVIDER"
 MCP_PROVIDER_MODEL_ENV: Final = "ADAPTORCH_MCP_PROVIDER_MODEL"
 MCP_PROVIDER_API_KEY_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY"
+MCP_PROVIDER_API_KEY_COMMAND_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND"
 AUTO_PROVIDER: Final = "auto"
 
 
@@ -52,22 +55,74 @@ def _discover_provider_keys(env: Mapping[str, str]) -> list[tuple[str, str]]:
     ]
 
 
+def _run_api_key_command(command: str, *, timeout_seconds: float = 15.0) -> str:
+    """Resolve a credential by running a local command (no shell).
+
+    For rotating secrets — OAuth access tokens read from a local store — the
+    command runs at run-submission time so an expiring token is always fresh.
+    stderr and exit details never reach the caller's error text.
+    """
+    argv = shlex.split(command)
+    if not argv:
+        raise ValueError(f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} cannot be empty")
+    try:
+        completed = subprocess.run(
+            argv,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except FileNotFoundError as exc:
+        raise ValueError(
+            f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} executable not found: {argv[0]}"
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError(
+            f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} timed out after {timeout_seconds}s"
+        ) from exc
+    except OSError as exc:
+        raise ValueError(f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} could not run: {argv[0]}") from exc
+    if completed.returncode != 0:
+        raise ValueError(
+            f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} exited with status {completed.returncode}"
+        )
+    token = completed.stdout.strip()
+    if not token:
+        raise ValueError(f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} produced no credential")
+    if "\n" in token or "\r" in token:
+        raise ValueError(f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} output must be a single line")
+    return token
+
+
 @dataclass(frozen=True, slots=True)
 class ProviderCredentialConfig:
-    """Secret-safe wrapper configuration for one process-local provider credential."""
+    """Secret-safe wrapper configuration for one process-local provider credential.
+
+    ``api_key`` is a static secret; ``api_key_command`` resolves the secret per
+    run submission by executing a local command — the form used for expiring
+    credentials such as OAuth access tokens. They are mutually exclusive.
+    """
 
     provider: str
     model: str
     api_key: str | None = field(default=None, repr=False)
+    api_key_command: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         provider = self.provider.strip().lower()
         model = self.model.strip()
         api_key = self.api_key.strip() if self.api_key is not None else None
+        api_key_command = self.api_key_command.strip() if self.api_key_command is not None else None
         if not provider:
             raise ValueError(f"{MCP_PROVIDER_ENV} cannot be empty")
         if not model:
             raise ValueError(f"{MCP_PROVIDER_MODEL_ENV} cannot be empty")
+        if api_key and api_key_command:
+            raise ValueError(
+                f"{MCP_PROVIDER_API_KEY_ENV} and {MCP_PROVIDER_API_KEY_COMMAND_ENV} "
+                "are mutually exclusive"
+            )
         values = (
             (MCP_PROVIDER_ENV, provider),
             (MCP_PROVIDER_MODEL_ENV, model),
@@ -79,6 +134,13 @@ class ProviderCredentialConfig:
         object.__setattr__(self, "provider", provider)
         object.__setattr__(self, "model", model)
         object.__setattr__(self, "api_key", api_key or None)
+        object.__setattr__(self, "api_key_command", api_key_command or None)
+
+    def resolve_api_key(self) -> str | None:
+        """Return the key to send now; commands are resolved per call."""
+        if self.api_key_command is not None:
+            return _run_api_key_command(self.api_key_command)
+        return self.api_key
 
 
 def _resolve_auto_credential(
@@ -124,13 +186,25 @@ def resolve_provider_credential(
     model = env.get(MCP_PROVIDER_MODEL_ENV, "").strip()
     raw_api_key = env.get(MCP_PROVIDER_API_KEY_ENV)
     api_key = raw_api_key.strip() if raw_api_key is not None else None
-    if not provider and not model and not api_key:
+    raw_command = env.get(MCP_PROVIDER_API_KEY_COMMAND_ENV)
+    api_key_command = raw_command.strip() if raw_command is not None else None
+    if not provider and not model and not api_key and not api_key_command:
         return None
     if not provider or not model:
         raise ValueError(f"{MCP_PROVIDER_ENV} and {MCP_PROVIDER_MODEL_ENV} must be set together")
     if provider.lower() == AUTO_PROVIDER:
+        if api_key_command:
+            raise ValueError(
+                f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} requires an explicit "
+                f"{MCP_PROVIDER_ENV}; auto discovery only reads provider key variables"
+            )
         return _resolve_auto_credential(env, model=model, explicit_api_key=api_key or None)
-    return ProviderCredentialConfig(provider=provider, model=model, api_key=api_key or None)
+    return ProviderCredentialConfig(
+        provider=provider,
+        model=model,
+        api_key=api_key or None,
+        api_key_command=api_key_command or None,
+    )
 
 
 def _build_server_for_env(

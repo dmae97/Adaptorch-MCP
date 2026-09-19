@@ -38,6 +38,10 @@ class ProviderCredentialConfig(Protocol):
     def api_key(self) -> str | None:
         raise NotImplementedError
 
+    @property
+    def api_key_command(self) -> str | None:
+        raise NotImplementedError
+
 
 def build_parent_config(
     *,
@@ -62,9 +66,19 @@ def build_parent_config(
                 "installed adaptorch engine is too old for MCP provider credentials; "
                 "install an engine revision with ControlPlaneProviderCredential support"
             )
-        config_kwargs["provider_credential"] = credential_type(
-            provider=provider_credential.provider,
-            model=provider_credential.model,
-            api_key=provider_credential.api_key,
-        )
+        credential_kwargs: dict[str, Any] = {
+            "provider": provider_credential.provider,
+            "model": provider_credential.model,
+            "api_key": provider_credential.api_key,
+        }
+        api_key_command = getattr(provider_credential, "api_key_command", None)
+        if api_key_command:
+            if "api_key_command" not in getattr(credential_type, "__dataclass_fields__", {}):
+                raise RuntimeError(
+                    "installed adaptorch engine is too old for "
+                    "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND; install an engine "
+                    "revision whose ControlPlaneProviderCredential resolves key commands"
+                )
+            credential_kwargs["api_key_command"] = api_key_command
+        config_kwargs["provider_credential"] = credential_type(**credential_kwargs)
     return N8nConnectorConfig(**config_kwargs)
