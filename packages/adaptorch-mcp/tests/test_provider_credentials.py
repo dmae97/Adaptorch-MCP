@@ -303,3 +303,51 @@ def test_command_credential_reaches_parent_connector(tmp_path: Any) -> None:
     resolve = getattr(parent, "resolve_api_key", None)
     if resolve is not None:
         assert resolve() == "resolved-oauth-token"
+
+
+def test_fallback_env_is_resolved_into_the_credential() -> None:
+    """A rate-limited primary needs a second provider the control plane can try."""
+    credential = runtime.resolve_provider_credential(
+        {
+            "ADAPTORCH_MCP_PROVIDER": "anthropic",
+            "ADAPTORCH_MCP_PROVIDER_MODEL": "claude-opus-5",
+            "ADAPTORCH_MCP_PROVIDER_API_KEY": "primary-secret",
+            "ADAPTORCH_MCP_PROVIDER_FALLBACK": "XAI",
+            "ADAPTORCH_MCP_PROVIDER_FALLBACK_MODEL": "grok-4.6",
+            "ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY": "fallback-secret",
+        }
+    )
+    assert credential is not None
+    assert credential.fallback_provider == "xai"
+    assert credential.fallback_model == "grok-4.6"
+    assert credential.resolve_fallback_api_key() == "fallback-secret"
+    # Neither key may surface in a repr.
+    assert "fallback-secret" not in repr(credential)
+    assert "primary-secret" not in repr(credential)
+
+
+def test_half_specified_fallback_env_fails_closed() -> None:
+    with pytest.raises(ValueError, match="must be set together"):
+        runtime.resolve_provider_credential(
+            {
+                "ADAPTORCH_MCP_PROVIDER": "anthropic",
+                "ADAPTORCH_MCP_PROVIDER_MODEL": "claude-opus-5",
+                "ADAPTORCH_MCP_PROVIDER_API_KEY": "primary-secret",
+                "ADAPTORCH_MCP_PROVIDER_FALLBACK": "xai",
+            }
+        )
+
+
+def test_fallback_static_key_and_command_are_mutually_exclusive() -> None:
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        runtime.resolve_provider_credential(
+            {
+                "ADAPTORCH_MCP_PROVIDER": "anthropic",
+                "ADAPTORCH_MCP_PROVIDER_MODEL": "claude-opus-5",
+                "ADAPTORCH_MCP_PROVIDER_API_KEY": "primary-secret",
+                "ADAPTORCH_MCP_PROVIDER_FALLBACK": "xai",
+                "ADAPTORCH_MCP_PROVIDER_FALLBACK_MODEL": "grok-4.6",
+                "ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY": "fallback-secret",
+                "ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY_COMMAND": "/bin/echo k",
+            }
+        )

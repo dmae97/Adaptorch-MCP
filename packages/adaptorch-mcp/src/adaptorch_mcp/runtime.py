@@ -34,6 +34,12 @@ MCP_PROVIDER_ENV: Final = "ADAPTORCH_MCP_PROVIDER"
 MCP_PROVIDER_MODEL_ENV: Final = "ADAPTORCH_MCP_PROVIDER_MODEL"
 MCP_PROVIDER_API_KEY_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY"
 MCP_PROVIDER_API_KEY_COMMAND_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND"
+MCP_PROVIDER_FALLBACK_ENV: Final = "ADAPTORCH_MCP_PROVIDER_FALLBACK"
+MCP_PROVIDER_FALLBACK_MODEL_ENV: Final = "ADAPTORCH_MCP_PROVIDER_FALLBACK_MODEL"
+MCP_PROVIDER_FALLBACK_API_KEY_ENV: Final = "ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY"
+MCP_PROVIDER_FALLBACK_API_KEY_COMMAND_ENV: Final = (
+    "ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY_COMMAND"
+)
 AUTO_PROVIDER: Final = "auto"
 
 
@@ -102,12 +108,20 @@ class ProviderCredentialConfig:
     ``api_key`` is a static secret; ``api_key_command`` resolves the secret per
     run submission by executing a local command — the form used for expiring
     credentials such as OAuth access tokens. They are mutually exclusive.
+
+    The optional ``fallback_*`` triple names a second provider the control
+    plane tries when the primary fails, which is what makes a rate-limited
+    subscription recoverable rather than terminal.
     """
 
     provider: str
     model: str
     api_key: str | None = field(default=None, repr=False)
     api_key_command: str | None = field(default=None, repr=False)
+    fallback_provider: str | None = None
+    fallback_model: str | None = None
+    fallback_api_key: str | None = field(default=None, repr=False)
+    fallback_api_key_command: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         provider = self.provider.strip().lower()
@@ -123,10 +137,34 @@ class ProviderCredentialConfig:
                 f"{MCP_PROVIDER_API_KEY_ENV} and {MCP_PROVIDER_API_KEY_COMMAND_ENV} "
                 "are mutually exclusive"
             )
+        fb_provider = (
+            self.fallback_provider.strip().lower() if self.fallback_provider is not None else None
+        )
+        fb_model = self.fallback_model.strip() if self.fallback_model is not None else None
+        fb_api_key = self.fallback_api_key.strip() if self.fallback_api_key is not None else None
+        fb_command = (
+            self.fallback_api_key_command.strip()
+            if self.fallback_api_key_command is not None
+            else None
+        )
+        if fb_api_key and fb_command:
+            raise ValueError(
+                f"{MCP_PROVIDER_FALLBACK_API_KEY_ENV} and "
+                f"{MCP_PROVIDER_FALLBACK_API_KEY_COMMAND_ENV} are mutually exclusive"
+            )
+        if bool(fb_provider) != bool(fb_model):
+            # A half-specified fallback looks configured and never fires.
+            raise ValueError(
+                f"{MCP_PROVIDER_FALLBACK_ENV} and {MCP_PROVIDER_FALLBACK_MODEL_ENV} "
+                "must be set together"
+            )
         values = (
             (MCP_PROVIDER_ENV, provider),
             (MCP_PROVIDER_MODEL_ENV, model),
             ("provider key", api_key),
+            (MCP_PROVIDER_FALLBACK_ENV, fb_provider),
+            (MCP_PROVIDER_FALLBACK_MODEL_ENV, fb_model),
+            ("fallback provider key", fb_api_key),
         )
         for label, value in values:
             if value is not None and ("\r" in value or "\n" in value):
@@ -135,12 +173,22 @@ class ProviderCredentialConfig:
         object.__setattr__(self, "model", model)
         object.__setattr__(self, "api_key", api_key or None)
         object.__setattr__(self, "api_key_command", api_key_command or None)
+        object.__setattr__(self, "fallback_provider", fb_provider or None)
+        object.__setattr__(self, "fallback_model", fb_model or None)
+        object.__setattr__(self, "fallback_api_key", fb_api_key or None)
+        object.__setattr__(self, "fallback_api_key_command", fb_command or None)
 
     def resolve_api_key(self) -> str | None:
         """Return the key to send now; commands are resolved per call."""
         if self.api_key_command is not None:
             return _run_api_key_command(self.api_key_command)
         return self.api_key
+
+    def resolve_fallback_api_key(self) -> str | None:
+        """Return the fallback key to send now; commands are resolved per call."""
+        if self.fallback_api_key_command is not None:
+            return _run_api_key_command(self.fallback_api_key_command)
+        return self.fallback_api_key
 
 
 def _resolve_auto_credential(
@@ -199,11 +247,23 @@ def resolve_provider_credential(
                 f"{MCP_PROVIDER_ENV}; auto discovery only reads provider key variables"
             )
         return _resolve_auto_credential(env, model=model, explicit_api_key=api_key or None)
+    raw_fb = env.get(MCP_PROVIDER_FALLBACK_ENV)
+    fb_provider = raw_fb.strip() if raw_fb is not None else None
+    raw_fb_model = env.get(MCP_PROVIDER_FALLBACK_MODEL_ENV)
+    fb_model = raw_fb_model.strip() if raw_fb_model is not None else None
+    raw_fb_key = env.get(MCP_PROVIDER_FALLBACK_API_KEY_ENV)
+    fb_api_key = raw_fb_key.strip() if raw_fb_key is not None else None
+    raw_fb_command = env.get(MCP_PROVIDER_FALLBACK_API_KEY_COMMAND_ENV)
+    fb_command = raw_fb_command.strip() if raw_fb_command is not None else None
     return ProviderCredentialConfig(
         provider=provider,
         model=model,
         api_key=api_key or None,
         api_key_command=api_key_command or None,
+        fallback_provider=fb_provider or None,
+        fallback_model=fb_model or None,
+        fallback_api_key=fb_api_key or None,
+        fallback_api_key_command=fb_command or None,
     )
 
 

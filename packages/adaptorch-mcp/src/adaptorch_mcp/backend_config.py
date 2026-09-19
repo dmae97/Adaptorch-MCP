@@ -42,6 +42,22 @@ class ProviderCredentialConfig(Protocol):
     def api_key_command(self) -> str | None:
         raise NotImplementedError
 
+    @property
+    def fallback_provider(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def fallback_model(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def fallback_api_key(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def fallback_api_key_command(self) -> str | None:
+        raise NotImplementedError
+
 
 def build_parent_config(
     *,
@@ -80,5 +96,22 @@ def build_parent_config(
                     "revision whose ControlPlaneProviderCredential resolves key commands"
                 )
             credential_kwargs["api_key_command"] = api_key_command
+        fallback_provider = getattr(provider_credential, "fallback_provider", None)
+        fallback_model = getattr(provider_credential, "fallback_model", None)
+        if fallback_provider and fallback_model:
+            if "fallback_provider" not in getattr(credential_type, "__dataclass_fields__", {}):
+                raise RuntimeError(
+                    "installed adaptorch engine is too old for "
+                    "ADAPTORCH_MCP_PROVIDER_FALLBACK; install an engine revision "
+                    "whose ControlPlaneProviderCredential carries a fallback triple"
+                )
+            credential_kwargs["fallback_provider"] = fallback_provider
+            credential_kwargs["fallback_model"] = fallback_model
+            fallback_key = getattr(provider_credential, "fallback_api_key", None)
+            if fallback_key:
+                credential_kwargs["fallback_api_key"] = fallback_key
+            fallback_command = getattr(provider_credential, "fallback_api_key_command", None)
+            if fallback_command:
+                credential_kwargs["fallback_api_key_command"] = fallback_command
         config_kwargs["provider_credential"] = credential_type(**credential_kwargs)
     return N8nConnectorConfig(**config_kwargs)

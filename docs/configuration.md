@@ -8,10 +8,13 @@
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | yes unless `--api-token` is passed | Upstream AdaptOrch bearer token or cloud API key |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | no | Base URL used when `--base-url` is omitted; surrounding whitespace is ignored and non-empty values must be HTTP(S) URLs with a host |
-| `ADAPTORCH_MCP_PROVIDER` | BYOK-only deployments | Provider name sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER_MODEL`. `auto` picks the one provider whose key variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`) is set in the MCP process environment and fails closed, naming the variables, when none or more than one is |
+| `ADAPTORCH_MCP_PROVIDER` | BYOK-only deployments | Provider name sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER_MODEL`. `auto` picks the one provider whose key variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`) is set in the MCP process environment and fails closed, naming the variables, when none or more than one is |
 | `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK-only deployments | Provider model sent only while submitting a run; requires `ADAPTORCH_MCP_PROVIDER` |
 | `ADAPTORCH_MCP_PROVIDER_API_KEY` | Credentialed BYOK providers | Process-local provider key; optional only for keyless CLI providers. Mutually exclusive with `ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND` |
 | `ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND` | Rotating BYOK credentials | Local command (no shell) whose stdout is the provider key, resolved per run submission — for expiring credentials such as OAuth access tokens |
+| `ADAPTORCH_MCP_PROVIDER_FALLBACK` | Optional | Second provider the control plane tries when the primary fails; requires `ADAPTORCH_MCP_PROVIDER_FALLBACK_MODEL` |
+| `ADAPTORCH_MCP_PROVIDER_FALLBACK_MODEL` | With the fallback | Model for the fallback provider |
+| `ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY` / `_COMMAND` | With the fallback | Fallback credential, static or command-resolved; mutually exclusive |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | HTTP only | Client-facing bearer token for MCP HTTP/SSE |
 
 Base-url resolution differs by entrypoint:
@@ -94,6 +97,35 @@ provider name and auth form are what differ:
 
 An account that does not map to an engine provider fails closed — the run
 never reaches the control plane with a credential the server cannot use.
+
+### Fallback provider
+
+A subscription credential can be rate-limited while remaining perfectly valid.
+The optional fallback triple names a second provider that the control plane
+tries when the primary call fails, so a 429 degrades to a slower answer
+instead of a failed run:
+
+```bash
+export ADAPTORCH_MCP_PROVIDER="anthropic"
+export ADAPTORCH_MCP_PROVIDER_MODEL="claude-opus-5"
+export ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND="$HOME/.config/omk/adaptorch_token.py anthropic"
+
+export ADAPTORCH_MCP_PROVIDER_FALLBACK="xai"
+export ADAPTORCH_MCP_PROVIDER_FALLBACK_MODEL="grok-4.6"
+export ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY_COMMAND="$HOME/.config/omk/adaptorch_token.py xai"
+```
+
+The fallback carries its own key because a hosted BYOK run has no provider key
+in the server environment to fall back on; it rides the `X-Provider-Fallback`,
+`X-Provider-Fallback-Model` and `X-Provider-Fallback-Key` headers under the
+same rules as the primary (never stored, never echoed, redacted in errors).
+A half-specified fallback is refused rather than dropped: one that looked
+configured and never fired would only be discovered during an outage.
+
+The chain is tried in order on any provider error the engine classifies as
+such — including `429` after the primary's own retries are exhausted. When
+every entry fails the run is marked `DEGRADED` with the per-provider reasons,
+keys redacted.
 
 For source parity against an unreleased engine checkout, run `make engine-local ENGINE_PATH=../adaptorch` before `make check`.
 
