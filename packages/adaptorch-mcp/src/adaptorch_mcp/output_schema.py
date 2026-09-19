@@ -31,6 +31,7 @@ _ROUTING_FEATURE_KEYS: Final = frozenset(
         "structural_depth",
         "token_weighted_critical_path",
         "legacy_critical_path_depth",
+        "unit_work_parallelism",
     }
 )
 _ARTIFACT_NAME: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
