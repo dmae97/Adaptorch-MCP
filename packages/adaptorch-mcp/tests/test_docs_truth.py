@@ -39,6 +39,11 @@ NON_ENGINE_DOC_TOKENS = frozenset(
         "ADAPTORCH_MCP_PROVIDER_MODEL",
         "ADAPTORCH_MCP_PROVIDER_API_KEY",
         "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND",
+        # Optional second provider used when the primary fails (runtime.py).
+        "ADAPTORCH_MCP_PROVIDER_FALLBACK",
+        "ADAPTORCH_MCP_PROVIDER_FALLBACK_MODEL",
+        "ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY",
+        "ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY_COMMAND",
         # Line-wrapped diagram fragment for ADAPTORCH_CONTROL_PLANE_TOKEN.
         "ADAPTORCH_CONTROL",
     }
