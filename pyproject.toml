@@ -12,7 +12,7 @@ authors = [{ name = "ClassicMate" }]
 members = ["packages/adaptorch-mcp", "packages/adaptorch-client", "packages/adaptorch-cli"]
 
 [tool.uv.sources]
-adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "903ed7c12494cb4321e0184e46e9bd3d552125a4" }
+adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "d1dfea841a337245c0d8e744cf448cffe4152c84" }
 adaptorch-client = { workspace = true }
 
 [tool.ruff]
