@@ -16,6 +16,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import urlsplit
 
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
@@ -80,6 +81,13 @@ class ProviderCredential:
     provider: str
     model: str
     api_key: str
+
+
+@dataclass(frozen=True, slots=True)
+class PollPolicy:
+    timeout_seconds: float = 120.0
+    interval_seconds: float = 1.0
+    max_polls: int = 100
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +170,27 @@ class AdaptOrchClient:
         _fail_if_requested()
         _record("cancel_run", [run_id], {"reason": reason})
         return ApiResult({"id": run_id, "status": "CANCELLED"})
+
+    def wait_for_run(self, run_id, *, policy=None):
+        _fail_if_requested()
+        _record(
+            "wait_for_run",
+            [run_id],
+            {
+                "timeout_seconds": getattr(policy, "timeout_seconds", None),
+                "interval_seconds": getattr(policy, "interval_seconds", None),
+            },
+        )
+        result = SimpleNamespace()
+        result.run = ApiResult(
+            {"id": run_id, "status": os.environ.get("FAKE_RUN_STATUS", "SUCCEEDED")}
+        )
+        result.polls = int(os.environ.get("FAKE_WAIT_POLLS", "1"))
+        result.reason = SimpleNamespace(
+            value=os.environ.get("FAKE_WAIT_REASON", "terminal")
+        )
+        result.elapsed_seconds = 0.01
+        return result
 
     def get_evidence(self, run_id):
         _fail_if_requested()

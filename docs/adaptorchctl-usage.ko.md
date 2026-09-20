@@ -187,6 +187,25 @@ adaptorchctl run cancel "$RUN_ID" --reason "중복 제출"
 
 `--status`와 `--project-id`는 함께 사용할 수 있습니다. 취소는 요청이며, 서버 응답에서 최종 상태를 확인해야 합니다.
 
+### 응답을 잃은 뒤 이어서 확인하기
+
+`run submit`의 응답을 받지 못했다면 **작업을 다시 제출하지 마세요.** 응답 실패만으로
+작업이 생성되지 않았다고 단정할 수 없습니다. `run_id`를 이미 알고 있다면 `run wait`로
+종료 상태까지 조회만 합니다. 새 실행을 만들지 않으며, MCP `resume_run_id`와 같은 계약입니다.
+
+```bash
+adaptorchctl run wait "$RUN_ID"
+adaptorchctl run wait "$RUN_ID" --timeout 300 --interval 2
+```
+
+응답은 `reason`(`terminal`/`deadline`/`poll_limit`/`unsupported_status`), `polls`,
+`elapsed_seconds`, 그리고 마지막으로 관측한 `run`을 담습니다. `terminal`이 아닌 종료는
+실패가 아니라 **조회를 멈춘 것**이므로 같은 명령을 다시 실행하면 됩니다.
+`run_id`를 모른다면 `run list`로 먼저 기존 실행을 확인하세요.
+
+제출 자체를 다시 보내야 한다면 보관해 둔 **동일한 `--request-id`와 동일한 JSON**을 그대로
+사용합니다(위 “멱등성” 참고).
+
 ## 증거와 아티팩트 목록
 
 ```bash

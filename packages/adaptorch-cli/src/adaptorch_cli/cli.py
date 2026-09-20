@@ -13,6 +13,7 @@ from adaptorch_client import (
     AdaptOrchAPIError,
     AdaptOrchClient,
     ClientConfig,
+    PollPolicy,
     ProviderCredential,
     validate_api_url,
 )
@@ -39,7 +40,10 @@ def _reject_json_constant(_value: str) -> Never:
 
 
 def _finite_float(text: str) -> float:
-    value = float(text)
+    try:
+        value = float(text)
+    except ValueError:
+        _reject_json_constant(text)
     if not math.isfinite(value):
         raise ValueError("non-finite JSON number")
     return value
@@ -241,6 +245,28 @@ def _run_command(
         case "get":
             run_id: str = args.run_id
             return _result_payload(_require_client(api_url).get_run(run_id)), True
+        case "wait":
+            wait_run_id: str = args.run_id
+            timeout_seconds: float = args.timeout
+            interval_seconds: float = args.interval
+            if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+                parser.error("--timeout must be finite positive seconds")
+            if not math.isfinite(interval_seconds) or interval_seconds <= 0:
+                parser.error("--interval must be finite positive seconds")
+            wait_result = _require_client(api_url).wait_for_run(
+                wait_run_id,
+                policy=PollPolicy(
+                    timeout_seconds=timeout_seconds, interval_seconds=interval_seconds
+                ),
+            )
+            wait_payload: dict[str, JSONValue] = {
+                "reason": wait_result.reason.value,
+                "polls": wait_result.polls,
+                "elapsed_seconds": wait_result.elapsed_seconds,
+            }
+            if wait_result.run is not None:
+                wait_payload["run"] = wait_result.run.to_payload()
+            return wait_payload, True
         case "cancel":
             cancel_run_id: str = args.run_id
             reason: str | None = args.reason

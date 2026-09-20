@@ -229,9 +229,39 @@ def test_wrong_subject_is_rejected_before_inherited_collection(
     artifact = {"run_id": subject, "artifacts": {"report": "private-sibling"}}
     records = ({"run_id": "r"}, summary, artifact)
     wire.replies = [(200, json.dumps(item).encode()) for item in records]
-    with pytest.raises(N8nConnectorError, match="subject"):
-        backend.run_task_and_collect(payload=PAYLOAD)
+
+    result = backend.run_task_and_collect(payload=PAYLOAD)
+
+    # The subject guard still refuses the foreign record. Since the stability
+    # bundle, a collection failure no longer discards the admitted run: the
+    # read is marked blocked and the caller keeps the run_id to resume with,
+    # instead of losing it to an exception and resubmitting the work.
+    assert "private-sibling" not in json.dumps(result)
+    assert result["run_id"] == "r"
+    if endpoint == "summary":
+        assert result["collection_status"] == "blocked"
+    else:
+        assert result["collection_status"] == "complete"
+        assert result["artifact_status"] == "blocked"
+        assert not result.get("artifact_urls")
+    guaranteed = result["consumer_receipt"]["correctness_guaranteed"]
+    assert isinstance(guaranteed, bool) and not guaranteed
     assert len(wire.calls) == (2 if endpoint == "summary" else 3)
+
+
+def test_subject_guard_still_raises_on_a_direct_read(
+    backend: SafeControlPlaneConnector,
+    wire: Wire,
+) -> None:
+    """Collection degrades to `blocked`; a direct read must still fail loudly.
+
+    Only the collection helper is allowed to convert a refusal into status.
+    ``get_run`` has no run to preserve, so a foreign subject stays an error.
+    """
+    wire.replies = [(200, json.dumps({"run_id": "other", "status": "SUCCEEDED"}).encode())]
+
+    with pytest.raises(N8nConnectorError, match="subject"):
+        backend.get_run("r")
 
 
 def test_parent_collection_keeps_polling_idempotency_and_creation_receipt(

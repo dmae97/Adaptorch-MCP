@@ -343,6 +343,109 @@ def test_run_projection_preserves_requested_and_selected_serving_modes() -> None
     assert project_tool_output("adaptorch_run", payload) == payload
 
 
+@requires_engine_surface
+def test_remote_run_schema_exposes_submission_recovery_arguments() -> None:
+    """idempotency_key and resume_run_id are engine-declared arguments."""
+    properties = _remote_run_schema()["properties"]
+
+    key = properties["idempotency_key"]
+    assert key["type"] == "string"
+    resume = properties["resume_run_id"]
+    assert resume["type"] == "string"
+    # The remote profile must not market resume as submission; it is read-only.
+    assert "existing" in resume["description"].lower()
+
+
+def test_run_projection_preserves_stability_fields() -> None:
+    """The engine's collection envelope survives the closed projection."""
+    payload = {
+        "run_id": "r1",
+        "status": "SUCCEEDED",
+        "request_idempotency_key": "task-20260920-example-01",
+        "collection_status": "complete",
+        "artifact_status": "available",
+        "connector_recovery": {
+            "schema_version": 1,
+            "requests": 2,
+            "attempts": 2,
+            "retries": 1,
+            "events": [
+                {"attempt": 1, "kind": "http_error", "status_code": 503, "delay_seconds": 0.5}
+            ],
+            "omitted_events": 0,
+        },
+        "consumer_receipt": {
+            "schema_version": 1,
+            "run_id": "r1",
+            "headline": "Result ready, review needed",
+            "next_action": "Completion is not proof of correctness.",
+            "execution_status": "SUCCEEDED",
+            "verification_state": "not_run",
+            "budget_state": "cost_unknown",
+            "collection_status": "complete",
+            "artifact_status": "available",
+            "correctness_guaranteed": False,
+            "new_run_recommended": False,
+            "recovery_reason": None,
+        },
+        "first_run_receipt": {
+            "schema_version": 1,
+            "verdict": "OK",
+            "budget_state": "within_cap",
+            "verification_state": "passed",
+        },
+    }
+
+    projected = project_tool_output("adaptorch_run", payload)
+
+    assert projected is not None
+    assert projected["request_idempotency_key"] == "task-20260920-example-01"
+    assert projected["collection_status"] == "complete"
+    assert projected["artifact_status"] == "available"
+    assert projected["connector_recovery"] == payload["connector_recovery"]
+    assert projected["consumer_receipt"]["verification_state"] == "not_run"
+    assert projected["first_run_receipt"]["verdict"] == "OK"
+
+
+def test_run_projection_drops_malformed_stability_fields_not_the_run() -> None:
+    payload = {
+        "run_id": "r1",
+        "status": "SUCCEEDED",
+        "collection_status": "complete",
+        "artifact_status": "blocked",
+        "connector_recovery": {"schema_version": 2, "reason": "???"},
+        "consumer_receipt": "not-a-map",
+        "recovery": {"schema_version": 1, "reason": "not-a-real-reason"},
+    }
+
+    projected = project_tool_output("adaptorch_run", payload)
+
+    assert projected is not None
+    assert projected["run_id"] == "r1"
+    assert projected["artifact_status"] == "blocked"
+    assert projected["connector_recovery"] is None
+    assert projected["consumer_receipt"] is None
+    assert projected["recovery"] is None
+
+
+def test_consumer_receipt_never_publishes_a_correctness_claim() -> None:
+    payload = {
+        "run_id": "r1",
+        "status": "SUCCEEDED",
+        "consumer_receipt": {
+            "schema_version": 1,
+            "correctness_guaranteed": True,
+            "new_run_recommended": False,
+            "verification_state": "passed",
+        },
+    }
+
+    projected = project_tool_output("adaptorch_run", payload)
+
+    assert projected is not None
+    assert projected["consumer_receipt"] is None
+
+
 def test_capabilities_projection_tolerates_parent_without_algorithm_surface() -> None:
     projected = project_tool_output(
         "adaptorch_capabilities",

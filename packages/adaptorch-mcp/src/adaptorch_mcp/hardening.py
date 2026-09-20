@@ -209,6 +209,10 @@ class HardenedMCPServer(AdaptOrchMCPServer):
             if tool_name is None:
                 return _jsonrpc_error(message, -32602, "Invalid tool arguments")
             run_id = _run_arguments(message).get("run_id")
+            if not isinstance(run_id, str):
+                # adaptorch_run's read-only resume names its subject differently;
+                # the subject binding still has to hold for that call shape.
+                run_id = _run_arguments(message).get("resume_run_id")
             return sanitize_tool_response(
                 response,
                 tool_name=tool_name,

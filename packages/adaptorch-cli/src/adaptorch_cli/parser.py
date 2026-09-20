@@ -33,6 +33,28 @@ def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser
     get = commands.add_parser("get", help="Get a run")
     get.add_argument("run_id")
 
+    wait = commands.add_parser(
+        "wait",
+        help=(
+            "Read an existing run until it reaches a terminal status — the "
+            "CLI's form of the MCP resume_run_id contract. It never submits "
+            "another run; use it after an uncertain submit response."
+        ),
+    )
+    wait.add_argument("run_id")
+    wait.add_argument(
+        "--timeout",
+        type=float,
+        default=120.0,
+        help="Seconds to keep polling before stopping (default: 120)",
+    )
+    wait.add_argument(
+        "--interval",
+        type=float,
+        default=1.0,
+        help="Seconds between status reads (default: 1)",
+    )
+
     cancel = commands.add_parser("cancel", help="Cancel a run")
     cancel.add_argument("run_id")
     cancel.add_argument("--reason")

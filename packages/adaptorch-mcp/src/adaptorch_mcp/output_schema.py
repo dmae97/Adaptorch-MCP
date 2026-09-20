@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Callable, Mapping
 from typing import Any, Final
@@ -61,6 +62,213 @@ def _project_artifact_map(value: Any) -> dict[str, str] | None:
     return references
 
 
+_RECOVERY_REASONS: Final = frozenset(
+    {
+        "http_transient",
+        "rate_limited",
+        "quota_exceeded",
+        "authentication",
+        "request_rejected",
+        "redirect_blocked",
+        "network",
+        "tls",
+        "dns",
+        "protocol",
+        "response_too_large",
+        "deadline",
+        "cancelled",
+        "circuit_open",
+        "busy",
+    }
+)
+_RECOVERY_OUTCOMES: Final = frozenset({"unknown", "not_sent", "read_only", "response_received"})
+_RECOVERY_ACTIONS: Final = frozenset(
+    {
+        "reuse_same_request_and_key",
+        "retry_read",
+        "retry_artifact_read",
+        "resume_existing_run",
+        "inspect_existing_runs_before_resubmitting",
+    }
+)
+
+
+def _bounded_str(value: Any, maximum: int) -> str | None:
+    if not isinstance(value, str) or not 0 < len(value) <= maximum or not value.isprintable():
+        return None
+    return value
+
+
+def _project_attempt_events(value: Any) -> list[dict[str, Any]] | None:
+    if not isinstance(value, list) or len(value) > 64:
+        return None
+    events: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, Mapping):
+            return None
+        attempt = item.get("attempt")
+        kind = _bounded_str(item.get("kind"), 64)
+        delay = item.get("delay_seconds")
+        if (
+            isinstance(attempt, bool)
+            or not isinstance(attempt, int)
+            or not 0 <= attempt <= 64
+            or kind is None
+            or isinstance(delay, bool)
+            or not isinstance(delay, int | float)
+            or not math.isfinite(delay)
+            or delay < 0
+        ):
+            return None
+        # A wait/cancel event legitimately carries no HTTP status, so null is
+        # preserved rather than dropped: the engine's own record round-trips.
+        status_code = item.get("status_code")
+        if status_code is not None and (
+            isinstance(status_code, bool)
+            or not isinstance(status_code, int)
+            or not 100 <= status_code <= 599
+        ):
+            return None
+        events.append(
+            {
+                "attempt": attempt,
+                "kind": kind,
+                "status_code": status_code,
+                "delay_seconds": delay,
+            }
+        )
+    return events
+
+
+def _project_recovery(value: Any) -> dict[str, Any] | None:
+    """Bounded projection of the engine's client-side HTTP recovery records.
+
+    Two shapes share this projector: ``connector_recovery`` is the per-call
+    attempt trace (counters plus events) and ``recovery`` is the failure record
+    (reason, outcome, next action). Absent keys stay absent — inventing a
+    ``reason: null`` on a successful trace would report a failure that did not
+    happen. Only allowlisted metadata crosses the remote profile; transport
+    text and upstream bodies never do, and a malformed record drops the field
+    rather than voiding the whole run summary.
+    """
+    if not isinstance(value, Mapping) or value.get("schema_version") != 1:
+        return None
+    projected: dict[str, Any] = {"schema_version": 1}
+    if "reason" in value:
+        if value["reason"] not in _RECOVERY_REASONS:
+            return None
+        projected["reason"] = value["reason"]
+    if "request_outcome" in value:
+        if value["request_outcome"] not in _RECOVERY_OUTCOMES:
+            return None
+        projected["request_outcome"] = value["request_outcome"]
+    for key in ("requests", "attempts", "retries", "omitted_events"):
+        item = value.get(key)
+        if item is None:
+            continue
+        if isinstance(item, bool) or not isinstance(item, int) or not 0 <= item <= 10000:
+            return None
+        projected[key] = item
+    for key in ("retryable", "replay_safe", "new_run_safe"):
+        item = value.get(key)
+        if item is None:
+            continue
+        if not isinstance(item, bool):
+            return None
+        projected[key] = item
+    status_code = value.get("status_code")
+    if status_code is not None:
+        if (
+            isinstance(status_code, bool)
+            or not isinstance(status_code, int)
+            or not 100 <= status_code <= 599
+        ):
+            return None
+        projected["status_code"] = status_code
+    retry_after = value.get("retry_after_seconds")
+    if retry_after is not None:
+        if (
+            isinstance(retry_after, bool)
+            or not isinstance(retry_after, int | float)
+            or not math.isfinite(retry_after)
+            or retry_after < 0
+        ):
+            return None
+        projected["retry_after_seconds"] = retry_after
+    for key in ("run_id", "idempotency_key", "next_action"):
+        item = value.get(key)
+        if item is None:
+            continue
+        if key == "next_action":
+            if item not in _RECOVERY_ACTIONS:
+                return None
+            projected[key] = item
+        else:
+            bounded = _bounded_str(item, 256)
+            if bounded is None:
+                return None
+            projected[key] = bounded
+    if "events" in value:
+        events = _project_attempt_events(value["events"])
+        if events is None:
+            return None
+        projected["events"] = events
+    return projected
+
+
+_CONSUMER_RECEIPT_ENUMS: Final[dict[str, frozenset[str]]] = {
+    "verification_state": frozenset({"passed", "failed", "error", "not_run", "unknown"}),
+    "budget_state": frozenset(
+        {"within_cap", "cap_missing", "cap_untrusted", "cost_unknown", "cap_exceeded", "unknown"}
+    ),
+    "collection_status": frozenset({"complete", "pending", "blocked"}),
+    "artifact_status": frozenset(
+        {"available", "not_available", "not_requested", "pending", "blocked"}
+    ),
+}
+
+
+def _project_consumer_receipt(value: Any) -> dict[str, Any] | None:
+    """Bounded projection of the engine's consumer-facing collection receipt."""
+    if not isinstance(value, Mapping) or value.get("schema_version") != 1:
+        return None
+    projected: dict[str, Any] = {"schema_version": 1}
+    for key, allowed in _CONSUMER_RECEIPT_ENUMS.items():
+        item = value.get(key)
+        projected[key] = item if isinstance(item, str) and item in allowed else "unknown"
+    run_id = value.get("run_id")
+    projected["run_id"] = _bounded_str(run_id, 256) if run_id is not None else None
+    for key in ("headline", "headline_ko", "next_action", "next_action_ko"):
+        item = value.get(key)
+        bounded = _bounded_str(item, 512)
+        if item is not None and bounded is None:
+            return None
+        if bounded is not None:
+            projected[key] = bounded
+    for key in ("correctness_guaranteed", "new_run_recommended"):
+        # These may only publish False: a wrapper that lets the parent set them
+        # would let a receipt overclaim what the product guarantees.
+        item = value.get(key)
+        if isinstance(item, bool) and not item:
+            projected[key] = False
+        elif item is not None or key in value:
+            return None
+        else:
+            return None
+    reason = value.get("recovery_reason")
+    if reason is not None:
+        if reason not in _RECOVERY_REASONS:
+            return None
+        projected["recovery_reason"] = reason
+    status = value.get("execution_status")
+    if status is not None:
+        bounded = _bounded_str(status, 64)
+        if bounded is None:
+            return None
+        projected["execution_status"] = bounded
+    return projected
+
+
 def _project_run(value: Mapping[str, Any]) -> dict[str, Any] | None:
     projected = project_run_scalars(value)
     if projected is None:
@@ -69,7 +277,16 @@ def _project_run(value: Mapping[str, Any]) -> dict[str, Any] | None:
         artifact_urls = _project_artifact_map(value["artifact_urls"])
         if artifact_urls is None:
             return None
-        return {**projected, "artifact_urls": artifact_urls}
+        projected["artifact_urls"] = dict(artifact_urls)
+    # Stability fields are optional engine metadata; malformed objects drop the
+    # field (never the run summary), matching the first_run_receipt contract.
+    for key in ("recovery", "connector_recovery"):
+        if key in value:
+            projected[key] = _project_recovery(value[key])
+    if "consumer_receipt" in value:
+        projected["consumer_receipt"] = _project_consumer_receipt(value["consumer_receipt"])
+    if "first_run_receipt" in value:
+        projected["first_run_receipt"] = project_first_run_receipt(value["first_run_receipt"])
     return projected
 
 
@@ -79,11 +296,6 @@ def _project_get_run(value: Mapping[str, Any]) -> dict[str, Any] | None:
         return None
     if "correctness_wall" in value:
         projected["correctness_wall"] = project_correctness_wall(value["correctness_wall"])
-    if "first_run_receipt" in value:
-        # A malformed receipt projects to null rather than voiding the run
-        # summary: the consumer still needs status, but must never receive an
-        # unvalidated verdict.
-        projected["first_run_receipt"] = project_first_run_receipt(value["first_run_receipt"])
     return projected
 
 

@@ -15,6 +15,7 @@ from typing import Any, Final, NoReturn
 from urllib import parse, request
 from urllib.error import HTTPError
 
+from adaptorch.connector_stability import caller_fixable_status
 from adaptorch.control_plane.request_credential import KEY_HEADER, MODEL_HEADER, PROVIDER_HEADER
 from adaptorch.n8n_connector import (
     N8nConnectorError,
@@ -28,6 +29,7 @@ from adaptorch.n8n_connector import (
 from adaptorch_mcp.response_json import within_json_depth
 
 _MAX_JSON_BYTES: Final = 8 * 1024 * 1024
+_SAFE_METHODS: Final = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 def _reject_constant(value: str) -> NoReturn:
@@ -35,7 +37,13 @@ def _reject_constant(value: str) -> NoReturn:
 
 
 def _finite_float(value: str) -> float:
-    number = float(value)
+    # json routes only syntactically valid float tokens here, but an invalid one
+    # must still fail closed as a rejected number rather than escape as a
+    # different exception type the caller does not catch.
+    try:
+        number = float(value)
+    except ValueError:
+        _reject_constant(value)
     if not math.isfinite(number):
         _reject_constant(value)
     return number
@@ -226,12 +234,29 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
                     message="Tenant quota exhausted for the current period",
                     usage=safe_usage,
                 )
+            # This wrapper owns its own one-attempt transport, so it must also
+            # produce the recovery record the engine's error payload reads.
+            # Without it a 4xx reaches the caller as the generic "inspect the
+            # run" sentence and a keyless caller never learns which headers to
+            # send. `_caller_message` has already redacted the known secrets.
+            caller_fixable = caller_fixable_status(status)
             message = (
                 self._caller_message(payload)
-                if status in {401, 403}
+                if caller_fixable
                 else "Control-plane request rejected"
             )
-            raise N8nHttpError(status_code=status, message=message)
+            error = N8nHttpError(status_code=status, message=message)
+            error.__dict__["recovery"] = {
+                "schema_version": 1,
+                "reason": "authentication" if status in {401, 403} else "request_rejected",
+                "attempts": 1,
+                "retryable": False,
+                "replay_safe": False,
+                "request_outcome": "read_only" if method in _SAFE_METHODS else "response_received",
+                "status_code": status,
+                **({"detail": message} if caller_fixable else {}),
+            }
+            raise error
         if method == "POST" and path == "/v1/runs":
             run_id = payload.get("run_id")
             if not isinstance(run_id, str) or not run_id.strip():

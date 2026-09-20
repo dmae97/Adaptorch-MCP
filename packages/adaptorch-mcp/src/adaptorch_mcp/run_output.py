@@ -26,6 +26,11 @@ _STRING_KEYS: Final = frozenset(
         "created_at",
         "started_at",
         "finished_at",
+        # Stability surface (2026-09-20): the engine's own metadata, never
+        # execution claims. `request_idempotency_key` echoes the caller's key.
+        "request_idempotency_key",
+        "collection_status",
+        "artifact_status",
     }
 )
 RUN_SCALAR_KEYS: Final = _STRING_KEYS | {"consistency", "duration_ms"}

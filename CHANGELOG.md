@@ -4,6 +4,42 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [Unreleased]
+
+### Added
+
+- The remote profile now projects the engine's duplicate-run surface instead of
+  discarding it. `adaptorch_run` results carry `request_idempotency_key`,
+  `collection_status`, `artifact_status`, `connector_recovery`, `recovery`,
+  `consumer_receipt`, and the previously dropped `first_run_receipt`. Each object
+  is projected through a closed allowlist: a malformed record drops that field
+  rather than voiding the run summary, and a `consumer_receipt` that claims
+  `correctness_guaranteed: true` is refused outright.
+- Error envelopes carry the engine's recovery vocabulary: `reason`,
+  `request_outcome`, `next_action`, `run_id`, `idempotency_key`, `attempts`,
+  `retry_after_seconds`, and `message_ko`. `new_run_safe` may only ever be
+  `false` — a response claiming a fresh submission is safe after an uncertain
+  request is dropped as malformed.
+- `adaptorchctl run wait <run_id> [--timeout S] [--interval S]`: the CLI form of
+  the MCP `resume_run_id` contract. It polls an existing run to a terminal status
+  and never submits another one.
+
+### Fixed
+
+- `resume_run_id` calls were not subject-bound. `sanitize_tool_response` read the
+  expected run only from a `run_id` argument, so a resume response for a
+  *different* run passed the binding check. It now falls back to `resume_run_id`.
+- A 4xx refusal lost its remediation. `SafeControlPlaneConnector` owns its own
+  one-attempt transport, so it never produced the recovery record the engine's
+  error payload reads, and a keyless caller saw only "401" instead of the three
+  `X-Provider*` headers to send. The transport now emits that record, with the
+  status classification derived from the engine's `caller_fixable_status()`
+  rather than a re-listed literal.
+- A transport failure carries no HTTP status; the availability projector
+  required an integer and replaced the whole envelope with "unsupported tool
+  response format". `status_code: null` is now accepted.
+- `_finite_float` called `float()` unguarded in the JSON `parse_float` hook.
+
 ## [0.5.2] - 2026-09-20
 
 ### Changed

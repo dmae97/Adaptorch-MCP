@@ -118,6 +118,43 @@ def test_run_get_prints_client_json(run_cli: CliRunner) -> None:
     assert _json_stdout(result.stdout) == {"id": "run-1", "status": "RUNNING"}
 
 
+def test_run_wait_reads_until_terminal_without_resubmitting(run_cli: CliRunner) -> None:
+    result = run_cli(
+        [
+            "--output",
+            "json",
+            "run",
+            "wait",
+            "run-1",
+            "--timeout",
+            "5",
+            "--interval",
+            "0.5",
+        ]
+    )
+
+    assert result.returncode == 0
+    assert _json_stdout(result.stdout) == {
+        "reason": "terminal",
+        "polls": 1,
+        "elapsed_seconds": 0.01,
+        "run": {"id": "run-1", "status": "SUCCEEDED"},
+    }
+    calls = [json.loads(line) for line in result.client_log.splitlines()]
+    assert calls[-1] == {
+        "args": ["run-1"],
+        "kwargs": {"interval_seconds": 0.5, "timeout_seconds": 5.0},
+        "method": "wait_for_run",
+    }
+
+
+def test_run_wait_rejects_non_positive_bounds(run_cli: CliRunner) -> None:
+    result = run_cli(["--output", "json", "run", "wait", "run-1", "--timeout", "0"])
+
+    assert result.returncode != 0
+    assert result.client_log.count("wait_for_run") == 0
+
+
 def test_run_cancel_prints_client_json(run_cli: CliRunner) -> None:
     result = run_cli(["--output", "json", "run", "cancel", "run-1"])
 

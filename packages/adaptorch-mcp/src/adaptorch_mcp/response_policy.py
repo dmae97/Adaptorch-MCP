@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping
 from typing import Any, Final
 
@@ -27,6 +28,105 @@ _RESOURCE_PROJECTORS: Final = {
     "adaptorch://server-info": project_server_info,
     "adaptorch://plans/cloud": project_catalog,
 }
+
+# Vocabularies owned by adaptorch.connector_stability.connector_error_payload.
+# The wrapper re-lists them once so an older engine's envelope still projects,
+# and a value outside the set fails closed rather than being forwarded.
+_RECOVERY_REASONS: Final = frozenset(
+    {
+        "http_transient",
+        "rate_limited",
+        "quota_exceeded",
+        "authentication",
+        "request_rejected",
+        "redirect_blocked",
+        "network",
+        "tls",
+        "dns",
+        "protocol",
+        "response_too_large",
+        "deadline",
+        "cancelled",
+        "circuit_open",
+        "busy",
+    }
+)
+_RECOVERY_OUTCOMES: Final = frozenset({"unknown", "not_sent", "read_only", "response_received"})
+_RECOVERY_ACTIONS: Final = frozenset(
+    {
+        "reuse_same_request_and_key",
+        "retry_read",
+        "retry_artifact_read",
+        "resume_existing_run",
+        "inspect_existing_runs_before_resubmitting",
+    }
+)
+
+
+def _bounded_str(value: Any, maximum: int) -> str | None:
+    if not isinstance(value, str) or not 0 < len(value) <= maximum or not value.isprintable():
+        return None
+    return value
+
+
+def _project_recovery_fields(
+    decoded: Mapping[str, Any], projected: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Carry the engine's allowlisted recovery metadata onto an error envelope.
+
+    Every field is validated against the connector's own vocabulary — never
+    ``str(exc)`` or an upstream body. Returns ``None`` (fail closed) on a
+    malformed field rather than forwarding it.
+    """
+    reason = decoded.get("reason")
+    if reason is not None:
+        if reason not in _RECOVERY_REASONS:
+            return None
+        projected["reason"] = reason
+    outcome = decoded.get("request_outcome")
+    if outcome is not None:
+        if outcome not in _RECOVERY_OUTCOMES:
+            return None
+        projected["request_outcome"] = outcome
+    if "new_run_safe" in decoded:
+        # Only False is publishable: the wrapper never lets a parent tell the
+        # caller a fresh submission is safe after an uncertain request.
+        new_run_safe = decoded["new_run_safe"]
+        if not isinstance(new_run_safe, bool) or new_run_safe:
+            return None
+        projected["new_run_safe"] = False
+    action = decoded.get("next_action")
+    if action is not None:
+        if action not in _RECOVERY_ACTIONS:
+            return None
+        projected["next_action"] = action
+    for key in ("run_id", "idempotency_key"):
+        item = decoded.get(key)
+        if item is not None:
+            bounded = _bounded_str(item, 256)
+            if bounded is None:
+                return None
+            projected[key] = bounded
+    attempts = decoded.get("attempts")
+    if attempts is not None:
+        if (
+            isinstance(attempts, bool)
+            or not isinstance(attempts, int)
+            or not 0 <= attempts <= 10000
+        ):
+            return None
+        projected["attempts"] = attempts
+    retry_after = decoded.get("retry_after_seconds")
+    if retry_after is not None:
+        if (
+            isinstance(retry_after, bool)
+            or not isinstance(retry_after, int | float)
+            or not math.isfinite(retry_after)
+            or retry_after < 0
+        ):
+            return None
+        projected["retry_after_seconds"] = retry_after
+    return projected
 
 
 def _error_envelope(response: Mapping[str, Any], code: int, message: str) -> dict[str, Any]:
@@ -74,7 +174,13 @@ def _projected_control_plane_rejection(decoded: Mapping[str, Any]) -> dict[str, 
     projected: dict[str, Any] = {"error": _CONTROL_PLANE_REJECTED, "status_code": status_code}
     if status_code in _CALLER_FIXABLE_STATUSES:
         projected["message"] = message
-    return projected
+    message_ko = decoded.get("message_ko")
+    if message_ko is not None:
+        bounded_ko = _bounded_str(message_ko, 1024)
+        if bounded_ko is None:
+            return None
+        projected["message_ko"] = bounded_ko
+    return _project_recovery_fields(decoded, projected)
 
 
 def _projected_control_plane_unavailable(decoded: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -89,18 +195,31 @@ def _projected_control_plane_unavailable(decoded: Mapping[str, Any]) -> dict[str
     status_code = decoded.get("status_code")
     retryable = decoded.get("retryable")
     message = decoded.get("message")
-    if isinstance(status_code, bool) or not isinstance(status_code, int):
+    # Transport-layer failures (DNS/TLS/network) carry no HTTP status; the
+    # engine reports them as status_code=None rather than omitting the field.
+    if status_code is not None and (
+        isinstance(status_code, bool)
+        or not isinstance(status_code, int)
+        or not 100 <= status_code <= 599
+    ):
         return None
     if not isinstance(retryable, bool):
         return None
     if not isinstance(message, str) or not message:
         return None
-    return {
+    projected: dict[str, Any] = {
         "error": _CONTROL_PLANE_UNAVAILABLE,
         "status_code": status_code,
         "retryable": retryable,
         "message": message,
     }
+    message_ko = decoded.get("message_ko")
+    if message_ko is not None:
+        bounded_ko = _bounded_str(message_ko, 1024)
+        if bounded_ko is None:
+            return None
+        projected["message_ko"] = bounded_ko
+    return _project_recovery_fields(decoded, projected)
 
 
 def _projected_quota_rejection(decoded: Mapping[str, Any]) -> dict[str, Any] | None:

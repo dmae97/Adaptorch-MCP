@@ -418,14 +418,97 @@ class TestControlPlaneAvailabilityReachesTheTenant:
             },
         ],
     )
-    def test_a_malformed_availability_envelope_fails_closed(
-        self, broken: dict[str, Any]
-    ) -> None:
+    def test_a_malformed_availability_envelope_fails_closed(self, broken: dict[str, Any]) -> None:
         response = _control_plane_unavailable(502, retryable=True)
         response["result"]["content"][0]["text"] = json.dumps(broken)
 
-        body = json.loads(
-            _sanitize(response, "adaptorch_run")["result"]["content"][0]["text"]
-        )
+        body = json.loads(_sanitize(response, "adaptorch_run")["result"]["content"][0]["text"])
 
         assert body == {"error": "unsupported tool response format"}
+
+
+class TestStabilityRecoveryFields:
+    """The 2026-09-20 connector contract: outcome is unknown until inspected.
+
+    The engine's connector_error_payload carries bounded recovery metadata so a
+    caller can decide what to do next. The wrapper must project exactly that
+    vocabulary — and still never forward ``new_run_safe=True``.
+    """
+
+    @staticmethod
+    def _unavailable_with_recovery() -> dict[str, Any]:
+        return {
+            "jsonrpc": "2.0",
+            "id": 21,
+            "result": {
+                "isError": True,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "error": "CONTROL_PLANE_UNAVAILABLE",
+                                "status_code": 503,
+                                "reason": "http_transient",
+                                "retryable": True,
+                                "request_outcome": "unknown",
+                                "message": "The response does not prove the run was not created.",
+                                "message_ko": (
+                                    "응답 실패만으로 작업이 생성되지 않았다고 판단할 수 없어요."
+                                ),
+                                "new_run_safe": False,
+                                "next_action": "inspect_existing_runs_before_resubmitting",
+                                "run_id": "r1",
+                                "idempotency_key": "task-20260920-example-01",
+                                "attempts": 2,
+                            }
+                        ),
+                    }
+                ],
+            },
+        }
+
+    def test_recovery_metadata_reaches_the_caller(self) -> None:
+        body = json.loads(
+            _sanitize(self._unavailable_with_recovery(), "adaptorch_run")["result"]["content"][0][
+                "text"
+            ]
+        )
+
+        assert body["error"] == "CONTROL_PLANE_UNAVAILABLE"
+        assert body["status_code"] == 503
+        assert body["reason"] == "http_transient"
+        assert body["request_outcome"] == "unknown"
+        # Strictly the boolean False: across a JSON boundary a plain `not` would
+        # also accept a missing field, which is the drift this guards against.
+        assert isinstance(body["new_run_safe"], bool) and not body["new_run_safe"]
+        assert body["next_action"] == "inspect_existing_runs_before_resubmitting"
+        assert body["run_id"] == "r1"
+        assert body["idempotency_key"] == "task-20260920-example-01"
+        assert body["attempts"] == 2
+        assert body["message_ko"].startswith("응답 실패")
+
+    def test_new_run_safe_true_never_survives_projection(self) -> None:
+        response = self._unavailable_with_recovery()
+        decoded = json.loads(response["result"]["content"][0]["text"])
+        decoded["new_run_safe"] = True
+        response["result"]["content"][0]["text"] = json.dumps(decoded)
+
+        body = json.loads(_sanitize(response, "adaptorch_run")["result"]["content"][0]["text"])
+
+        assert body == {"error": "unsupported tool response format"}
+
+    def test_transport_failure_has_no_http_status(self) -> None:
+        """status_code=None is a transport failure, not a malformed envelope."""
+        response = self._unavailable_with_recovery()
+        decoded = json.loads(response["result"]["content"][0]["text"])
+        decoded["status_code"] = None
+        decoded["reason"] = "dns"
+        decoded["retryable"] = False
+        response["result"]["content"][0]["text"] = json.dumps(decoded)
+
+        body = json.loads(_sanitize(response, "adaptorch_run")["result"]["content"][0]["text"])
+
+        assert body["error"] == "CONTROL_PLANE_UNAVAILABLE"
+        assert body["status_code"] is None
+        assert body["reason"] == "dns"

@@ -37,6 +37,34 @@ installed `adaptorch` engine and are asserted by
 | Verification decisions | `SHIP`, `REJECT`, `ABSTAIN`, `ESCALATE`, `INCONCLUSIVE_ENVIRONMENT` | `VerificationDecision` values. `SHIP` is not a release authorization. |
 | Evidence causality | `CandidateCaused`, `EnvironmentCaused`, `Ambiguous`, `NotApplicable` | `EvidenceCausality` values. |
 
+## Duplicate-run protection and resume
+
+A lost or failed response never proves that a submitted run was not created. Two
+`adaptorch_run` arguments exist so a caller can recover without paying for the
+work twice. Both are engine arguments; the wrapper only forwards and projects them.
+
+| Argument | Effect |
+| `idempotency_key` | 8–128 chars of `A-Za-z0-9._:-`. Reuse the **same key with an unchanged task** to replay a submission whose response you lost. Changing the task under a reused key is a caller error. Never use an API key or any secret as the key. |
+| `resume_run_id` | Read-only collection of a run you already have an ID for. It never creates a run. Mixing it with any submission option (`prompt`, `payload`, `model`, `idempotency_key`, …) is rejected before the call, and a backend that cannot collect is rejected rather than silently ignoring the argument. |
+
+Run results carry `request_idempotency_key`, `collection_status`
+(`complete`/`pending`/`blocked`), `artifact_status`
+(`available`/`not_available`/`not_requested`/`pending`/`blocked`),
+`connector_recovery` (HTTP attempt counters — **transport attempts, not model calls
+or billed tokens**), an optional `recovery` record, `consumer_receipt`, and
+`first_run_receipt`.
+
+A refused or failed call answers with `request_outcome`
+(`unknown`/`not_sent`/`read_only`/`response_received`), `new_run_safe: false`, and a
+`next_action`. `new_run_safe` is never `true`: the wrapper drops any response that
+claims otherwise. A 4xx additionally carries the control plane's own remediation —
+for `401`/`403` that sentence names the headers to send — with configured secrets
+redacted first. Every other status keeps the status code and drops the operator text.
+
+Collection failures degrade rather than discard: a blocked read preserves the
+`run_id` and marks the status so the caller resumes instead of resubmitting.
+`SUCCEEDED` is never downgraded because an artifact read failed.
+
 `adaptorch_capabilities` reports `synthesis_modes` (everything callers may pass),
 `supported_synthesis_modes`, `deprecated_synthesis_mode_aliases`, `topologies`,
 `output_extractor_modes`, `orchestration_value_verdicts`,
