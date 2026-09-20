@@ -4,7 +4,7 @@
 
 ```bash
 pip install adaptorch-mcp
-uvx --from "adaptorch-mcp==0.5.1" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.5.2" adaptorch-mcp-client --help
 ```
 
 ## Package dependency order
@@ -57,11 +57,11 @@ uv run --no-sync python -m build packages/adaptorch-mcp --outdir dist
 uv run --no-sync python -m build --wheel \
   --outdir /absolute/path/to/core-dist /absolute/path/to/adaptorch
 sha256sum \
-  dist/adaptorch_mcp-0.5.1-py3-none-any.whl \
+  dist/adaptorch_mcp-0.5.2-py3-none-any.whl \
   /absolute/path/to/core-dist/adaptorch-0.1.2-py3-none-any.whl
 uv tool install --offline --force \
   --with "adaptorch[api] @ file:///absolute/path/to/core-dist/adaptorch-0.1.2-py3-none-any.whl" \
-  dist/adaptorch_mcp-0.5.1-py3-none-any.whl
+  dist/adaptorch_mcp-0.5.2-py3-none-any.whl
 ```
 
 Both distributions publish an `adaptorch-mcp` console script. Prefer the wrapper-only
@@ -72,7 +72,7 @@ restore that entry point after installing the core and verify its import target:
 uv pip install --offline \
   --python "$HOME/.local/share/uv/tools/adaptorch-mcp/bin/python" \
   --force-reinstall --no-deps \
-  dist/adaptorch_mcp-0.5.1-py3-none-any.whl
+  dist/adaptorch_mcp-0.5.2-py3-none-any.whl
 grep -q "from adaptorch_mcp.cli import main" \
   "$HOME/.local/share/uv/tools/adaptorch-mcp/bin/adaptorch-mcp"
 ```
@@ -105,7 +105,7 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 1. Create the PyPI project `adaptorch-mcp`.
 2. In PyPI, add a trusted publisher for this repository.
 3. Require the GitHub `pypi` environment.
-4. Tag a release like `adaptorch-mcp-v0.5.1`.
+4. Tag a release like `adaptorch-mcp-v0.5.2`.
 5. Let `.github/workflows/publish.yml` build and publish without storing a PyPI API token.
 
 ## One workflow, four packages
@@ -132,7 +132,7 @@ uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-clien
 ## Post-publish smoke
 
 ```bash
-uvx --from "adaptorch-mcp==0.5.1" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.5.2" adaptorch-mcp-client --help
 uvx --with "adaptorch[api]" adaptorch-mcp-doctor --json
 ADAPTORCH_CONTROL_PLANE_TOKEN="<token>" \
   uvx --with "adaptorch[api]" adaptorch-mcp-smoke --base-url https://adaptorch.com

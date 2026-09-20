@@ -4,6 +4,25 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [0.5.2] - 2026-09-20
+
+### Changed
+
+- Re-pinned the engine lock from `d1dfea841a` to `4ab017244`, so the wrapper
+  ships the current published algorithm and control-plane contract. The pin
+  carries the engine's `fix(mcp)` for control-plane 5xx reporting (status and
+  retry info instead of an opaque `N8nHttpError`) and the billing/plan-catalog
+  surface that now advertises `trial_days` for the paid plans.
+- The advertised algorithm surface is unchanged: `paper`, `robust`,
+  `robust_lite`, and `stable_hybrid` remain the executed synthesis modes and
+  `fourier_aggressive` still resolves to `stable_hybrid`. Verified against the
+  working-tree engine with `make engine-local` plus `test_engine_algorithm_parity.py`.
+
+### Notes
+
+- Patch release only: the same in-process wrapper over `adaptorch[api]>=0.1.2,<0.2`.
+  No private-engine code, API client, or CLI distribution is published here.
+
 ## [Unreleased]
 
 ### Fixed — tri-state ensemble singleton hint

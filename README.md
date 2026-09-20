@@ -114,7 +114,7 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
 
 There are three ways in. Pick by what you are: an agent, a program, or a terminal.
 
-> **Release status (2026-09-12):** `adaptorch-mcp` 0.5.1 is published with the
+> **Release status (2026-09-20):** `adaptorch-mcp` 0.5.2 is published with the
 > `adaptorch-mcp-client` launcher and `adaptorch[api]>=0.1.2,<0.2` dependency.
 > The client-only `adaptorch` 0.2.0 replacement is not published. New SDK polling
 > and response-safety features below describe this source revision; pushing it
@@ -197,7 +197,7 @@ environments where the compatible engine is installed. Its package dependency
 installs the published 0.1.x engine; the hosted endpoint above needs no local engine.
 
 ```bash
-uvx --python 3.12 --from adaptorch-mcp==0.5.1 adaptorch-mcp-client --help
+uvx --python 3.12 --from adaptorch-mcp==0.5.2 adaptorch-mcp-client --help
 ```
 
 ## Why Claude Code users feel it quickly

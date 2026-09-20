@@ -7,7 +7,7 @@ The package runs a hardened facade over `adaptorch.mcp_server`, so routing and s
 ## Install
 
 ```bash
-pip install --upgrade "adaptorch-mcp>=0.5.1,<0.6"
+pip install --upgrade "adaptorch-mcp>=0.5.2,<0.6"
 adaptorch-mcp-client --help
 ```
 
@@ -26,8 +26,8 @@ pip install adaptorch-mcp
 One-shot with `uvx`:
 
 ```bash
-uvx --from "adaptorch-mcp==0.5.1" adaptorch-mcp-client --help
-uvx --from "adaptorch-mcp==0.5.1" --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.5.2" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.5.2" --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adaptorch-mcp-client --help
 ```
 
 For contributors inside this monorepo:
