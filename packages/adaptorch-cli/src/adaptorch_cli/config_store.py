@@ -27,6 +27,8 @@ _PROVIDER_KEY_MAP = {
     "provider.name": "provider",
     "provider.model": "model",
     "provider.api_key": "api_key",
+    "provider.auth_type": "auth_type",
+    "provider.account_id": "account_id",
 }
 _CONFIGURABLE_KEYS = frozenset({"api_url", *_PROVIDER_KEY_MAP})
 
@@ -175,16 +177,48 @@ def resolve_provider_credential() -> tuple[tuple[str, str, str] | None, str]:
     env_provider = os.environ.get("ADAPTORCH_PROVIDER", "").strip()
     env_model = os.environ.get("ADAPTORCH_PROVIDER_MODEL", "").strip()
     env_key = os.environ.get("ADAPTORCH_PROVIDER_API_KEY", "").strip()
-    if env_provider or env_model or env_key:
+    if any(
+        (
+            env_provider,
+            env_model,
+            env_key,
+            os.environ.get("ADAPTORCH_PROVIDER_AUTH_TYPE"),
+            os.environ.get("ADAPTORCH_PROVIDER_ACCOUNT_ID"),
+        )
+    ):
         return (env_provider, env_model, env_key), "env"
     provider_cfg = load_config().get("provider")
     if isinstance(provider_cfg, dict):
         provider = str(provider_cfg.get("provider") or "").strip()
         model = str(provider_cfg.get("model") or "").strip()
         key = str(provider_cfg.get("api_key") or "").strip()
-        if provider or model or key:
+        has_auth_metadata = "auth_type" in provider_cfg or "account_id" in provider_cfg
+        if provider or model or key or has_auth_metadata:
             return (provider, model, key), "config"
     return None, "none"
+
+
+def resolve_provider_auth(source: str) -> tuple[str | None, str | None]:
+    """Read metadata from the same source as the token; never mix identities."""
+    if source == "env":
+        values = (
+            os.environ.get("ADAPTORCH_PROVIDER_AUTH_TYPE"),
+            os.environ.get("ADAPTORCH_PROVIDER_ACCOUNT_ID"),
+        )
+    else:
+        provider = load_config().get("provider")
+        if not isinstance(provider, dict):
+            return None, None
+        values = (provider.get("auth_type"), provider.get("account_id"))
+
+    def optional_text(value: object) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("provider authentication metadata must be strings")
+        return value.strip() or None
+
+    return optional_text(values[0]), optional_text(values[1])
 
 
 def mask_secret(value: str | None) -> str | None:
@@ -209,6 +243,8 @@ def config_view() -> dict[str, Any]:
             "name": provider.get("provider"),
             "model": provider.get("model"),
             "api_key": mask_secret(provider_key if isinstance(provider_key, str) else None),
+            "auth_type": provider.get("auth_type"),
+            "account_id_configured": bool(provider.get("account_id")),
             "source": resolve_provider_credential()[1],
         },
         "config_path": str(config_path()),

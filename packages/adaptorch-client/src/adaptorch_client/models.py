@@ -88,7 +88,10 @@ def _optional_probability_at(record: JSONMapping, key: str, path: str) -> float 
         raise contract_error(field_path(path, key), "a finite probability or null")
     if not math.isfinite(value):
         raise contract_error(field_path(path, key), "a finite probability or null")
-    return float(value)
+    try:
+        return float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise contract_error(field_path(path, key), "a finite probability or null") from exc
 
 
 def _optional_links_at(record: JSONMapping, key: str, path: str) -> dict[str, str] | None:
@@ -115,6 +118,49 @@ class PayloadResult:
         return stored_copy(self._payload)
 
 
+def _optional_string_tuple_map(record: JSONMapping, key: str, path: str) -> dict[str, str] | None:
+    """Read an optional string-to-string map without inventing missing keys."""
+    value = record.get(key)
+    if value is None:
+        return None
+    mapped: dict[str, str] = {}
+    for name, target in require_object(value, field_path(path, key)).items():
+        if not isinstance(target, str):
+            raise contract_error(field_path(path, key), "a string map")
+        mapped[name] = target
+    return mapped
+
+
+@dataclass(frozen=True, slots=True)
+class AlgorithmSurface:
+    """Engine vocabulary reported by the server. Absence means the server omitted it."""
+
+    supported_synthesis_modes: tuple[str, ...]
+    deprecated_synthesis_mode_aliases: dict[str, str]
+    selectable_synthesis_modes: tuple[str, ...]
+    serving_synthesis_modes: tuple[str, ...]
+    hosted_default_synthesis_mode: str
+    topologies: tuple[str, ...]
+    output_extractor_modes: tuple[str, ...]
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, JSONValue], path: str = "algorithm") -> Self:
+        """Validate one reported algorithm object. Do not fill missing modes."""
+        record = require_object(payload, path)  # type: ignore[arg-type]
+        return cls(
+            supported_synthesis_modes=_string_tuple_at(record, "supported_synthesis_modes", path),
+            deprecated_synthesis_mode_aliases=_optional_string_tuple_map(
+                record, "deprecated_synthesis_mode_aliases", path
+            )
+            or {},
+            selectable_synthesis_modes=_string_tuple_at(record, "selectable_synthesis_modes", path),
+            serving_synthesis_modes=_string_tuple_at(record, "serving_synthesis_modes", path),
+            hosted_default_synthesis_mode=string_at(record, "hosted_default_synthesis_mode", path),
+            topologies=_string_tuple_at(record, "topologies", path),
+            output_extractor_modes=_string_tuple_at(record, "output_extractor_modes", path),
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class CapabilitySet(PayloadResult):
     """Direct ``GET /v1/capabilities`` record; unknown run kinds are preserved."""
@@ -127,11 +173,13 @@ class CapabilitySet(PayloadResult):
     evidence_schema_version: str | None = None
     mcp_toolset_version: str | None = None
     supported_mcp_protocols: tuple[str, ...] = ()
+    algorithm: AlgorithmSurface | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, JSONValue]) -> Self:
         """Validate one raw capability response against the v1 contract."""
         record = stored_copy(payload)
+        algorithm_raw = record.get("algorithm")
         return cls(
             record,
             api_version=string_at(record, "api_version", ""),
@@ -145,6 +193,11 @@ class CapabilitySet(PayloadResult):
                 _string_tuple_at(record, "supported_mcp_protocols", "")
                 if "supported_mcp_protocols" in record
                 else ()
+            ),
+            algorithm=(
+                None
+                if algorithm_raw is None
+                else AlgorithmSurface.from_payload(require_object(algorithm_raw, "algorithm"))
             ),
         )
 

@@ -98,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
     config_commands.add_parser("get", help="Show the merged configuration (secrets masked)")
     config_set = config_commands.add_parser(
         "set",
-        help="Set api_url, provider.name, provider.model, or provider.api_key",
+        help="Set api_url or provider.name/model/api_key/auth_type/account_id",
     )
     config_set.add_argument("key")
     config_set.add_argument("value", nargs="?")

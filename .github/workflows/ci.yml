@@ -36,7 +36,13 @@ jobs:
       - name: Doctor
         run: uv run adaptorch-mcp-doctor --json
       - name: Build package
+        # The in-process adaptorch-mcp wrapper still depends on the private
+        # engine, so it is build-checked but not a publishable wheel.
         run: uv run python -m build packages/adaptorch-mcp
       - name: Public wheel gate
         # No public wheel may carry engine code or depend on the private core.
-        run: uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli adaptorch-mcp
+        # adaptorch-mcp is intentionally excluded: it still wraps the engine
+        # in-process, so a core dependency is expected and the gate would fail
+        # it. It is gated again at publish time (publish.yml) if a release tag
+        # ever tries to ship it.
+        run: uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli

@@ -120,6 +120,31 @@ For the Singapore subscription endpoint and its required server support, see
 See [algorithm client contract](../../docs/2026-09-08-algorithm-client-contract.md)
 and [CLI/API usage](../../docs/adaptorchctl-usage.ko.md) for scope and examples.
 
+## OAuth BYOK (current source)
+
+The existing `api_key` slot can carry an OAuth **access token** for `openai_codex`:
+
+```python
+credential = ProviderCredential(
+    provider="openai_codex",
+    model="gpt-5-codex",  # use a model available to your account
+    api_key=os.environ["MY_OAUTH_ACCESS_TOKEN"],
+    auth_type="oauth",
+    account_id=os.environ["MY_CHATGPT_ACCOUNT_ID"],
+)
+```
+
+This adds `X-Provider-Auth-Type` and `X-Provider-Account-Id` on submission only.
+Both token and account metadata are excluded from repr and error text. The SDK
+still performs no environment discovery: the caller obtains/refreshes the access
+token using their provider-supported client. Do not send refresh tokens, cookies
+or an entire auth JSON file. OAuth does not replace the AdaptOrch tenant key.
+
+Upgrade the control plane with the matching engine support before use. Login UI,
+server-side refresh, other providers' OAuth, and credential handoff to RQ workers
+are not part of this change. Use an explicit model when shared-store Auto
+selection is unavailable. An accepted run still needs terminal result inspection.
+
 ## Auto model IDs
 
 On control planes supporting tenant Auto models, use `model="auto"` in the

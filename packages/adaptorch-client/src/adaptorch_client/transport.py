@@ -129,13 +129,7 @@ class HTTPTransport:
             **self._config.auth_headers,
         }
         if spec.provider_credential is not None:
-            headers.update(
-                {
-                    "X-Provider": spec.provider_credential.provider,
-                    "X-Provider-Model": spec.provider_credential.model,
-                    "X-Provider-Key": spec.provider_credential.api_key,
-                }
-            )
+            headers.update(spec.provider_credential.headers)
         if body is not None:
             headers["Content-Type"] = "application/json"
 
@@ -230,6 +224,8 @@ class HTTPTransport:
         secrets: tuple[str, ...] = (self._config.api_key,)
         if credential is not None:
             secrets += (credential.api_key,)
+            if credential.account_id is not None:
+                secrets += (credential.account_id,)
         error_value = decoded.get("error", decoded.get("detail"))
         if isinstance(error_value, str):
             message = sanitize_error(error_value, secrets, _MAX_ERROR_MESSAGE_LENGTH)

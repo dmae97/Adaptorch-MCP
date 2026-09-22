@@ -6,6 +6,20 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### OAuth BYOK (source change)
+
+- MCP process settings `ADAPTORCH_MCP_PROVIDER_AUTH_TYPE` and
+  `ADAPTORCH_MCP_PROVIDER_ACCOUNT_ID` preserve request-scoped Codex OAuth
+  metadata. A matching local engine is required; older engines fail closed.
+- SDK `ProviderCredential` adds optional `auth_type` and `account_id`; both
+  access tokens and account metadata are hidden from repr/error text and sent
+  only on run submission. CLI reads the matching provider env/config fields
+  without mixing an environment token with a stored account.
+- The hardened transport forwards OAuth headers and redacts the actual submitted
+  token snapshot without invoking a rotating credential command again.
+- OAuth login/refresh remains client-owned. This is not a hosted OAuth login
+  service, support for other providers, an RQ credential bridge or a PyPI release.
+
 ### Added
 
 - The remote profile now projects the engine's duplicate-run surface instead of

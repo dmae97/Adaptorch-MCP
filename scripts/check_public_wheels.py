@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Fail when a public wheel carries engine code or depends on the private core.
 
-The private engine left PyPI on 2026-09-02; every distribution this repository
-publishes must stay thin. The rule is mechanical:
+The private engine must not be published again; every distribution this repository
+publishes must stay thin. Removing older PyPI artifacts is a separate owner action.
+The rule is mechanical:
 
 * a wheel may only contain the import package that belongs to it
   (``adaptorch-client`` -> ``adaptorch_client`` ...); the ``adaptorch``
@@ -17,9 +18,8 @@ Usage::
         --distribution adaptorch
 
 Exit ``0`` when every checked wheel passes, ``1`` on any FAIL, ``2`` when a
-build or read fails. ``adaptorch-mcp`` still wraps the engine in-process until
-it becomes a stdio bridge (distribution plan T4); its core dependency is
-reported as WARN so the exception stays visible instead of silently allowed.
+build or read fails. The legacy in-process ``adaptorch-mcp`` wrapper is not
+publishable: a core dependency fails the gate, with no package-name exemption.
 """
 
 from __future__ import annotations
@@ -34,15 +34,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CORE_DISTRIBUTION = "adaptorch"
+CORE_DISTRIBUTIONS = frozenset({"adaptorch", "adaptorch-core"})
 ALLOWED_TOP_LEVEL: dict[str, frozenset[str]] = {
     "adaptorch": frozenset(),
     "adaptorch-client": frozenset({"adaptorch_client"}),
     "adaptorch-cli": frozenset({"adaptorch_cli"}),
     "adaptorch-mcp": frozenset({"adaptorch_mcp"}),
-}
-KNOWN_CORE_DEPENDENTS: dict[str, str] = {
-    "adaptorch-mcp": "wraps the engine in-process until distribution plan T4 lands",
 }
 _REQUIREMENT_NAME = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
@@ -76,9 +73,7 @@ def inspect_wheel(path: Path) -> WheelFacts:
             raise GateError(f"{path.name} has {len(metadata_names)} METADATA files, expected 1")
         metadata = archive.read(metadata_names[0]).decode("utf-8")
     top_level = frozenset(
-        n.split("/", 1)[0]
-        for n in names
-        if not n.split("/", 1)[0].endswith((".dist-info", ".data"))
+        n.split("/", 1)[0] for n in names if not n.split("/", 1)[0].endswith(".dist-info")
     )
     distribution = ""
     requires: list[str] = []
@@ -107,13 +102,9 @@ def evaluate(facts: WheelFacts, distribution: str) -> tuple[list[str], list[str]
         if match is None:
             failures.append(f"unparseable Requires-Dist {requirement!r}")
             continue
-        if normalize(match.group(1)) == CORE_DISTRIBUTION:
-            message = f"depends on the core distribution {CORE_DISTRIBUTION!r}: {requirement}"
-            reason = KNOWN_CORE_DEPENDENTS.get(normalize(distribution))
-            if reason is None:
-                failures.append(message)
-            else:
-                warnings.append(f"{message} (allowed for now: {reason})")
+        dependency = normalize(match.group(1))
+        if dependency in CORE_DISTRIBUTIONS:
+            failures.append(f"depends on the core distribution {dependency!r}: {requirement}")
     return failures, warnings
 
 

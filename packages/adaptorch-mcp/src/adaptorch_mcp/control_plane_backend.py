@@ -108,23 +108,23 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
     def get_artifacts(self, run_id: str) -> dict[str, Any]:
         return _check_subject(super().get_artifacts(run_id), run_id)
 
-    def _caller_message(self, payload: Mapping[str, Any]) -> str:
+    def _caller_message(
+        self, payload: Mapping[str, Any], *, submitted_secrets: tuple[str, ...] = ()
+    ) -> str:
         value = payload.get("detail", payload.get("message"))
         error = payload.get("error")
         if not isinstance(value, str) and isinstance(error, Mapping):
             value = error.get("message")
         if not isinstance(value, str):
             return "Control-plane request rejected"
-        secrets = [self._config.api_token]
+        secrets = [self._config.api_token, *submitted_secrets]
         credential = self._config.provider_credential
         if credential is not None:
-            resolve = getattr(credential, "resolve_api_key", None)
-            try:
-                resolved = resolve() if callable(resolve) else credential.api_key
-            except Exception:
-                resolved = credential.api_key
-            if isinstance(resolved, str) and resolved:
-                secrets.append(resolved)
+            # Never resolve a rotating command again to redact an earlier request.
+            for name in ("api_key", "account_id"):
+                value_secret = getattr(credential, name, None)
+                if isinstance(value_secret, str) and value_secret:
+                    secrets.append(value_secret)
         for secret in sorted(set(secrets), key=len, reverse=True):
             value = value.replace(secret, "[redacted]")
         value = "".join(char if char.isprintable() else " " for char in value)
@@ -141,6 +141,7 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
         idempotency_key: str | None = None,
         include_provider_credential: bool = False,
     ) -> dict[str, Any]:
+        submitted_secrets: tuple[str, ...] = ()
         try:
             _validate_path(path)
             if not method.isascii() or not method.isalpha() or not method.isupper():
@@ -161,6 +162,11 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
                 if credential is not None:
                     headers[PROVIDER_HEADER] = credential.provider
                     headers[MODEL_HEADER] = credential.model
+                    if getattr(credential, "auth_type", None) == "oauth":
+                        headers["X-Provider-Auth-Type"] = "oauth"
+                    account_id = getattr(credential, "account_id", None)
+                    if isinstance(account_id, str) and account_id:
+                        headers["X-Provider-Account-Id"] = account_id
                     resolve = getattr(credential, "resolve_api_key", None)
                     try:
                         resolved = resolve() if callable(resolve) else credential.api_key
@@ -168,6 +174,9 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
                         raise N8nConnectorError("Provider credential resolution failed") from exc
                     if isinstance(resolved, str) and resolved:
                         headers[KEY_HEADER] = resolved
+            submitted_secrets = tuple(
+                headers[name] for name in (KEY_HEADER, "X-Provider-Account-Id") if headers.get(name)
+            )
             if any(
                 not value.isascii() or any(ord(char) < 32 or ord(char) == 127 for char in value)
                 for value in headers.values()
@@ -224,12 +233,13 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
         if not 200 <= status < 300:
             usage = _quota_exceeded_usage(status, payload)
             if usage is not None:
-                safe_usage = {
-                    key: _redact_connector_secrets(value, self._config)
-                    if isinstance(value, str)
-                    else value
-                    for key, value in usage.items()
-                }
+                safe_usage: dict[str, Any] = {}
+                for key, value in usage.items():
+                    if isinstance(value, str):
+                        for secret in sorted(submitted_secrets, key=len, reverse=True):
+                            value = value.replace(secret, "[redacted]")
+                        value = _redact_connector_secrets(value, self._config)
+                    safe_usage[key] = value
                 raise N8nQuotaExceededError(
                     message="Tenant quota exhausted for the current period",
                     usage=safe_usage,
@@ -241,7 +251,7 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
             # send. `_caller_message` has already redacted the known secrets.
             caller_fixable = caller_fixable_status(status)
             message = (
-                self._caller_message(payload)
+                self._caller_message(payload, submitted_secrets=submitted_secrets)
                 if caller_fixable
                 else "Control-plane request rejected"
             )

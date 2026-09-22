@@ -167,6 +167,37 @@ def test_capabilities_defaults_absent_run_types_to_empty() -> None:
     result = CapabilitySet.from_payload({"api_version": "v1", "features": []})
 
     assert result.run_types == ()
+    assert result.algorithm is None
+
+
+def test_capabilities_reads_a_reported_algorithm_surface() -> None:
+    payload: JSONMapping = {
+        "api_version": "v1",
+        "features": [],
+        "algorithm": {
+            "supported_synthesis_modes": ["paper", "robust"],
+            "deprecated_synthesis_mode_aliases": {"fourier_aggressive": "stable_hybrid"},
+            "selectable_synthesis_modes": ["paper", "robust", "fourier_aggressive"],
+            "serving_synthesis_modes": ["paper", "robust", "auto"],
+            "hosted_default_synthesis_mode": "robust",
+            "topologies": ["parallel"],
+            "output_extractor_modes": ["final_answer"],
+        },
+    }
+
+    result = CapabilitySet.from_payload(payload)
+
+    assert result.algorithm is not None
+    assert result.algorithm.hosted_default_synthesis_mode == "robust"
+    assert result.algorithm.serving_synthesis_modes == ("paper", "robust", "auto")
+    assert result.to_payload()["algorithm"] == payload["algorithm"]
+
+
+def test_capabilities_does_not_invent_an_algorithm_surface() -> None:
+    with pytest.raises(AdaptOrchAPIError):
+        CapabilitySet.from_payload(
+            {"api_version": "v1", "features": [], "algorithm": {"supported_synthesis_modes": []}}
+        )
 
 
 def test_capabilities_rejects_non_string_run_type() -> None:

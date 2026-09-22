@@ -9,10 +9,14 @@ license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "ClassicMate" }]
 
 [tool.uv.workspace]
-members = ["packages/adaptorch-mcp", "packages/adaptorch-client", "packages/adaptorch-cli"]
+members = [
+  "packages/adaptorch-mcp",
+  "packages/adaptorch-client",
+  "packages/adaptorch-cli",
+]
 
 [tool.uv.sources]
-adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "4ab0172443b1979662268a4d1f0690f913ee40dd" }
+adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "5b22381499124d3bce7dfec66861735c0fe48a71" }
 adaptorch-client = { workspace = true }
 
 [tool.ruff]

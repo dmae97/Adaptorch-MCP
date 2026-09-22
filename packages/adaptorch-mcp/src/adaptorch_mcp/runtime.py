@@ -34,6 +34,8 @@ MCP_PROVIDER_ENV: Final = "ADAPTORCH_MCP_PROVIDER"
 MCP_PROVIDER_MODEL_ENV: Final = "ADAPTORCH_MCP_PROVIDER_MODEL"
 MCP_PROVIDER_API_KEY_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY"
 MCP_PROVIDER_API_KEY_COMMAND_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND"
+MCP_PROVIDER_AUTH_TYPE_ENV: Final = "ADAPTORCH_MCP_PROVIDER_AUTH_TYPE"
+MCP_PROVIDER_ACCOUNT_ID_ENV: Final = "ADAPTORCH_MCP_PROVIDER_ACCOUNT_ID"
 MCP_PROVIDER_FALLBACK_ENV: Final = "ADAPTORCH_MCP_PROVIDER_FALLBACK"
 MCP_PROVIDER_FALLBACK_MODEL_ENV: Final = "ADAPTORCH_MCP_PROVIDER_FALLBACK_MODEL"
 MCP_PROVIDER_FALLBACK_API_KEY_ENV: Final = "ADAPTORCH_MCP_PROVIDER_FALLBACK_API_KEY"
@@ -120,6 +122,8 @@ class ProviderCredentialConfig:
     fallback_model: str | None = None
     fallback_api_key: str | None = field(default=None, repr=False)
     fallback_api_key_command: str | None = field(default=None, repr=False)
+    auth_type: str | None = None
+    account_id: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         provider = self.provider.strip().lower()
@@ -167,6 +171,21 @@ class ProviderCredentialConfig:
         for label, value in values:
             if value is not None and ("\r" in value or "\n" in value):
                 raise ValueError(f"{label} cannot contain newline characters")
+        if self.auth_type is not None or self.account_id is not None:
+            try:
+                from adaptorch.provider_auth import (
+                    normalize_provider_auth,
+                    validate_oauth_access_token,
+                )
+            except ImportError:
+                raise ValueError("installed adaptorch engine is too old for OAuth BYOK") from None
+            auth_type, account_id = normalize_provider_auth(
+                provider, self.auth_type, self.account_id
+            )
+            if auth_type == "oauth" and api_key:
+                validate_oauth_access_token(api_key)
+            object.__setattr__(self, "auth_type", auth_type)
+            object.__setattr__(self, "account_id", account_id)
         object.__setattr__(self, "provider", provider)
         object.__setattr__(self, "model", model)
         object.__setattr__(self, "api_key", api_key or None)
@@ -234,11 +253,15 @@ def resolve_provider_credential(
     api_key = raw_api_key.strip() if raw_api_key is not None else None
     raw_command = env.get(MCP_PROVIDER_API_KEY_COMMAND_ENV)
     api_key_command = raw_command.strip() if raw_command is not None else None
-    if not provider and not model and not api_key and not api_key_command:
+    auth_type = env.get(MCP_PROVIDER_AUTH_TYPE_ENV, "").strip() or None
+    account_id = env.get(MCP_PROVIDER_ACCOUNT_ID_ENV, "").strip() or None
+    if not any((provider, model, api_key, api_key_command, auth_type, account_id)):
         return None
     if not provider or not model:
         raise ValueError(f"{MCP_PROVIDER_ENV} and {MCP_PROVIDER_MODEL_ENV} must be set together")
     if provider.lower() == AUTO_PROVIDER:
+        if auth_type is not None or account_id is not None:
+            raise ValueError("OAuth authentication metadata requires an explicit provider")
         if api_key_command:
             raise ValueError(
                 f"{MCP_PROVIDER_API_KEY_COMMAND_ENV} requires an explicit "
@@ -262,6 +285,8 @@ def resolve_provider_credential(
         fallback_model=fb_model or None,
         fallback_api_key=fb_api_key or None,
         fallback_api_key_command=fb_command or None,
+        auth_type=auth_type,
+        account_id=account_id,
     )
 
 

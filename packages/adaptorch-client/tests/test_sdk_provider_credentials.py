@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import FrozenInstanceError, fields, replace
-from typing import Literal
+from typing import Literal, cast
 
 import pytest
 from client_test_support import JSONValue, LocalAPIServer
@@ -68,7 +68,7 @@ def test_credential_rejects_unsafe_header_values_without_echoing_them(
     }
     values[field_name] = value
     # Runtime callers can supply untyped data despite the public str annotations.
-    construct: Callable[..., ProviderCredential] = ProviderCredential
+    construct = cast(Callable[..., ProviderCredential], ProviderCredential)
 
     with pytest.raises(ValueError) as raised:
         construct(**values)
@@ -140,7 +140,7 @@ def test_timeout_override_rejects_invalid_values_before_io(
     timeout: JSONValue,
 ) -> None:
     transport = HTTPTransport(ClientConfig(local_api.api_url, "synthetic-service"))
-    construct: Callable[..., RequestSpec] = RequestSpec
+    construct = cast(Callable[..., RequestSpec], RequestSpec)
 
     with pytest.raises(ValueError, match="timeout_seconds"):
         transport.request(construct("GET", "/v1/whoami", timeout_seconds=timeout))

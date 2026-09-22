@@ -43,6 +43,14 @@ class ProviderCredentialConfig(Protocol):
         raise NotImplementedError
 
     @property
+    def auth_type(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def account_id(self) -> str | None:
+        raise NotImplementedError
+
+    @property
     def fallback_provider(self) -> str | None:
         raise NotImplementedError
 
@@ -87,6 +95,15 @@ def build_parent_config(
             "model": provider_credential.model,
             "api_key": provider_credential.api_key,
         }
+        auth_type = getattr(provider_credential, "auth_type", None)
+        account_id = getattr(provider_credential, "account_id", None)
+        if auth_type is not None or account_id is not None:
+            if not {"auth_type", "account_id"}.issubset(
+                getattr(credential_type, "__dataclass_fields__", {})
+            ):
+                raise RuntimeError("installed adaptorch engine is too old for OAuth BYOK")
+            credential_kwargs["auth_type"] = auth_type
+            credential_kwargs["account_id"] = account_id
         api_key_command = getattr(provider_credential, "api_key_command", None)
         if api_key_command:
             if "api_key_command" not in getattr(credential_type, "__dataclass_fields__", {}):

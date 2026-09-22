@@ -114,6 +114,19 @@ Provider credentials are process configuration, not part of the public `adaptorc
 
 The key is omitted from tool arguments, request bodies, non-run requests, repr output, and errors. A partial configuration fails before the server starts, and an installed engine without provider-credential support fails closed rather than silently sending an unauthenticated run.
 
+Current source also supports `openai_codex` OAuth access tokens in the same key
+slot. Set `ADAPTORCH_MCP_PROVIDER_AUTH_TYPE=oauth` and optionally
+`ADAPTORCH_MCP_PROVIDER_ACCOUNT_ID`; these become `X-Provider-Auth-Type` and
+`X-Provider-Account-Id` submission headers, never tool arguments. The local engine
+must support these fields or configuration fails closed. The server must also
+be updated; older servers may ignore unfamiliar headers.
+
+For expiring tokens, use a trusted client-side
+`ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND` instead of the static key. It runs once
+per logical submission; polling and error redaction do not invoke it. OAuth
+login/refresh, cookies and refresh tokens stay outside the control plane.
+Request-scoped OAuth is still refused on RQ, exactly like request-scoped API keys.
+
 Tenant Auto models require trusted selection storage on the control plane. The
 current shared-store path rejects tenant/deployment model resolution before charging
 until its schema supports that field; explicit models keep working without an

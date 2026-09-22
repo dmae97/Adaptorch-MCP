@@ -73,6 +73,32 @@ export ADAPTORCH_API_URL="http://127.0.0.1:8000"  # 로컬 개발 전용
 
 클라이언트는 리디렉션을 따라가지 않으므로 인증 헤더가 다른 주소로 전달되지 않습니다.
 
+## OAuth BYOK (현재 소스)
+
+공급자가 지원하는 클라이언트로 로그인한 뒤 access token만 전달합니다. 현재 대상은
+`openai_codex`이며, AdaptOrch tenant key를 대체하지 않습니다. 로그인 화면과 refresh는
+CLI 외부의 사용자 클라이언트가 담당합니다.
+
+```bash
+export ADAPTORCH_PROVIDER=openai_codex
+export ADAPTORCH_PROVIDER_MODEL=gpt-5-codex
+export ADAPTORCH_PROVIDER_AUTH_TYPE=oauth
+export ADAPTORCH_PROVIDER_ACCOUNT_ID=YOUR_CHATGPT_ACCOUNT_ID
+# ADAPTORCH_PROVIDER_API_KEY에는 별도로 얻은 최신 access token을 주입합니다.
+adaptorchctl run submit --file task.json
+```
+
+model ID는 계정에서 실제 제공되는 값을 사용하세요. JSON body에도 명시적 model을
+지정하면 shared backend의 Auto 선택 제한과 구별할 수 있습니다. refresh token,
+cookie, 전체 인증 파일을 `API_KEY` 값으로 보내지 않습니다.
+
+비밀이 아닌 설정은 `config set provider.auth_type oauth`,
+`config set provider.account_id <account-id>`로 저장할 수도 있습니다. 환경 credential을
+사용하면 account ID 역시 같은 환경에서 읽고, 저장된 다른 계정 설정과 섞지 않습니다.
+OAuth token과 account ID는 요청 body나 이후 조회 요청에 붙지 않습니다.
+서버도 해당 source 기능으로 업데이트해야 합니다. RQ로의 요청 자격증명 전달은
+여전히 지원하지 않습니다.
+
 ## 상태와 서버 정보 확인
 
 다음 두 명령은 로컬 환경만 확인하며 API 요청을 보내지 않습니다. 비밀 값은 마스킹되어

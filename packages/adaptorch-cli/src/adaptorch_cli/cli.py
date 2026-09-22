@@ -101,11 +101,14 @@ def _require_client(api_url: str) -> AdaptOrchClient:
 
 
 def _submission_credential() -> ProviderCredential | None:
-    resolved, _source = config_store.resolve_provider_credential()
+    resolved, source = config_store.resolve_provider_credential()
     if resolved is None:
         return None
     provider, model, key = resolved
-    return ProviderCredential(provider, model, key)
+    auth_type, account_id = config_store.resolve_provider_auth(source)
+    if auth_type is None and account_id is None:
+        return ProviderCredential(provider, model, key)
+    return ProviderCredential(provider, model, key, auth_type=auth_type, account_id=account_id)
 
 
 def _read_secret(prompt: str, *, stdin_flag: bool) -> str:

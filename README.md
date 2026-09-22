@@ -61,6 +61,15 @@ export ADAPTORCH_MCP_PROVIDER_API_KEY="<provider-api-key>"
 
 These values are not MCP tool arguments or JSON body fields. The local wrapper attaches them only to run submission headers and redacts the provider key from errors. Direct HTTP clients may attach configured headers to other requests as well; check your client's secret-handling settings.
 
+**OAuth BYOK (current source):** `openai_codex` accepts a caller-owned OAuth access
+ token in the same key slot, with `ADAPTORCH_MCP_PROVIDER_AUTH_TYPE=oauth` and
+`ADAPTORCH_MCP_PROVIDER_ACCOUNT_ID=<your-account-id>`. A long-lived local MCP can
+use `ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND=<trusted-token-helper>` instead of a
+static key. The helper is caller-provided and must print only the fresh access
+token; login/refresh stays on the client. Never send refresh tokens, cookies or
+an entire auth file. Both the control plane and local engine must support this
+source contract. RQ dispatch still refuses request-scoped credentials.
+
 ### Signup → MCP → dashboard run list
 
 1. Sign up at `/app/signup` and open `/app/api-keys`.
@@ -344,9 +353,12 @@ explicitly in checked-in MCP client configs for reproducible behavior.
 | --- | --- | --- |
 | `ADAPTORCH_CONTROL_PLANE_TOKEN` | Upstream AdaptOrch token. | Required unless `--api-token` is passed. |
 | `ADAPTORCH_CONTROL_PLANE_BASE_URL` | Base URL used when `--base-url` is omitted. | Trimmed and validated as HTTP(S); do not embed credentials. |
-| `ADAPTORCH_MCP_PROVIDER` | BYOK provider name, or `auto`. | Set with `ADAPTORCH_MCP_PROVIDER_MODEL`; forwarded only on run submission. `auto` uses the one provider whose own key variable is set (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`, `OPENCODE_GO_API_KEY`, `OPENAI_CODEX_API_KEY`) and fails closed otherwise. |
+| `ADAPTORCH_MCP_PROVIDER` | BYOK provider name, or `auto`. | Set with `ADAPTORCH_MCP_PROVIDER_MODEL`; forwarded only on run submission. `auto` uses the one provider whose own key variable is set (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`, `OPENCODE_GO_API_KEY`, `OPENAI_CODEX_API_KEY`, `WORKBUDDY_API_KEY`) and fails closed otherwise. |
 | `ADAPTORCH_MCP_PROVIDER_MODEL` | BYOK provider model. | Set with `ADAPTORCH_MCP_PROVIDER`; forwarded only on run submission. |
-| `ADAPTORCH_MCP_PROVIDER_API_KEY` | BYOK provider secret. | Process-local, omitted from tool schemas/bodies and non-run requests; optional only for keyless providers. |
+| `ADAPTORCH_MCP_PROVIDER_API_KEY` | BYOK provider secret or OAuth access token. | Process-local, omitted from tool schemas/bodies and non-run requests; optional only for keyless providers. |
+| `ADAPTORCH_MCP_PROVIDER_API_KEY_COMMAND` | Caller-owned rotating token helper. | Mutually exclusive with the static key; invoked once per submission, never for polling or error redaction. |
+| `ADAPTORCH_MCP_PROVIDER_AUTH_TYPE` | `api_key` or `oauth`. | OAuth currently supports explicit `openai_codex`; not a browser login or refresh-token service. |
+| `ADAPTORCH_MCP_PROVIDER_ACCOUNT_ID` | Request-scoped OAuth account ID. | Validated, hidden from repr/errors, forwarded only on submission; never borrows the server's account. |
 | `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` | Client-facing bearer token for HTTP/SSE MCP. | Keep separate from the upstream control-plane token. |
 | `ADAPTORCH_MCP_ALLOWED_ORIGINS` | Comma-separated HTTP origin allowlist. | Use with browser or remote HTTP clients. |
 | `ADAPTORCH_MCP_MAX_PAYLOAD_SIZE_BYTES` | Maximum accepted HTTP request body size. | Keep bounded for public deployments. |
