@@ -25,11 +25,29 @@ from adaptorch.n8n_connector import (
 )
 
 from adaptorch_mcp.control_plane_backend import SafeControlPlaneConnector
+from adaptorch_mcp.hardening import HardenedMCPServer
+from adaptorch_mcp.security_policy import REMOTE_EXPOSURE_PROFILE
 
 LIMIT = 8 * 1024 * 1024
 TENANT_KEY = "ado_synthetic-tenant-canary"
 PROVIDER_KEY = "synthetic-provider-canary"
 PAYLOAD = {"subtasks": [{"id": "task", "description": "fixture only"}]}
+# The 429 body `POST /v1/runs` answers when a plan's quota is spent, frozen. The engine pins the
+# same literal in tests/test_quota_exceeded_contract.py::test_the_body_is_the_frozen_wire_contract;
+# change both or neither. `detail` is the legacy sentence and names the tenant.
+CONTROL_PLANE_QUOTA_429 = {
+    "error": "QUOTA_EXCEEDED",
+    "detail": (
+        "Quota exceeded for tenant tenant-quota-contract on starter plan: "
+        "5000/5000 verification calls used this period"
+    ),
+    "quota_limit": 5000,
+    "quota_used": 5000,
+    "quota_remaining": 0,
+    "plan_level": "starter",
+    "period": "2026-09",
+    "upgrade_url": "/pricing",
+}
 
 
 class WireResponse(addinfourl):
@@ -424,3 +442,42 @@ def test_engine_mcp_recognizes_quota_without_turning_it_into_internal_error(
     result = response["result"]
     assert result["isError"] is True
     assert json.loads(result["content"][0]["text"])["usage"]["used"] == 11
+
+
+def test_a_spent_plan_reaches_the_remote_tool_result_with_its_upgrade_path(
+    backend: SafeControlPlaneConnector,
+    wire: Wire,
+) -> None:
+    # Producer to consumer, end to end: the control plane's own 429 body, through the
+    # one-attempt transport and the remote projection, to what an MCP client reads.
+    wire.replies = [(429, json.dumps(CONTROL_PLANE_QUOTA_429).encode())]
+    server = HardenedMCPServer(backend=backend, exposure_profile=REMOTE_EXPOSURE_PROFILE)
+
+    response = server.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "adaptorch_run",
+                "arguments": {"prompt": "fixture only", "wait_for_terminal": False},
+            },
+        }
+    )
+
+    assert response is not None and "error" not in response
+    result = response["result"]
+    assert result["isError"] is True
+    payload = json.loads(result["content"][0]["text"])
+    assert payload["error"] == "QUOTA_EXCEEDED"
+    assert payload["usage"] == {
+        "limit": 5000,
+        "used": 5000,
+        "remaining": 0,
+        "plan_level": "starter",
+        "period": "2026-09",
+        "upgrade_url": "/pricing",
+    }
+    # The legacy sentence names the tenant; the projection must not carry it.
+    assert "tenant-quota-contract" not in json.dumps(response)
+    assert len(wire.calls) == 1 and wire.sleeps == []

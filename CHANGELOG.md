@@ -54,6 +54,30 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
   response format". `status_code: null` is now accepted.
 - `_finite_float` called `float()` unguarded in the JSON `parse_float` hook.
 
+### Billing wiring (tests and docs only, no source change)
+
+- A spent plan quota was never actionable through this wrapper against the hosted control
+  plane. Its 429 carried only `{"detail": "..."}`, so the parent's `_quota_exceeded_usage`
+  returned nothing and callers saw `CONTROL_PLANE_REJECTED` with no usage. The control plane now
+  answers with the `QUOTA_EXCEEDED` body the connectors already parse (`quota_limit`,
+  `quota_used`, `quota_remaining`, `plan_level`, `period`, and `upgrade_url` when a higher plan
+  exists). The wrapper needed no change: it already projected that shape.
+- `test_control_plane_backend.py` freezes the control plane's 429 body (`CONTROL_PLANE_QUOTA_429`)
+  and drives it through the real one-attempt transport and the remote projection, so this seam
+  cannot drift silently. The engine pins the same literal; change both or neither.
+- `test_quota_response_contract.py` refuses seven hostile `upgrade_url` shapes (absolute URL,
+  `//host`, backslash, `javascript:`, relative, control character, over-long). Behaviour was
+  already fail-closed; it is now locked.
+- The hosted `/mcp` endpoint's `adaptorch_usage` answered a different number than the REST
+  `/v1/usage` this wrapper reads: it counted stored run records against the tenant's billing plan,
+  while REST reports the counter admission charges at the key's own tier. The control plane now
+  answers both from one implementation, so `plan_level`, `used`, `limit` and `remaining` agree
+  whichever MCP surface a client uses.
+- `docs/tools.md` documents the full usage envelope and the billing boundary: run API keys cannot
+  manage billing, so the wrapper exposes no checkout or portal tool by design.
+- A structured refusal needs a control plane that emits it. Older deployments keep answering the
+  opaque 429, which is still projected as `CONTROL_PLANE_REJECTED`.
+
 ## [0.5.2] - 2026-09-20
 
 ### Changed

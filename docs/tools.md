@@ -157,9 +157,35 @@ error payload rather than a masked internal failure:
 {
   "error": "QUOTA_EXCEEDED",
   "message": "Tenant quota exhausted for the current period",
-  "usage": { "limit": 1000, "used": 1000, "remaining": 0, "upgrade_url": "/pricing" }
+  "usage": {
+    "limit": 5000,
+    "used": 5000,
+    "remaining": 0,
+    "plan_level": "starter",
+    "period": "2026-09",
+    "upgrade_url": "/pricing"
+  }
 }
 ```
+
+`plan_level` and `period` name what was spent. `upgrade_url` is present only when the plan has a
+higher tier (the top plan is sold by contact, so it carries none) and is always a same-origin
+path. The wrapper accepts nothing else: an absolute URL, a protocol-relative `//host`, a
+backslash, a control character or an over-long value voids the whole projection instead of being
+trimmed, so a hostile link cannot ride in an otherwise valid envelope.
+
+This structured refusal needs a control plane that answers the 429 with the `QUOTA_EXCEEDED`
+body. An older deployment answers only `{"detail": "..."}`; the wrapper then reports a plain
+`CONTROL_PLANE_REJECTED` with no usage, because it cannot tell a spent plan from any other 429.
+
+### Billing stays on the dashboard
+
+The wrapper exposes no checkout, portal or subscription-changing tool, and that is the control
+plane's rule, not a gap in the wrapper: billing management is refused to run API keys (the key an
+MCP client holds), so it cannot be reached from here. Upgrade or manage a subscription signed in
+on the dashboard, at the `upgrade_url` above. A checkout link is a bearer-like URL tied to a
+customer; keeping it out of tool results keeps it out of MCP transcripts and out of reach of
+prompt injection.
 
 The wrapper's safe backend makes one HTTP attempt, including quota, burst-limit and
 transient failures. It never blindly retries a POST or follows redirects. Parent
