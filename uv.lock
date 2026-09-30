@@ -13,7 +13,7 @@ members = [
 [[package]]
 name = "adaptorch"
 version = "0.1.2"
-source = { git = "https://github.com/dmae97/adaptorch.git?rev=5b22381499124d3bce7dfec66861735c0fe48a71#5b22381499124d3bce7dfec66861735c0fe48a71" }
+source = { git = "https://github.com/dmae97/adaptorch.git?rev=c89d62c331d99cbc71876267ca69a9de28a02efc#c89d62c331d99cbc71876267ca69a9de28a02efc" }
 dependencies = [
     { name = "httpx" },
     { name = "pillow" },
@@ -79,7 +79,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=5b22381499124d3bce7dfec66861735c0fe48a71" },
+    { name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=c89d62c331d99cbc71876267ca69a9de28a02efc" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },

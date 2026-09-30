@@ -6,6 +6,17 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### Changed — engine pin follows the served control plane
+
+- The CI engine pin moves from `5b22381` to `c89d62c`, the revision the hosted
+  control plane reports in `/.well-known/adaptorch-build.json`. Wrapper tests now
+  run against the engine that serves `https://adaptorch.com/mcp`.
+- Auto-provider documentation now includes the engine's `DEEPSEEK_API_KEY` and
+  `COMMANDCODE_API_KEY` variables, which this engine lists in
+  `DEFAULT_API_KEY_ENV`. No credential resolution policy is changed.
+- The pinned engine still answers malformed BYOK headers with HTTP 503. The
+  HTTP 400 answer needs a later core deployment.
+
 ### Fixed — request rejection projection
 
 - Remote HTTP 400/422 tool failures include a fixed validation remedy without
