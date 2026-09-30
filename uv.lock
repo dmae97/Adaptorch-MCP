@@ -30,7 +30,7 @@ api = [
 
 [[package]]
 name = "adaptorch-cli"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "packages/adaptorch-cli" }
 dependencies = [
     { name = "adaptorch-client" },
@@ -41,7 +41,7 @@ requires-dist = [{ name = "adaptorch-client", editable = "packages/adaptorch-cli
 
 [[package]]
 name = "adaptorch-client"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "packages/adaptorch-client" }
 
 [package.optional-dependencies]

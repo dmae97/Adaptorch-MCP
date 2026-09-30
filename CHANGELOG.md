@@ -27,7 +27,12 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 - The hardened transport forwards OAuth headers and redacts the actual submitted
   token snapshot without invoking a rotating credential command again.
 - OAuth login/refresh remains client-owned. This is not a hosted OAuth login
-  service, support for other providers, an RQ credential bridge or a PyPI release.
+  service, support for other providers or an RQ credential bridge.
+- Released on PyPI as `adaptorch-client` 0.1.2 and `adaptorch-cli` 0.1.1
+  (2026-09-30). The CLI now requires `adaptorch-client>=0.1.2`: its OAuth
+  submission path passes `auth_type`/`account_id`, which 0.1.1 rejects with a
+  `TypeError`. The MCP wrapper is not republished to PyPI; it depends on the
+  private engine, which the public wheel gate refuses.
 
 ### Added
 
