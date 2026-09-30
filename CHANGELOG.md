@@ -6,6 +6,15 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### Fixed — request rejection projection
+
+- Remote HTTP 400/422 tool failures include a fixed validation remedy without
+  forwarding upstream input or Pydantic context. Rejected envelopes retain
+  `retryable` only when it is a boolean; omission stays omission for older engines.
+- Malformed BYOK headers need a matching core update to answer HTTP 400; this
+  wrapper change alone does not update a server. Until then the control plane
+  answers them with HTTP 503.
+
 ### OAuth BYOK (source change)
 
 - MCP process settings `ADAPTORCH_MCP_PROVIDER_AUTH_TYPE` and

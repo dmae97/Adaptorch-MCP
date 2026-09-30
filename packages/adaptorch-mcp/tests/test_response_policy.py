@@ -304,7 +304,7 @@ class TestControlPlaneRefusalReachesTheTenant:
         assert body["status_code"] == 403
         assert body["message"] == message
 
-    @pytest.mark.parametrize("status_code", [400, 404, 429, 500, 503])
+    @pytest.mark.parametrize("status_code", [404, 429, 500, 503])
     def test_other_refusals_keep_the_code_but_not_the_operator_text(self, status_code: int) -> None:
         body = json.loads(
             _sanitize(

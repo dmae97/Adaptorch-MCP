@@ -127,6 +127,15 @@ per logical submission; polling and error redaction do not invoke it. OAuth
 login/refresh, cookies and refresh tokens stay outside the control plane.
 Request-scoped OAuth is still refused on RQ, exactly like request-scoped API keys.
 
+A control plane that includes the matching core update rejects malformed provider
+headers with HTTP 400 before creating a run or charging quota; earlier deployments
+answer the same input with HTTP 503. For 400 the remote wrapper returns
+`CONTROL_PLANE_REJECTED`, the status, a fixed validation remedy and a boolean
+`retryable` when the engine supplied one. HTTP 422 receives the same safe remedy;
+upstream validation values and context are not forwarded. An older engine may omit
+`retryable`; absence is unknown, not permission to replay. Existing no-credential
+401/403 responses and RQ/deployment 503 failures keep their distinct meanings.
+
 Tenant Auto models require trusted selection storage on the control plane. The
 current shared-store path rejects tenant/deployment model resolution before charging
 until its schema supports that field; explicit models keep working without an

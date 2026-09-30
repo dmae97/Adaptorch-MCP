@@ -78,6 +78,11 @@ def _project_recovery_fields(
     ``str(exc)`` or an upstream body. Returns ``None`` (fail closed) on a
     malformed field rather than forwarding it.
     """
+    if "retryable" in decoded:
+        retryable = decoded["retryable"]
+        if not isinstance(retryable, bool):
+            return None
+        projected["retryable"] = retryable
     reason = decoded.get("reason")
     if reason is not None:
         if reason not in _RECOVERY_REASONS:
@@ -174,6 +179,13 @@ def _projected_control_plane_rejection(decoded: Mapping[str, Any]) -> dict[str, 
     projected: dict[str, Any] = {"error": _CONTROL_PLANE_REJECTED, "status_code": status_code}
     if status_code in _CALLER_FIXABLE_STATUSES:
         projected["message"] = message
+    elif status_code in {400, 422}:
+        # Validation bodies may echo input or Pydantic context. Publish only a
+        # fixed remedy, not arbitrary upstream text, even after key redaction.
+        projected["message"] = (
+            "Request validation failed. Check the task payload and X-Provider, "
+            "X-Provider-Model and X-Provider-Key headers before resubmitting."
+        )
     message_ko = decoded.get("message_ko")
     if message_ko is not None:
         bounded_ko = _bounded_str(message_ko, 1024)
