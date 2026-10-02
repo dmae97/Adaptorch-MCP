@@ -1,56 +1,23 @@
-# Public Publication Checklist
+# Publication gate (not authorization)
 
-Use this before making the repository public or cutting a package release.
+Version 0.6.0 is a local migration candidate. No release, upload, merge or production test
+has been authorized by creating this prototype. Verify the complete source diff, all
+runtime dependencies and wheel contents; disclose the breaking migration; pass Python
+3.11 and 3.12 clean-install tests; complete source-backed synthetic hosted-contract tests;
+then obtain separate publication authorization. Keep private full/local-engine usage separate.
 
-## Repository
+The isolated runtime gate must contain only `adaptorch-mcp==0.6.0`, the official public
+`adaptorch-client==0.1.2` wheel and ordinary packaging bootstrap, with empty HOME, disabled
+user-site/config, no Git credential, no editable install and no private source override.
+Never confuse a build tool installed in a development environment with clean runtime proof.
 
-- [ ] Confirm `LICENSE` and `NOTICE` are present.
-- [ ] Confirm default branch protection and required CI checks.
-- [ ] Confirm issue templates and security contact.
-- [ ] Confirm all examples use placeholders or environment interpolation, not real credentials.
-- [ ] Run a redacted secret scan and attach the output to release evidence:
+## Repository release checks
 
-```bash
-gitleaks detect --source . --redact
-```
-
-If `gitleaks` is unavailable, run the project-approved equivalent and keep the output redacted.
-
-## Package
-
-- [ ] Decide whether `adaptorch` is available on PyPI.
-- [ ] If not on PyPI, document the GitHub install path clearly.
-- [ ] Verify `packages/adaptorch-mcp/pyproject.toml` version matches `adaptorch_mcp.__version__`.
-- [ ] Tag package releases from the monorepo root.
-- [ ] Build package locally with `python -m build packages/adaptorch-mcp`.
-- [ ] Verify console script: `adaptorch-mcp --help`.
-- [ ] Verify diagnostics: `adaptorch-mcp-doctor --json`.
-
-## Documentation and Environment Coverage
-
-- [ ] README and package README cover install, stdio, HTTP, doctor, smoke, examples, and the tool surface.
-- [ ] Examples cover public env vars with placeholders: upstream token/base URL, HTTP auth token, allowed origins, max payload, request timeout, SSE subscribers, and engine-delegated optional controls.
-- [ ] Algorithm-control docs distinguish benchmark/eval beta flags from general runtime determinism and state that the wrapper delegates to the engine.
-- [ ] Public benchmark or accuracy claims include the required honesty gate evidence.
-- [ ] Auto-approve guidance distinguishes trusted local clients from shared or production clients.
-
-
-## B2C Readiness Hard Gates
-
-- [ ] `billing_failopen_path_absent`
-- [ ] `dashboard_route_integrity`
-- [ ] `gate_enforces_exit`
-- [ ] Full50 overclaim gate: no public improvement claim without `n >= 50`, a Wilcoxon signed-rank test, and a 95% confidence interval.
-
-## MCP Smoke Tests
-
-- [ ] stdio: `adaptorch-mcp-smoke --base-url <url>`.
-- [ ] HTTP: `/mcp/health`, initialize, `tools/list`.
-- [ ] Confirm `adaptorch_plan_catalog` appears if using AdaptOrch >= the pricing catalog MCP update.
-
-## Public Safety
-
-- [ ] No `.env*`, API keys, private keys, tenant tokens, or MCP client tokens.
-- [ ] HTTP examples bind to `127.0.0.1` by default.
-- [ ] Docs explain the separate MCP HTTP auth token vs upstream control-plane token.
-- [ ] Benchmark corpora, prompts, traces, and artifacts are sanitized before sharing release evidence.
+- Retain ClassicMate LICENSE/NOTICE and verify every built wheel's ownership metadata
+- Run inherited E,F,I,UP,B lint, strict typing and all public package tests
+- Gate every public wheel including MCP against private imports/dependencies
+- Run Python3.11/3.12 clean installed-wheel initialization/discovery/read/submit fixtures
+- Keep Git/workspace credentials out of clean public runtime proof
+- Inspect examples/docs for real keys, private artifacts and unsupported legacy setup advice
+- Obtain publication approval; do not modify publisher credentials or permissions
+- No accuracy improvements may be claimed without the existing n>=50/Wilcoxon/95%CI gate

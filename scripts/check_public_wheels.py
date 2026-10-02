@@ -18,8 +18,8 @@ Usage::
         --distribution adaptorch
 
 Exit ``0`` when every checked wheel passes, ``1`` on any FAIL, ``2`` when a
-build or read fails. The legacy in-process ``adaptorch-mcp`` wrapper is not
-publishable: a core dependency fails the gate, with no package-name exemption.
+build or read fails. Every MCP wheel is gated too; any legacy private-core dependency fails with no
+package-name exemption.
 """
 
 from __future__ import annotations

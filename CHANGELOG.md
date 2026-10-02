@@ -1,10 +1,17 @@
 # Changelog — adaptorch-mcp
 
-All notable changes to the AdaptOrch MCP wrapper are documented here. The wrapper
-delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
-accuracy work is surfaced here as activation/configuration, not duplicated logic.
+The 0.6 client is a remote-only stdio bridge. Legacy source history below describes
+the preceding engine-dependent wrapper and related SDK/CLI changes; it is not the
+0.6 runtime contract or installation guide.
 
-## [Unreleased]
+## [0.6.0] — Unreleased
+
+- Remote-only stdio bridge; public SDK dependency; no private-engine installation
+- Nine fixed tools, authenticated submit-only provider headers, safe projection and bounded I/O
+- Explicit launcher; documented full/local/HTTP and credential-option migration
+- Clean public wheel/runtime CI gates; no publisher credential/permission changes
+
+## Legacy 0.5.x source history (not part of 0.6.0)
 
 ### Changed — engine pin follows the served control plane
 

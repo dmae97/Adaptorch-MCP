@@ -1,22 +1,14 @@
 {
   "mcpServers": {
     "adaptorch": {
-      "command": "adaptorch-mcp",
-      "args": [
-        "--transport",
-        "stdio",
-        "--base-url",
-        "${ADAPTORCH_CONTROL_PLANE_BASE_URL}"
-      ],
+      "command": "adaptorch-mcp-client",
+      "args": ["--base-url", "https://adaptorch.com"],
       "env": {
-        "ADAPTORCH_CONTROL_PLANE_TOKEN": "${ADAPTORCH_CONTROL_PLANE_TOKEN}"
-      },
-      "autoApprove": [
-        "adaptorch_route_topology",
-        "adaptorch_server_metrics",
-        "adaptorch_capabilities",
-        "adaptorch_plan_catalog"
-      ]
+        "ADAPTORCH_CONTROL_PLANE_TOKEN": "<tenant-api-key>",
+        "ADAPTORCH_MCP_PROVIDER": "<provider>",
+        "ADAPTORCH_MCP_PROVIDER_MODEL": "<model>",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY": "<provider-key>"
+      }
     }
   }
 }

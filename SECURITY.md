@@ -17,22 +17,19 @@ Please report security issues privately by email: `ict03@rfems.com`.
 
 Do not open a public issue for suspected secrets, authentication bypasses, transport vulnerabilities, prompt/artifact disclosure, or control-plane credential exposure. Expect an initial triage response within 3 business days for supported versions.
 
-## Secret Handling
+## MCP0.6 candidate boundary
 
-- Never commit `.env`, API keys, bearer tokens, private keys, or MCP client tokens.
-- Example configs in this repository use placeholders or environment interpolation only.
-- Keep real URLs and tokens in local, uncommitted config files.
-- Production MCP HTTP should use a separate `ADAPTORCH_MCP_HTTP_AUTH_TOKEN` from the upstream AdaptOrch control-plane token.
-- Prefer localhost binding for HTTP transport unless the endpoint is protected by a trusted reverse proxy and TLS.
+See the README for supported credentials, stdio framing, nine-tool exposure, error
+projection, resource/prompt allowlists, and post-connect deadline limitations.
 
-## Transport Notes
+The endpoint must be an explicitly configured trusted AdaptOrch-compatible HTTPS origin.
+A server can still lie about first-use tenant identity or semantic run status; local
+projection is not independent proof of hosted correctness or execution. Authentication
+and access control remain hosted-service responsibilities.
 
-- stdio is intended for local MCP clients.
-- HTTP transport requires bearer auth and origin/protocol validation from the underlying AdaptOrch MCP server.
-- Keep `ADAPTORCH_MCP_MAX_PAYLOAD_SIZE_BYTES` bounded for public deployments.
-- Set `ADAPTORCH_MCP_ALLOWED_ORIGINS` narrowly when browser or remote clients can reach HTTP/SSE.
-- Avoid auto-approving run, artifact, and trace readers in shared or production MCP clients unless those payloads are sanitized.
+Do not place tenant/provider keys in tool arguments, prompts, URLs, schemas or examples.
+No keyless provider, shell key-command, fallback provider, arbitrary headers, tenant
+argument override, downloaded artifact execution, trace or topology exposure is supported.
 
-## Accuracy and Benchmark Data Hygiene
-
-Engine algorithm controls (e.g. `ADAPTORCH_REPRODUCIBLE`, `ADAPTORCH_PAPER_SEMANTIC_WEIGHT`, `ADAPTORCH_ROUTER_ACCURACY_GATE`) are opt-in and engine-delegated; the wrapper does not implement these algorithms. When sharing accuracy reports, benchmark corpora, traces, artifacts, prompts, and outputs, remove tenant data, credentials, file-system secrets, and private source snippets first.
+Production/service and provider calls require a separately authorized test tenant and
+scope. Offline synthetic tests do not establish production behavior.
