@@ -16,14 +16,16 @@ The MCP0.6 candidate is unreleased until separately approved and published.
 
 ## MCP0.6 connection
 
-After installing the approved MCP wheel, use the explicit launcher:
+Install the approved MCP wheel in a fresh Python 3.11/3.12 virtual environment,
+following the [candidate install instructions](packages/adaptorch-mcp/README.md#install-and-launch).
+Then use that environment's explicit launcher:
 
 ```sh
 export ADAPTORCH_CONTROL_PLANE_TOKEN='<tenant-api-key>'
 export ADAPTORCH_MCP_PROVIDER='<provider>'
 export ADAPTORCH_MCP_PROVIDER_MODEL='<model>'
 export ADAPTORCH_MCP_PROVIDER_API_KEY='<provider-key>'
-adaptorch-mcp-client --base-url https://adaptorch.com
+.venv-mcp/bin/adaptorch-mcp-client --base-url https://adaptorch.com
 ```
 
 Explicit `--base-url` takes precedence over `ADAPTORCH_CONTROL_PLANE_BASE_URL`,
@@ -51,8 +53,11 @@ timeout never triggers retry or cancellation. Read the package guide before firs
 
 ## Breaking migration from0.5
 
-Use `adaptorch-mcp-client`, not the colliding `adaptorch-mcp` script. The public0.6
-package does not support full/local-engine/local-HTTP mode, provider auto/keyless/
+Use a fresh environment for 0.6 rather than upgrading an existing 0.5/private-engine
+installation in place. Point the MCP host at the new environment's absolute
+`adaptorch-mcp-client` path; an older `adaptorch-mcp` script elsewhere on PATH may
+still belong to the old wrapper or engine. The public0.6 package does not support
+full/local-engine/local-HTTP mode, provider auto/keyless/
 key-command/fallback, or non-loopback plaintext escapes. Private engine usage belongs
 in a separate private distribution. Historical0.5 instructions are available in Git;
 they must not be used to install this client.

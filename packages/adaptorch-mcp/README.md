@@ -7,17 +7,49 @@ No publication, production connection, or provider execution is implied by offli
 
 ## Install and launch
 
-After a separately approved release, install the published `adaptorch-mcp==0.6.0`.
-For this candidate, install the locally built wheel and its public SDK dependency.
+Version 0.6.0 is not yet published. For this candidate, use an approved locally
+built wheel; an unpinned index install may select an older engine-dependent release.
 Python 3.11 and 3.12 are supported; both are covered by the candidate offline gates.
+
+Create a fresh virtual environment without `--system-site-packages`. Do not reuse
+an environment containing the 0.5 wrapper or private engine. For example, on
+macOS/Linux with Python 3.11 installed (Python 3.12 also works):
+
+```sh
+python3.11 -m venv .venv-mcp
+.venv-mcp/bin/python -m pip install --isolated --index-url https://pypi.org/simple \
+  /absolute/path/to/adaptorch_mcp-0.6.0-py3-none-any.whl
+.venv-mcp/bin/adaptorch-mcp-client --version
+.venv-mcp/bin/adaptorch-mcp-doctor --json
+```
+
+Replace the wheel path with the actual approved artifact. This installs its sole
+runtime dependency, `adaptorch-client==0.1.2`, from the public index. On Windows,
+create the environment with `py -3.11 -m venv .venv-mcp` (or `py -3.12`) and use
+`.venv-mcp\Scripts\python.exe` and the corresponding launcher `.exe` paths.
+The version and doctor checks are offline; neither verifies hosted access.
+
+Only after release approval and confirmed PyPI availability, the install command
+can instead select the exact published version:
+
+```sh
+.venv-mcp/bin/python -m pip install --isolated --index-url https://pypi.org/simple \
+  'adaptorch-mcp==0.6.0'
+```
+
+For an authorized hosted connection:
 
 ```sh
 export ADAPTORCH_CONTROL_PLANE_TOKEN='<tenant-api-key>'
 export ADAPTORCH_MCP_PROVIDER='openai'
 export ADAPTORCH_MCP_PROVIDER_MODEL='<model>'
 export ADAPTORCH_MCP_PROVIDER_API_KEY='<provider-key>'
-adaptorch-mcp-client --base-url https://adaptorch.com
+.venv-mcp/bin/adaptorch-mcp-client --base-url https://adaptorch.com
 ```
+
+In the MCP host configuration, set `command` to this environment's absolute
+`adaptorch-mcp-client` path (or `.exe` on Windows), including when adapting the
+repository examples. Shell activation alone does not select a GUI host's launcher.
 
 The four environment names above preserve the existing hosted connection guide.
 `ADAPTORCH_API_KEY` is a lower-priority tenant-key fallback only.
@@ -120,7 +152,10 @@ prove that the first tenant ID returned by an untrusted server is correct.
 
 ## Breaking migration from 0.5.x
 
-- Use `adaptorch-mcp-client`; the ambiguous `adaptorch-mcp` alias is not installed
+- Install into a fresh environment and repoint the host configuration before use;
+  upgrading the wrapper does not remove an already installed private engine
+- Use `adaptorch-mcp-client`; 0.6 does not install the ambiguous `adaptorch-mcp`
+  alias, but an old script may remain in another environment or elsewhere on PATH
 - Public `full`, local engine, and local HTTP listener modes are rejected
 - No private `adaptorch` dependency, private Git source, FastAPI, or uvicorn
 - Provider `auto`, keyless, key-command, and fallback settings are rejected explicitly
@@ -133,18 +168,22 @@ is not a workaround for this public package.
 
 ## Offline validation
 
+From this package directory, with the development dependencies installed:
+
 ```sh
 python -m pytest
 ruff check --config pyproject.toml src tests
 mypy src
-python -m build --no-isolation
+python -m build
 ```
 
 Tests use neutral synthetic protocol fixtures with blocked sockets, plus explicit
-loopback-only slow-drip fixtures. Public projection baseline provenance is recorded in
-`evidence/PUBLIC_MODULE_PROVENANCE.json`. A clean wheel install must use only public
+loopback-only slow-drip fixtures. A clean wheel install must use only public
 wheels, no private Git override, no editable package, and no system-site inheritance.
-See `evidence/VALIDATION.md` for actually completed gates and remaining release blockers.
+For repository-wide checks and release requirements, see the public
+[development guide](https://github.com/dmae97/Adaptorch-MCP/blob/b68f314986544304f239e927434971c1fff14c58/README.md#development-and-verification)
+and [publication gate](https://github.com/dmae97/Adaptorch-MCP/blob/b68f314986544304f239e927434971c1fff14c58/PUBLICATION.md).
+Passing offline checks does not authorize publication or verify live hosted execution.
 
 ## Current-source compatibility limits
 
