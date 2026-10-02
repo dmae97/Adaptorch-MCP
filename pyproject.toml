@@ -16,7 +16,6 @@ members = [
 ]
 
 [tool.uv.sources]
-adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "c89d62c331d99cbc71876267ca69a9de28a02efc" }
 adaptorch-client = { workspace = true }
 
 [tool.ruff]
@@ -54,11 +53,10 @@ extraPaths = [
   "packages/adaptorch-client/src",
   "packages/adaptorch-cli/src",
   "packages/adaptorch-mcp/src",
-  "../src",
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["packages/adaptorch-client/src", "packages/adaptorch-cli/src"]
+pythonpath = ["packages/adaptorch-client/src", "packages/adaptorch-cli/src", "packages/adaptorch-mcp/src"]
 testpaths = [
   "packages/adaptorch/tests",
   "packages/adaptorch-client/tests",

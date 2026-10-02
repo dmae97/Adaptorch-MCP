@@ -1,3 +1,10 @@
+## MCP0.6.0 candidate (unreleased)
+
+- Remote-only stdio bridge; public SDK dependency; no private-engine installation
+- Nine fixed tools, authenticated submit-only provider headers, safe projection and bounded I/O
+- Explicit launcher; documented full/local/HTTP and credential-option migration
+- Clean public wheel/runtime CI gates; no publisher credential/permission changes
+
 # Changelog — adaptorch-mcp
 
 All notable changes to the AdaptOrch MCP wrapper are documented here. The wrapper

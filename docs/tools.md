@@ -1,3 +1,7 @@
+> Version note: this page records the legacy0.5 engine-dependent integration.
+> For the remote-only public0.6 client, use the [current MCP package guide](../packages/adaptorch-mcp/README.md).
+> Full/local-engine/HTTP listener, key-command/fallback and private-engine installation instructions below do not apply to0.6.
+
 # MCP Tool Surface
 
 The package delegates tool registration to `adaptorch.mcp_server`. The default `remote` profile exposes nine hardened tools. The two rows marked `full only` are available only with `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`.

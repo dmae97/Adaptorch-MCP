@@ -1,110 +1,79 @@
+"""Unambiguous public launcher; help never imports or contacts private core."""
+
 from __future__ import annotations
 
+import argparse
 import os
 import sys
-from collections.abc import Callable, Sequence
-from urllib.parse import urlparse
+from collections.abc import Sequence
+from typing import Never
 
-_CONTROL_PLANE_BASE_URL_ENV = "ADAPTORCH_CONTROL_PLANE_BASE_URL"
-_HOSTED_BASE_URL = "https://adaptorch.com"
-_ALLOWED_CONTROL_PLANE_SCHEMES = frozenset({"http", "https"})
-
-_MISSING_ADAPTORCH_MESSAGE = (
-    "adaptorch-mcp requires AdaptOrch. Install with: "
-    "pip install 'adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git'"
-)
+from adaptorch_mcp import __version__
+from adaptorch_mcp.bridge import Bridge
+from adaptorch_mcp.config import from_environment
+from adaptorch_mcp.protocol import serve
 
 
-def _validate_control_plane_base_url(value: str, *, source: str) -> str:
-    """Return a stripped http(s) URL or raise for invalid control-plane input."""
-    stripped = value.strip()
-    parsed = urlparse(stripped)
-    if parsed.scheme.lower() not in _ALLOWED_CONTROL_PLANE_SCHEMES or not parsed.netloc:
-        raise ValueError(f"{source} must be an http(s) URL with a host")
-    if "@" in parsed.netloc:
-        raise ValueError(f"{source} must not include embedded credentials")
-    return stripped
+class SafeArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> Never:
+        # Argparse errors otherwise echo invalid option values, potentially credentials.
+        del message
+        self.print_usage(sys.stderr)
+        self.exit(2, "Invalid CLI options. Use --help; 0.6 supports remote stdio only.\n")
 
 
-def _normalize_env_base_url(value: str | None) -> str | None:
-    """Normalize the optional base-url environment variable.
-
-    Empty or whitespace-only values are treated as unset. Non-empty values must
-    be syntactically valid HTTP(S) URLs so misconfiguration fails before the
-    wrapper submits work to an unexpected control plane.
-    """
-    if value is None:
-        return None
-    stripped = value.strip()
-    if not stripped:
-        return None
-    return _validate_control_plane_base_url(stripped, source=_CONTROL_PLANE_BASE_URL_ENV)
-
-
-def _strip_empty_base_url_equals(argv: Sequence[str]) -> list[str]:
-    """Drop empty equals-form base-url tokens so env/hosted defaults can apply."""
-    return [arg for arg in argv if arg != "--base-url="]
-
-
-def _explicit_base_url_value(argv: Sequence[str]) -> str | None:
-    """Return the first non-empty explicit base-url value from argv, if present."""
-    for index, arg in enumerate(argv):
-        if arg == "--base-url" and index + 1 < len(argv):
-            return argv[index + 1]
-        if arg.startswith("--base-url=") and arg != "--base-url=":
-            return arg.split("=", 1)[1]
-    return None
-
-
-def _has_base_url_flag(argv: Sequence[str]) -> bool:
-    """Return whether argv already carries a non-empty explicit base-url flag."""
-    return _explicit_base_url_value(argv) is not None
-
-
-def _with_hosted_base_url_default(argv: Sequence[str] | None) -> list[str] | None:
-    """Resolve the public wrapper's AdaptOrch control-plane base URL.
-
-    Precedence is deterministic:
-    1. Explicit ``--base-url`` or ``--base-url=...`` in argv.
-    2. ``ADAPTORCH_CONTROL_PLANE_BASE_URL`` when no explicit flag is present.
-    3. Hosted fallback for user-facing installs.
-
-    The canonical ``adaptorch.mcp_server`` keeps a localhost default for
-    core/local development. The public ``adaptorch-mcp`` package is user-facing,
-    so omitting both CLI and env configuration should still make runs visible in
-    the hosted dashboard.
-    """
-    raw_forwarded = list(argv) if argv is not None else sys.argv[1:]
-    forwarded = _strip_empty_base_url_equals(raw_forwarded)
-    explicit_base_url = _explicit_base_url_value(forwarded)
-    if explicit_base_url is not None:
-        _validate_control_plane_base_url(explicit_base_url, source="--base-url")
-        if argv is None and forwarded == raw_forwarded:
-            return None
-        return forwarded
-
-    env_base_url = _normalize_env_base_url(os.getenv(_CONTROL_PLANE_BASE_URL_ENV))
-    if env_base_url is not None:
-        return ["--base-url", env_base_url, *forwarded]
-
-    return ["--base-url", _HOSTED_BASE_URL, *forwarded]
-
-
-def _load_runtime_main() -> Callable[[Sequence[str] | None], int]:
-    from adaptorch_mcp.runtime import run_hardened_main
-
-    return run_hardened_main
+def build_parser() -> argparse.ArgumentParser:
+    parser = SafeArgumentParser(
+        prog="adaptorch-mcp-client",
+        description="AdaptOrch 0.6 remote-only stdio client. Local engine/full/HTTP unsupported.",
+    )
+    parser.add_argument("--version", action="version", version=__version__)
+    parser.add_argument("--base-url", help="HTTPS origin; authenticated requests use POST /mcp")
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=30.0,
+        help="Bounded request timeout, seconds (0 < timeout <= 300)",
+    )
+    parser.add_argument("--transport", choices=["stdio"], default="stdio")
+    parser.add_argument(
+        "--stdio-framing", choices=["line", "newline", "content-length"], default="line"
+    )
+    parser.add_argument(
+        "--allow-loopback-http",
+        action="store_true",
+        help="Development only: permit exact loopback HTTP origin",
+    )
+    return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the canonical AdaptOrch engine behind the hardened MCP facade."""
+    parser = build_parser()
+    args = parser.parse_args(list(argv) if argv is not None else None)
     try:
-        runtime_main = _load_runtime_main()
-    except ModuleNotFoundError as exc:
-        if exc.name == "adaptorch":
-            print(_MISSING_ADAPTORCH_MESSAGE, file=sys.stderr)
-            return 2
-        raise
+        config = from_environment(
+            os.environ,
+            base_url=args.base_url,
+            timeout_seconds=args.timeout,
+            allow_loopback_http=args.allow_loopback_http,
+        )
+    except ValueError as exc:
+        # Every configuration error is owned by the public validators and contains no values.
+        print(f"Configuration error: {exc}", file=sys.stderr)
+        return 2
+    try:
+        framing = "line" if args.stdio_framing == "newline" else args.stdio_framing
+        return serve(Bridge(config), sys.stdin.buffer, sys.stdout.buffer, framing)
+    except (BrokenPipeError, KeyboardInterrupt):
+        return 0
+    except Exception:
+        # Last boundary: raw exception text is never a protocol response or log message.
+        print(
+            "Client stopped after an internal protocol failure; no automatic retry occurred.",
+            file=sys.stderr,
+        )
+        return 2
 
-    forwarded_argv = _with_hosted_base_url_default(argv)
-    return int(runtime_main(forwarded_argv))
+
+if __name__ == "__main__":
+    raise SystemExit(main())

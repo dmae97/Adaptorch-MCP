@@ -1,3 +1,7 @@
+> Version note: this page records the legacy0.5 engine-dependent integration.
+> For the remote-only public0.6 client, use the [current MCP package guide](../packages/adaptorch-mcp/README.md).
+> Full/local-engine/HTTP listener, key-command/fallback and private-engine installation instructions below do not apply to0.6.
+
 # B2C Claude Code Experience Notes
 
 This package should feel useful to individual Claude Code users before they learn the broader AdaptOrch platform. Optimize the first-run path around a small, predictable tool surface.

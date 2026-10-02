@@ -68,12 +68,8 @@ jobs:
             echo "tag says $VERSION but packages/$PACKAGE/pyproject.toml says $declared"
             exit 1
           fi
-      - name: Install workspace
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
-          git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
-          uv sync --all-packages --extra dev
+      - name: Install public workspace
+        run: uv sync --locked --all-packages --extra dev
       - name: Verify
         env:
           PACKAGE: ${{ steps.target.outputs.package }}
@@ -97,6 +93,13 @@ jobs:
         env:
           PACKAGE: ${{ steps.target.outputs.package }}
         run: uv run python -m build "packages/$PACKAGE" --outdir dist
+      - name: Clean MCP wheel runtime before publication
+        if: steps.target.outputs.package == 'adaptorch-mcp'
+        run: |
+          python -m venv /tmp/mcp-public-runtime
+          /tmp/mcp-public-runtime/bin/python -m pip install --isolated --index-url https://pypi.org/simple dist/*.whl
+          cd /tmp
+          PYTHONNOUSERSITE=1 /tmp/mcp-public-runtime/bin/python "$GITHUB_WORKSPACE/scripts/check_mcp_clean_install.py"
       - name: Publish to PyPI
         env:
           PACKAGE: ${{ steps.target.outputs.package }}

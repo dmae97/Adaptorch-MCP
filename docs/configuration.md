@@ -1,3 +1,7 @@
+> Version note: this page records the legacy0.5 engine-dependent integration.
+> For the remote-only public0.6 client, use the [current MCP package guide](../packages/adaptorch-mcp/README.md).
+> Full/local-engine/HTTP listener, key-command/fallback and private-engine installation instructions below do not apply to0.6.
+
 # Configuration
 
 `adaptorch-mcp` delegates to `adaptorch.mcp_server`, so the canonical MCP flags, tools, resources, prompts, safety checks, and transports come from the installed AdaptOrch core release.

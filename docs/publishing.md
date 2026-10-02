@@ -1,3 +1,7 @@
+> Version note: this page records the legacy0.5 engine-dependent integration.
+> For the remote-only public0.6 client, use the [current MCP package guide](../packages/adaptorch-mcp/README.md).
+> Full/local-engine/HTTP listener, key-command/fallback and private-engine installation instructions below do not apply to0.6.
+
 # Publishing to pip / uv
 
 `uv` installs from Python package indexes such as PyPI; there is no separate uv registry. Publishing to PyPI makes the package available to both:

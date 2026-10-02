@@ -156,34 +156,7 @@ def test_get_run_fails_closed_on_non_string_wall_enums(field: str, value: Any) -
     assert sanitized["result"]["structuredContent"] == projected
 
 
-def test_current_parent_pass_wall_survives_public_projection() -> None:
-    shadow_report = pytest.importorskip("adaptorch.cek.shadow_report")
-    control_plane_models = pytest.importorskip("adaptorch.control_plane.models")
-    evidence_notes = tuple(f"parent-evidence-{index}" for index in range(11))
-    wall = shadow_report.CorrectnessWallResult(
-        verdict=shadow_report.CorrectnessWallVerdict.PASS,
-        evidence_notes=evidence_notes,
-        recommended_action="observe",
-    )
-    record = control_plane_models.RunRecord(
-        run_id="run-parent-wall",
-        payload={},
-        synthesis_mode="robust",
-        model=None,
-        trace=False,
-        budget_policy=None,
-        created_at="2026-07-14T00:00:00+00:00",
-        status="SUCCEEDED",
-        result_status="OK",
-        diagnostics={"correctness_wall": wall.to_payload()},
-    )
-
-    projected = project_tool_output("adaptorch_get_run", record.summary_payload())
-
-    assert projected is not None
-    assert projected["correctness_wall"] is not None
-    assert projected["correctness_wall"]["verdict"] == "PASS"
-    assert projected["correctness_wall"]["evidence_notes"] == list(evidence_notes)
+# Private-engine comparison remains in the separate hosted integration suite.
 
 
 def test_run_list_projection_does_not_gain_correctness_wall() -> None:

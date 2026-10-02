@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptorch-mcp"
-version = "0.5.2"
+version = "0.6.0"
 description = "Installable MCP bridge for AdaptOrch"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
@@ -22,7 +22,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
 ]
-dependencies = ["adaptorch[api]>=0.1.2,<0.2"]
+dependencies = ["adaptorch-client==0.1.2"]
 
 [project.optional-dependencies]
 dev = ["build>=1.2", "mypy>=1.10", "pytest>=8.2", "ruff>=0.6"]
@@ -34,7 +34,6 @@ Issues = "https://github.com/dmae97/Adaptorch-MCP/issues"
 Documentation = "https://adaptorch.com/mcp-docs"
 
 [project.scripts]
-adaptorch-mcp = "adaptorch_mcp.cli:main"
 adaptorch-mcp-client = "adaptorch_mcp.cli:main"
 adaptorch-mcp-doctor = "adaptorch_mcp.doctor:main"
 adaptorch-mcp-smoke = "adaptorch_mcp.stdio_smoke:main"
@@ -47,4 +46,18 @@ adaptorch_mcp = ["py.typed"]
 
 [tool.pyright]
 pythonVersion = "3.11"
-extraPaths = ["src", "../../../src", "../adaptorch-client/src"]
+extraPaths = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

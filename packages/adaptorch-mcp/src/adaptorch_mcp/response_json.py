@@ -72,4 +72,13 @@ def decode_response_text(text: str) -> dict[str, JSONValue] | None:
         )
     except (ValueError, UnicodeError, RecursionError):
         return None
-    return value if isinstance(value, dict) else None
+    def valid_unicode(item: JSONValue) -> bool:
+        if isinstance(item, str):
+            return not any(0xD800 <= ord(char) <= 0xDFFF for char in item)
+        if isinstance(item, dict):
+            return all(valid_unicode(key) and valid_unicode(child) for key, child in item.items())
+        if isinstance(item, list):
+            return all(valid_unicode(child) for child in item)
+        return True
+
+    return value if isinstance(value, dict) and valid_unicode(value) else None

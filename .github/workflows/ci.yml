@@ -21,12 +21,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install workspace
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
-          git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
-          uv sync --all-packages --extra dev
+      - name: Install public workspace
+        run: uv sync --locked --all-packages --extra dev
       - name: Lint
         run: uv run ruff check packages/adaptorch-mcp packages/adaptorch-client packages/adaptorch-cli
       - name: Typecheck
@@ -35,14 +31,13 @@ jobs:
         run: uv run pytest packages/adaptorch-mcp/tests packages/adaptorch-client/tests packages/adaptorch-cli/tests packages/adaptorch/tests -q
       - name: Doctor
         run: uv run adaptorch-mcp-doctor --json
-      - name: Build package
-        # The in-process adaptorch-mcp wrapper still depends on the private
-        # engine, so it is build-checked but not a publishable wheel.
-        run: uv run python -m build packages/adaptorch-mcp
       - name: Public wheel gate
-        # No public wheel may carry engine code or depend on the private core.
-        # adaptorch-mcp is intentionally excluded: it still wraps the engine
-        # in-process, so a core dependency is expected and the gate would fail
-        # it. It is gated again at publish time (publish.yml) if a release tag
-        # ever tries to ship it.
-        run: uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli
+        # Every public distribution must be independently free of private core code/dependencies.
+        run: uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli adaptorch-mcp
+      - name: Clean public MCP wheel runtime
+        run: |
+          uv run python -m build --wheel packages/adaptorch-mcp --outdir /tmp/mcp-public-wheel
+          python -m venv /tmp/mcp-public-runtime
+          /tmp/mcp-public-runtime/bin/python -m pip install --isolated --index-url https://pypi.org/simple /tmp/mcp-public-wheel/*.whl
+          cd /tmp
+          PYTHONNOUSERSITE=1 /tmp/mcp-public-runtime/bin/python "$GITHUB_WORKSPACE/scripts/check_mcp_clean_install.py"
