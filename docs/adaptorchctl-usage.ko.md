@@ -227,6 +227,15 @@ adaptorchctl run wait "$RUN_ID" --timeout 300 --interval 2
 응답은 `reason`(`terminal`/`deadline`/`poll_limit`/`unsupported_status`), `polls`,
 `elapsed_seconds`, 그리고 마지막으로 관측한 `run`을 담습니다. `terminal`이 아닌 종료는
 실패가 아니라 **조회를 멈춘 것**이므로 같은 명령을 다시 실행하면 됩니다.
+
+`run wait`는 `terminal`의 `SUCCEEDED`에 0, `FAILED`에 8, `CANCELLED`에 9를 반환합니다.
+`deadline`, `poll_limit`, `unsupported_status`와 알 수 없는 종료 사유는 10입니다.
+마지막 상태가 `SUCCEEDED`여도 종료 사유가 `terminal`이 아니면 10을 반환합니다.
+관측이 없거나 `terminal`의 상태가 누락·잘못됨·알 수 없음인 경우도 10입니다.
+코드 10은 서버 실행 실패를 뜻하지 않습니다. stdout JSON의 `reason`을 확인하고
+필요하면 같은 `run_id`로 조회를 이어가세요. 대기는 실행을 재제출하거나 취소하지 않습니다.
+이 판정은 실행 수명주기에만 적용되며 결과 정확성이나 증거 검증을 보장하지 않습니다.
+
 `run_id`를 모른다면 `run list`로 먼저 기존 실행을 확인하세요.
 
 제출 자체를 다시 보내야 한다면 보관해 둔 **동일한 `--request-id`와 동일한 JSON**을 그대로
@@ -273,12 +282,14 @@ adaptorchctl --output json run get "$RUN_ID" > run.json
 | `5` | HTTP 409 충돌 |
 | `6` | HTTP 429 제한 초과 |
 | `7` | 네트워크·응답 오류 또는 HTTP 5xx |
-| `8` | `run get` 결과가 `failed` |
-| `9` | `run get` 결과가 `cancelled` |
-| `10` | `run get` 결과가 `inconclusive`이거나 별도 매핑이 없는 API 오류 |
+| `8` | `run get` 결과 또는 `run wait`의 terminal 상태가 `failed` |
+| `9` | `run get` 결과 또는 `run wait`의 terminal 상태가 `cancelled` |
+| `10` | `run get` 결과가 `inconclusive`, `run wait` 관측이 불확정, 또는 별도 매핑이 없는 API 오류 |
 | `130` | 사용자 인터럽트 |
 
-종료 코드 `8`~`10`의 실행 상태 판정은 `run get`에만 적용됩니다. 자동화에서는 종료 코드와 stdout JSON을 함께 보관하세요.
+종료 코드 `8`~`10`은 위의 `run get` 및 `run wait` 계약에 따라 적용됩니다. 자동화에서는 종료 코드와 stdout JSON을 함께 보관하세요.
+
+호환성 주의: 기존 `run wait`는 실패·취소·조회 중단에도 0을 반환했습니다. `set -e`를 쓰거나 항상 0을 기대한 스크립트는 이제 0이 아닌 코드를 처리해야 합니다. `run get`, 제출 및 취소 명령의 기존 동작은 유지됩니다.
 
 ## 현재 MVP 경계
 

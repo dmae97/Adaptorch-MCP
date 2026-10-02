@@ -347,6 +347,19 @@ def _run_status_exit(payload: JSONMapping) -> int:
     return 0
 
 
+def _wait_status_exit(payload: JSONMapping) -> int:
+    """Map a bounded observation without treating a stopped wait as success."""
+    if payload.get("reason") != "terminal":
+        return 10
+    run = payload.get("run")
+    if not isinstance(run, dict):
+        return 10
+    status = run.get("status")
+    if not isinstance(status, str):
+        return 10
+    return {"succeeded": 0, "failed": 8, "cancelled": 9}.get(status.lower(), 10)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parse_args(argv)
@@ -362,6 +375,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         except ValueError:
             print("response contained non-encodable JSON values", file=sys.stderr)
             return 7
+        if args.command == "run" and args.run_command == "wait":
+            return _wait_status_exit(payload)
         return _run_status_exit(payload) if check_run_status else 0
     # pi-lens-ignore: unreachable-except
     except KeyboardInterrupt:

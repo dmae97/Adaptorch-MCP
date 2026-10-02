@@ -25,6 +25,22 @@ A git push does not replace a previously published PyPI version.
 
 See [`../../docs/adaptorchctl-usage.ko.md`](../../docs/adaptorchctl-usage.ko.md) for usage.
 
+## Bounded wait exit codes
+
+`adaptorchctl run wait RUN_ID` emits the last observation as JSON. A terminal
+`SUCCEEDED` exits 0, `FAILED` exits 8, and `CANCELLED` exits 9. These codes describe
+run lifecycle, not result correctness or evidence verification.
+
+A `deadline`, `poll_limit`, `unsupported_status`, or unrecognized stop reason exits
+10, even if the last observation looks terminal. Missing or unsupported terminal
+observations also exit 10. This means the observation is inconclusive, not that
+the server-side run failed. Inspect `reason` and retain the JSON; continue with the
+same run ID when appropriate. Waiting never resubmits or cancels a run.
+
+Automation compatibility: `run wait` previously returned 0 for these observations.
+Scripts using `set -e` must now handle nonzero exits. `run get` keeps its existing
+exit-code behavior; submit and cancel still report command success separately.
+
 ## License
 
 Proprietary — Copyright ClassicMate. All rights reserved. See [LICENSE](https://github.com/dmae97/Adaptorch-MCP/blob/main/LICENSE).
