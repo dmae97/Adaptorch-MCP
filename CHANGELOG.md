@@ -8,11 +8,14 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ### Changed — engine pin follows the served control plane
 
-- The CI engine pin moves from `5b22381` to `8152b13`, the revision the hosted
+- The CI engine pin moves from `5b22381` to `7bd2aa7`, the revision the hosted
   control plane reports in `/.well-known/adaptorch-build.json` (checked
-  2026-10-08; it reported `c89d62c` and then `7b4b021` before). Wrapper tests now
-  run against the engine that serves `https://adaptorch.com/mcp`. `7b4b021..8152b13`
-  changes only the engine's release manifest and agent config, not its MCP surface.
+  2026-10-08; previous pins included `c89d62c`, `7b4b021`, and `8152b13`). Wrapper
+  tests now run against the engine that serves `https://adaptorch.com/mcp`.
+- Since `8152b13`, the engine adds OFF-by-default GraphRAG transport/storage
+  support and derives its default MCP server version from the installed engine
+  release. The hosted engine now reports `0.1.2`; this wrapper continues to pass
+  its own package version explicitly.
 - Auto-provider documentation now includes the engine's `DEEPSEEK_API_KEY` and
   `COMMANDCODE_API_KEY` variables, which this engine lists in
   `DEFAULT_API_KEY_ENV`. No credential resolution policy is changed.
