@@ -218,8 +218,8 @@ def _decoded_tool_text(response: Mapping[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def _remote_run_schema() -> dict[str, Any]:
-    response = _remote_server().handle_message(
+def _remote_run_schema(server: Any | None = None) -> dict[str, Any]:
+    response = (server if server is not None else _remote_server()).handle_message(
         {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
     )
     assert response is not None
@@ -345,8 +345,19 @@ def test_run_projection_preserves_requested_and_selected_serving_modes() -> None
 
 @requires_engine_surface
 def test_remote_run_schema_exposes_submission_recovery_arguments() -> None:
-    """idempotency_key and resume_run_id are engine-declared arguments."""
-    properties = _remote_run_schema()["properties"]
+    """idempotency_key and resume_run_id are engine-declared arguments.
+
+    The engine advertises them only when the backend is its control-plane
+    connector, so read the schema from the shipped builder, not FakeBackend.
+    """
+    server = build_hardened_mcp_server(
+        base_url="https://api.example.test",
+        api_token="ado_synthetic",
+        timeout_seconds=1,
+        exposure_profile=REMOTE_EXPOSURE_PROFILE,
+        allow_insecure=False,
+    )
+    properties = _remote_run_schema(server)["properties"]
 
     key = properties["idempotency_key"]
     assert key["type"] == "string"
