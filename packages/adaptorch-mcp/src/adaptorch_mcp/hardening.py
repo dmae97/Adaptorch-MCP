@@ -5,8 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Final
 
-from adaptorch.mcp_server import AdaptOrchMCPServer, MCPToolBackend, NotificationSink
+from adaptorch.mcp_server import (
+    AdaptOrchMCPServer,
+    MCPServerConfig,
+    MCPToolBackend,
+    NotificationSink,
+)
 
+from adaptorch_mcp import __version__
 from adaptorch_mcp.backend_config import ProviderCredentialConfig as ProviderCredentialConfig
 from adaptorch_mcp.backend_config import build_parent_config as _parent_connector_config
 from adaptorch_mcp.backend_config import parent_n8n_connector as parent_n8n_connector
@@ -133,7 +139,7 @@ class HardenedMCPServer(AdaptOrchMCPServer):
     ) -> None:
         if exposure_profile not in {REMOTE_EXPOSURE_PROFILE, FULL_EXPOSURE_PROFILE}:
             raise _InvalidExposureProfileError("exposure profile must be 'remote' or 'full'")
-        super().__init__(backend=backend)
+        super().__init__(backend=backend, config=MCPServerConfig(server_version=__version__))
         self._exposure_profile: ExposureProfile = exposure_profile
         parent_response = super().handle_message(
             {"jsonrpc": "2.0", "id": 0, "method": "tools/list", "params": {}}
