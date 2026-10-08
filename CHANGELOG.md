@@ -18,6 +18,13 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 - The pinned engine still answers malformed BYOK headers with HTTP 503. The
   HTTP 400 answer needs a later core deployment.
 
+### Fixed — MCP server identity
+
+- `initialize` and the `adaptorch://server-info` resource report this package's
+  release as `serverInfo.version`. They reported the engine's fixed
+  `MCPServerConfig` default `0.1.0`, so an `adaptorch-mcp` 0.5.2 install showed
+  up as `v0.1.0` in MCP clients.
+
 ### Fixed — request rejection projection
 
 - Remote HTTP 400/422 tool failures include a fixed validation remedy without

@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+import adaptorch_mcp
 from adaptorch_mcp.hardening import (
     FULL_EXPOSURE_PROFILE,
     REMOTE_EXPOSURE_PROFILE,
@@ -214,6 +215,31 @@ def test_remote_profile_hides_sensitive_resources_and_completions() -> None:
     completion = server.handle_message(_request("completion/complete", params={}))
     assert completion is not None
     assert completion["error"]["code"] == -32601
+
+
+def test_initialize_reports_the_wrapper_release_not_the_engine_default() -> None:
+    """Clients talk to this wrapper, so serverInfo names its release, not the engine's."""
+    server = HardenedMCPServer(backend=_FakeBackend(), exposure_profile="remote")
+    expected = {"name": "adaptorch-mcp", "version": adaptorch_mcp.__version__}
+
+    initialized = server.handle_message(
+        _request(
+            "initialize",
+            params={
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "pytest", "version": "0"},
+            },
+        )
+    )
+    assert initialized is not None
+    assert initialized["result"]["serverInfo"] == expected
+
+    resource = server.handle_message(
+        _request("resources/read", params={"uri": "adaptorch://server-info"})
+    )
+    assert resource is not None
+    assert json.loads(resource["result"]["contents"][0]["text"])["serverInfo"] == expected
 
 
 def test_remote_profile_redacts_algorithm_diagnostics_and_suppresses_events() -> None:
