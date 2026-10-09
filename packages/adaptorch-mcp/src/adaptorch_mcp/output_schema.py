@@ -14,6 +14,10 @@ from adaptorch_mcp.first_run_receipt_output import project_first_run_receipt
 from adaptorch_mcp.orchestration_value_output import project_orchestration_value
 from adaptorch_mcp.projection_values import project_scalars as _project_scalars
 from adaptorch_mcp.run_output import project_run_scalars
+from adaptorch_mcp.verification_diagnostic_output import (
+    VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION,
+    project_verification_diagnostics,
+)
 
 MAX_ROUTING_STAGES: Final = 64
 MAX_ROUTING_STAGE_WIDTH: Final = 256
@@ -273,6 +277,16 @@ def _project_run(value: Mapping[str, Any]) -> dict[str, Any] | None:
     projected = project_run_scalars(value)
     if projected is None:
         return None
+    verification_diagnostics = project_verification_diagnostics(
+        value.get("verification_diagnostics")
+    )
+    if verification_diagnostics is not None and value.get(
+        "verification_diagnostics_schema_version"
+    ) == VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION:
+        projected["verification_diagnostics"] = verification_diagnostics
+        projected["verification_diagnostics_schema_version"] = (
+            VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION
+        )
     if "artifact_urls" in value:
         artifact_urls = _project_artifact_map(value["artifact_urls"])
         if artifact_urls is None:

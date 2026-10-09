@@ -1,5 +1,11 @@
 # adaptorch-cli
 
+Run/evidence JSON may include the SDK's safe, versioned `verification_diagnostics`.
+Project reports remain untrusted observations. Invalid optional metadata is
+omitted by the SDK, including in CLI JSON; it does not turn a valid run response
+into a CLI error. Existing failed/cancelled/inconclusive exits stay 8/9/10,
+and a stopped wait still exits 10. PDF tools are not global CLI prerequisites.
+
 Independent AdaptOrch SaaS CLI. Installs the `adaptorchctl` command and uses `adaptorch-client`; it does not invoke `adaptorch` or `adaptorch-mcp`.
 
 Log in once and every command picks the credential up:

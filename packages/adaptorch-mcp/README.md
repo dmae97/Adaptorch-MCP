@@ -1,5 +1,12 @@
 # adaptorch-mcp
 
+Run responses may expose versioned `verification_diagnostics` as bounded
+observations, including an untrusted `project_report` from explicit PDF checks.
+`verification_diagnostics_schema_version` is `verification.diagnostics/v1`.
+Only closed codes, source, scope and four allowlisted tool names survive remote
+projection. Logs remain redacted; malformed optional metadata is dropped while
+the original result survives. This does not make the legacy wheel publishable.
+
 Installable Python wrapper for the AdaptOrch MCP server.
 
 The package runs a hardened facade over `adaptorch.mcp_server`, so routing and synthesis stay aligned with AdaptOrch core without copying those algorithms into the wrapper. The default `remote` exposure profile keeps local topology and trace oracles out of the public MCP surface.

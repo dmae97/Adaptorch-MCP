@@ -198,6 +198,72 @@ requires_orchestration_value_surface = pytest.mark.skipif(
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+def test_verification_diagnostic_vocabulary_and_closed_schema_match_engine() -> None:
+    from adaptorch.verification_diagnostics import (
+        DIAGNOSTIC_CODES,
+        MAX_DIAGNOSTICS,
+        PDF_DIAGNOSTIC_TOOLS,
+        VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION,
+    )
+
+    from adaptorch_client.models import (
+        MAX_VERIFICATION_DIAGNOSTICS,
+        VERIFICATION_DIAGNOSTIC_CODES,
+    )
+    from adaptorch_client.models import (
+        PDF_DIAGNOSTIC_TOOLS as SDK_PDF_TOOLS,
+    )
+    from adaptorch_client.models import (
+        VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION as SDK_SCHEMA_VERSION,
+    )
+    from adaptorch_mcp.verification_diagnostic_output import (
+        DIAGNOSTIC_CODES as WRAPPER_CODES,
+    )
+    from adaptorch_mcp.verification_diagnostic_output import (
+        MAX_DIAGNOSTICS as WRAPPER_MAX,
+    )
+    from adaptorch_mcp.verification_diagnostic_output import (
+        PDF_DIAGNOSTIC_TOOLS as WRAPPER_PDF_TOOLS,
+    )
+    from adaptorch_mcp.verification_diagnostic_output import (
+        VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION as WRAPPER_SCHEMA_VERSION,
+    )
+    from adaptorch_mcp.verification_diagnostic_output import (
+        project_verification_diagnostics,
+        verification_diagnostics_schema,
+    )
+
+    assert DIAGNOSTIC_CODES == WRAPPER_CODES == VERIFICATION_DIAGNOSTIC_CODES
+    assert MAX_DIAGNOSTICS == WRAPPER_MAX == MAX_VERIFICATION_DIAGNOSTICS
+    assert PDF_DIAGNOSTIC_TOOLS == WRAPPER_PDF_TOOLS == SDK_PDF_TOOLS
+    assert VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION == WRAPPER_SCHEMA_VERSION == SDK_SCHEMA_VERSION
+    schema = verification_diagnostics_schema()
+    assert schema["items"]["additionalProperties"] is False
+    assert schema["items"]["properties"]["code"]["enum"] == list(DIAGNOSTIC_CODES)
+    assert schema["maxItems"] == MAX_DIAGNOSTICS
+    assert schema["items"]["properties"]["tool"]["enum"] == list(PDF_DIAGNOSTIC_TOOLS)
+    for code in DIAGNOSTIC_CODES:
+        diagnostic = {"code": code, "source": "project_report", "scope": "child_tool"}
+        assert project_verification_diagnostics([diagnostic]) == [diagnostic]
+
+
+@pytest.mark.parametrize("diagnostics", [
+    None, {}, [None], [{"code": "PASS", "source": "project_report", "scope": "child_tool"}],
+    [{"code": "ENV_DEPENDENCY_MISSING", "source": "project_report", "scope": "child_tool",
+      "stderr": "synthetic-secret", "path": "/private/synthetic", "argv": ["--secret"]}],
+    [{"code": "ENV_DEPENDENCY_MISSING", "source": "process_spawn", "scope": "child_tool"}],
+    [{"code": "ENV_DEPENDENCY_MISSING", "source": [], "scope": "child_tool"}],
+])
+def test_malformed_verification_metadata_drops_only_optional_field(diagnostics: Any) -> None:
+    projected = project_tool_output("adaptorch_get_run", {
+        "run_id": "r", "status": "FAILED", "result_status": "FAILED",
+        "verification_diagnostics": diagnostics,
+        "verification_diagnostics_schema_version": "verification.diagnostics/v1",
+        "diagnostics": {"stderr": "synthetic-secret"}, "telemetry": {"private": True},
+    })
+    assert projected == {"run_id": "r", "status": "FAILED", "result_status": "FAILED"}
+
+
 def _remote_server() -> Any:
     from adaptorch_mcp.hardening import HardenedMCPServer
 

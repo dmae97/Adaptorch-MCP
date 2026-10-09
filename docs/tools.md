@@ -1,5 +1,14 @@
 # MCP Tool Surface
 
+Run output optionally includes `verification_diagnostics` paired with
+`verification_diagnostics_schema_version: "verification.diagnostics/v1"`.
+Closed objects carry `code`, `source`, `scope`, and optional `tool` restricted to
+`pdftotext`, `pdffonts`, `pdftoppm`, `pdfinfo`. `project_report` is untrusted
+project metadata; `process_spawn` is a verifier launch observation. Neither
+changes the server verdict. Malformed or unknown-version observations are omitted
+while the run remains available. stdout/stderr, paths, arguments and environment
+values remain outside this optional public schema.
+
 The package delegates tool registration to `adaptorch.mcp_server`. The default `remote` profile exposes nine hardened tools. The two rows marked `full only` are available only with `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`.
 
 | Tool | Type | Purpose |

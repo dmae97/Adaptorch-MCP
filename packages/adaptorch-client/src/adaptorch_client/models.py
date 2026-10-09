@@ -6,7 +6,7 @@ import math
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Self, TypeAlias
+from typing import Final, Self, TypeAlias
 
 from adaptorch_client.errors import AdaptOrchAPIError
 
@@ -220,6 +220,99 @@ class Principal(PayloadResult):
         )
 
 
+VERIFICATION_DIAGNOSTIC_CODES: Final = (
+    "ENV_DEPENDENCY_MISSING",
+    "ENV_DEPENDENCY_NOT_EXECUTABLE",
+    "PDF_TOOL_EXECUTION_FAILED",
+)
+MAX_VERIFICATION_DIAGNOSTICS: Final = 16
+VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION: Final = "verification.diagnostics/v1"
+PDF_DIAGNOSTIC_TOOLS: Final = ("pdftotext", "pdffonts", "pdftoppm", "pdfinfo")
+
+
+@dataclass(frozen=True, slots=True)
+class VerificationDiagnostic:
+    """A bounded observation. Project reports are claims, never verification verdicts."""
+
+    code: str
+    source: str
+    scope: str
+    tool: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.code not in VERIFICATION_DIAGNOSTIC_CODES:
+            raise contract_error("verification_diagnostics.code", "an allowed diagnostic code")
+        if (self.source, self.scope) not in {
+            ("process_spawn", "verification_command"),
+            ("project_report", "child_tool"),
+        }:
+            raise contract_error("verification_diagnostics", "allowed diagnostic provenance")
+        if self.source == "process_spawn" and self.code == "PDF_TOOL_EXECUTION_FAILED":
+            raise contract_error("verification_diagnostics", "project provenance for PDF reports")
+        if self.tool is not None and self.tool not in PDF_DIAGNOSTIC_TOOLS:
+            raise contract_error("verification_diagnostics.tool", "an allowed PDF tool")
+
+    def to_payload(self) -> JSONMapping:
+        payload: JSONMapping = {"code": self.code, "source": self.source, "scope": self.scope}
+        if self.tool is not None:
+            payload["tool"] = self.tool
+        return payload
+
+
+def verification_diagnostics_at(
+    record: JSONMapping, path: str
+) -> tuple[VerificationDiagnostic, ...] | None:
+    """Normalize optional metadata in the stored copy; never reject a valid run.
+
+Unknown versions and malformed optional reports drop only these two fields.
+This also keeps CLI serialization from re-exporting the original unsafe value.
+"""
+    version_key = "verification_diagnostics_schema_version"
+    try:
+        if record.get(version_key) != VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION:
+            raise contract_error(version_key, "the supported diagnostic schema")
+        result = _parse_verification_diagnostics_at(record, path)
+        if result is None:
+            raise contract_error("verification_diagnostics", "a diagnostic array")
+    except AdaptOrchAPIError:
+        record.pop("verification_diagnostics", None)
+        record.pop(version_key, None)
+        return None
+    record["verification_diagnostics"] = [item.to_payload() for item in result]
+    return result
+
+
+def _parse_verification_diagnostics_at(
+    record: JSONMapping, path: str
+) -> tuple[VerificationDiagnostic, ...] | None:
+    key = "verification_diagnostics"
+    if key not in record:
+        return None
+    diagnostic_path = field_path(path, key)
+    items = require_array(record[key], diagnostic_path)
+    if len(items) > MAX_VERIFICATION_DIAGNOSTICS:
+        raise contract_error(diagnostic_path, "at most 16 diagnostics")
+    result: list[VerificationDiagnostic] = []
+    for index, item in enumerate(items):
+        item_path = f"{diagnostic_path}[{index}]"
+        diagnostic = require_object(item, item_path)
+        if not {"code", "source", "scope"} <= set(diagnostic) <= {
+            "code", "source", "scope", "tool"
+        }:
+            raise contract_error(item_path, "a closed diagnostic object")
+        tool = diagnostic.get("tool")
+        if not isinstance(tool, str | None) or ("tool" in diagnostic and tool is None):
+            raise contract_error(item_path, "an allowed PDF tool")
+        parsed = VerificationDiagnostic(
+            code=string_at(diagnostic, "code", item_path),
+            source=string_at(diagnostic, "source", item_path),
+            scope=string_at(diagnostic, "scope", item_path),
+            tool=tool,
+        )
+        result.append(parsed)
+    return tuple(result)
+
+
 @dataclass(frozen=True, slots=True)
 class Run(PayloadResult):
     """Direct ``Run`` record; unknown ``status`` enum strings are preserved."""
@@ -245,6 +338,8 @@ class Run(PayloadResult):
     score_validity_status: str | None = None
     consistency: float | None = None
     duration_ms: int | None = None
+    verification_diagnostics: tuple[VerificationDiagnostic, ...] | None = None
+    verification_diagnostics_schema_version: str | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, JSONValue]) -> Self:
@@ -258,6 +353,7 @@ class Run(PayloadResult):
 
     @classmethod
     def _parse(cls, record: JSONMapping, path: str) -> Self:
+        verification_diagnostics = verification_diagnostics_at(record, path)
         return cls(
             record,
             run_id=string_at(record, "run_id", path),
@@ -278,6 +374,10 @@ class Run(PayloadResult):
             score_validity_status=optional_string_at(record, "score_validity_status", path),
             consistency=_optional_probability_at(record, "consistency", path),
             duration_ms=_optional_size_at(record, "duration_ms", path),
+            verification_diagnostics=verification_diagnostics,
+            verification_diagnostics_schema_version=optional_string_at(
+                record, "verification_diagnostics_schema_version", path
+            ),
         )
 
 

@@ -401,6 +401,13 @@ URLs and tokens only in local, uncommitted config files.
 
 ## Diagnostics
 
+Runs may include `verification_diagnostics` with version marker
+`verification_diagnostics_schema_version: "verification.diagnostics/v1"`.
+These bounded observations do not change the result. `project_report` is an
+untrusted project claim; `process_spawn` is a verifier launch observation.
+Only closed codes, scope and the four PDF tool names are exposed; logs remain private.
+Malformed optional metadata is omitted without losing the run. See [tools](docs/tools.md).
+
 Print redacted local diagnostics:
 
 ```bash
