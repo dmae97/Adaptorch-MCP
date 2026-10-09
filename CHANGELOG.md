@@ -4,15 +4,21 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
-## [Unreleased]
+## [adaptorch-client 0.1.3 / adaptorch-cli 0.1.3] — 2026-10-09 (release candidate)
 
-### Optional verification observations
-- Preserve the engine's `verification.diagnostics/v1` metadata through remote MCP,
-  typed SDK Run/EvidenceReport and CLI JSON. Only closed codes, provenance, scope
-  and four allowlisted PDF tool names survive. Malformed or unknown-version metadata
-  is removed from SDK serialization and MCP projection while run results remain.
-- CLI failed/cancelled/inconclusive exit codes remain 8/9/10. The legacy MCP wheel
-  publication gate remains unchanged; standalone MCP migration is a separate release.
+- Preserve optional `verification.diagnostics/v1` observations in typed SDK
+  Run/EvidenceReport and CLI JSON. Closed codes, provenance, scope and four PDF
+  tool names survive; malformed or unknown-version metadata is omitted without
+  discarding the run result. Project reports remain untrusted observations.
+- Existing verdicts, receipts and CLI failed/cancelled/inconclusive exit codes
+  8/9/10 are preserved. The CLI now requires `adaptorch-client>=0.1.3,<0.2`.
+- Pin workspace validation to engine `b19124b0d26be7812fc875fe21c223bb335634fa`,
+  confirmed on the hosted control plane by the 2026-10-09 post-deploy build and
+  public-contract checks. The engine package version remains 0.1.2.
+- The source MCP projection follows the same diagnostic contract. MCP stays at
+  0.5.2; its public wheel gate and separate migration/release remain unchanged.
+
+## [Unreleased]
 
 ### Changed — engine pin follows the served control plane
 
