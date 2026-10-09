@@ -12,6 +12,7 @@ from adaptorch_client.models import (
     PayloadResult,
     Principal,
     Run,
+    VerificationDiagnostic,
 )
 from adaptorch_client.polling import PollPolicy, PollStopReason, RunPollResult
 from adaptorch_client.provider import ProviderCredential
@@ -40,5 +41,6 @@ __all__ = [
     "RunPollResult",
     "Run",
     "RunListResponse",
+    "VerificationDiagnostic",
     "validate_api_url",
 ]

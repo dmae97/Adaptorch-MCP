@@ -25,7 +25,7 @@ classifiers = [
 dependencies = ["adaptorch[api]>=0.1.2,<0.2"]
 
 [project.optional-dependencies]
-dev = ["build>=1.2", "mypy>=1.10", "pytest>=8.2", "ruff>=0.6"]
+dev = ["build>=1.2", "mypy>=1.10", "pytest>=8.2", "ruff>=0.6", "fpdf2==2.8.9"]
 
 [project.urls]
 Homepage = "https://adaptorch.com"

@@ -6,6 +6,10 @@ from typing import Any, Final
 from adaptorch_mcp.first_run_receipt_output import first_run_receipt_output_schema
 from adaptorch_mcp.run_output import RUN_SCALAR_KEYS as RUN_SCALAR_KEYS
 from adaptorch_mcp.run_output import run_scalar_schema
+from adaptorch_mcp.verification_diagnostic_output import (
+    VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION,
+    verification_diagnostics_schema,
+)
 
 MAX_CONTEXT_ITEMS: Final = 16
 MAX_CONTEXT_LENGTH: Final = 256
@@ -119,6 +123,10 @@ def correctness_wall_output_schema() -> dict[str, Any]:
 def get_run_output_schema() -> dict[str, Any]:
     """Return the closed structured-output schema for remote get-run results."""
     properties: dict[str, Any] = run_scalar_schema()
+    properties["verification_diagnostics"] = verification_diagnostics_schema()
+    properties["verification_diagnostics_schema_version"] = {
+        "type": "string", "const": VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION,
+    }
     properties["artifact_urls"] = {
         "type": "object",
         "additionalProperties": {"type": "string"},

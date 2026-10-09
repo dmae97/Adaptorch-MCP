@@ -1,5 +1,13 @@
 # adaptorch-client
 
+`Run` and `EvidenceReport` offer optional typed `verification_diagnostics` and
+`verification_diagnostics_schema_version` (`verification.diagnostics/v1`).
+`VerificationDiagnostic` carries a closed code, source, scope and optional tool
+from `pdftotext`, `pdffonts`, `pdftoppm`, `pdfinfo`. Project reports are untrusted
+observations and never override a result. Missing fields support old servers;
+malformed or unknown-version optional metadata is removed from both the typed
+view and `to_payload()`, preserving every existing run/evidence result field.
+
 Typed, standard-library Python client for the AdaptOrch User API.
 
 ## Install

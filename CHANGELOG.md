@@ -6,6 +6,14 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### Optional verification observations
+- Preserve the engine's `verification.diagnostics/v1` metadata through remote MCP,
+  typed SDK Run/EvidenceReport and CLI JSON. Only closed codes, provenance, scope
+  and four allowlisted PDF tool names survive. Malformed or unknown-version metadata
+  is removed from SDK serialization and MCP projection while run results remain.
+- CLI failed/cancelled/inconclusive exit codes remain 8/9/10. The legacy MCP wheel
+  publication gate remains unchanged; standalone MCP migration is a separate release.
+
 ### Changed — engine pin follows the served control plane
 
 - The CI engine pin moves from `5b22381` to `7bd2aa7`, the revision the hosted
