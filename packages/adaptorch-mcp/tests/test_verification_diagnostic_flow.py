@@ -63,7 +63,9 @@ def test_actual_verifier_flows_through_every_public_surface_without_changing_fai
         command = "node --version"
     verifier = CommandVerifier(
         [command], environment={"PATH": str(tmp_path)},
-        sandbox_limits=SandboxLimits(max_memory_bytes=512 * 1024**3),
+        # RLIMIT_NPROC includes other hosted-runner threads under the same UID.
+        # Let this synthetic Node fixture reach the child-tool check.
+        sandbox_limits=SandboxLimits(max_memory_bytes=512 * 1024**3, max_processes=None),
     )
     outcome = verifier.verify_candidate(candidate="synthetic", candidate_index=0, candidates=["x"])
     passed = scenario == "pdf_ok"
