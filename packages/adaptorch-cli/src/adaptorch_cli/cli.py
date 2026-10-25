@@ -69,6 +69,24 @@ def _read_submit_bytes(file_name: str, parser: argparse.ArgumentParser) -> bytes
         parser.error("submit input must be a readable JSON object")
 
 
+def _read_json_value(file_name: str, parser: argparse.ArgumentParser, label: str) -> JSONValue:
+    raw = _read_submit_bytes(file_name, parser)
+    if len(raw) > _MAX_SUBMIT_BYTES:
+        parser.error(f"{label} input exceeds the 8 MiB limit")
+    try:
+        value: JSONValue = json.loads(
+            raw.decode("utf-8"),
+            parse_constant=_reject_json_constant,
+            parse_float=_finite_float,
+        )
+    # pi-lens-ignore: unreachable-except
+    except RecursionError:
+        parser.error(f"{label} JSON is too deeply nested")
+    except ValueError:
+        parser.error(f"{label} must be readable JSON")
+    return value
+
+
 def _read_submit_payload(file_name: str, parser: argparse.ArgumentParser) -> JSONMapping:
     raw = _read_submit_bytes(file_name, parser)
     if len(raw) > _MAX_SUBMIT_BYTES:
@@ -302,6 +320,20 @@ def _execute(
         case "evidence":
             evidence_run_id: str = args.run_id
             return _result_payload(_require_client(api_url).get_evidence(evidence_run_id)), False
+        case "navigate":
+            document = _read_json_value(args.evidence_pack, parser, "--evidence-pack")
+            pack = document.get("evidence_pack") if isinstance(document, dict) else document
+            if not isinstance(pack, list):
+                parser.error("--evidence-pack must hold a JSON array of evidence objects")
+            items = [item for item in pack if isinstance(item, dict)]
+            if len(items) != len(pack):
+                parser.error("--evidence-pack must hold a JSON array of evidence objects")
+            question: str = args.question
+            algorithm: str = args.algorithm
+            navigation = _require_client(api_url).navigate_evidence(
+                question, items, algorithm_version=algorithm
+            )
+            return _result_payload(navigation), False
         case "artifact":
             artifact_run_id: str = args.run_id
             return _result_payload(_require_client(api_url).list_artifacts(artifact_run_id)), False

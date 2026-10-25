@@ -113,3 +113,38 @@ class ArtifactListResponse(PayloadResult):
                 Artifact.parse_at(item, f"items[{index}]") for index, item in enumerate(items)
             ),
         )
+
+
+#: Navigation algorithms the hosted ``POST /v1/navigation/evidence`` accepts. The
+#: engine owns the vocabulary; the wrapper parity tests pin this tuple to it.
+NAVIGATION_ALGORITHMS: tuple[str, ...] = ("graph_v4", "graph_v5")
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceNavigation(PayloadResult):
+    """Read-only navigation of a fixed evidence pack.
+
+    Candidates are lexical and graph rankings, never a support judgment: a payload
+    claiming any ``semantic_support`` other than ``NOT_EVALUATED`` is a contract break.
+    """
+
+    schema: str
+    navigation_version: str
+    semantic_support: str
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, JSONValue]) -> Self:
+        """Validate one navigation payload against the v1 contract."""
+        record = stored_copy(payload)
+        evaluation = require_object(record.get("evaluation"), "evaluation")
+        require_array(evaluation.get("candidates"), "evaluation.candidates")
+        support = string_at(evaluation, "semantic_support", "evaluation")
+        if support != "NOT_EVALUATED":
+            raise contract_error("evaluation.semantic_support", "'NOT_EVALUATED'")
+        version = string_at(record, "navigation_version", "")
+        return cls(
+            record,
+            schema=string_at(record, "schema", ""),
+            navigation_version=version,
+            semantic_support=support,
+        )

@@ -931,3 +931,12 @@ def test_full_profile_navigation_algorithms_match_engine() -> None:
         )
     assert _decoded_tool_text(_navigate(server))["navigation_version"] == ENGINE_NAVIGATION_DEFAULT
     assert _navigate(server, algorithm_version="graph_v0")["error"]["code"] == -32602
+
+
+@pytest.mark.skipif(
+    not ENGINE_NAVIGATION_ALGORITHMS, reason="engine predates selectable navigation algorithms"
+)
+def test_client_navigation_algorithms_match_engine() -> None:
+    from adaptorch_client import NAVIGATION_ALGORITHMS
+
+    assert NAVIGATION_ALGORITHMS == ENGINE_NAVIGATION_ALGORITHMS

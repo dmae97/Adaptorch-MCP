@@ -31,6 +31,17 @@ A git push does not replace a previously published PyPI version.
 
 See [`../../docs/adaptorchctl-usage.ko.md`](../../docs/adaptorchctl-usage.ko.md) for usage.
 
+## Evidence navigation
+
+```bash
+adaptorchctl navigate --question "How is public news reflected in prices?" \
+  --evidence-pack pack.json [--algorithm graph_v5|graph_v4]
+```
+
+`pack.json` is a JSON array of `{source_id, page, chunk, evidence_text}` objects, or
+an object with an `evidence_pack` field (`-` reads stdin). The command is read-only:
+no model call, no quota, nothing stored.
+
 ## Bounded wait exit codes
 
 `adaptorchctl run wait RUN_ID` emits the last observation as JSON. A terminal

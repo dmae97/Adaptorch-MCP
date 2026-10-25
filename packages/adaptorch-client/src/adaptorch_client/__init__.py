@@ -17,12 +17,15 @@ from adaptorch_client.models import (
 from adaptorch_client.polling import PollPolicy, PollStopReason, RunPollResult
 from adaptorch_client.provider import ProviderCredential
 from adaptorch_client.responses import (
+    NAVIGATION_ALGORITHMS,
     ArtifactListResponse,
+    EvidenceNavigation,
     EvidenceReport,
     RunListResponse,
 )
 
 __all__ = [
+    "NAVIGATION_ALGORITHMS",
     "AdaptOrchAPIError",
     "AdaptOrchClient",
     "Artifact",
@@ -30,6 +33,7 @@ __all__ = [
     "CapabilitySet",
     "ClientConfig",
     "EvidenceCheck",
+    "EvidenceNavigation",
     "EvidenceReport",
     "JSONMapping",
     "JSONValue",

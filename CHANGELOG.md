@@ -4,6 +4,18 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [adaptorch-client 0.1.4 / adaptorch-cli 0.1.4] — 2026-10-25
+
+- `AdaptOrchClient.navigate_evidence(question, evidence_pack, *, algorithm_version=
+  "graph_v5")` calls the hosted `POST /v1/navigation/evidence` (engine `ba3b7d840`)
+  and returns a typed `EvidenceNavigation`. `NAVIGATION_ALGORITHMS` lists the accepted
+  versions; unknown values fail before any request. The result fails closed unless
+  `evaluation.semantic_support` is `NOT_EVALUATED`.
+- `adaptorchctl navigate --question ... --evidence-pack FILE [--algorithm ...]` wraps
+  it. The CLI now requires `adaptorch-client>=0.1.4,<0.2`.
+- A wrapper parity test pins `NAVIGATION_ALGORITHMS` to the engine's
+  `NavigationAlgorithm`.
+
 ## [adaptorch-client 0.1.3 / adaptorch-cli 0.1.3] — 2026-10-09 (release candidate)
 
 - Preserve optional `verification.diagnostics/v1` observations in typed SDK

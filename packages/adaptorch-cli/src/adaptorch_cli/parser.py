@@ -121,6 +121,17 @@ def build_parser() -> argparse.ArgumentParser:
     show = evidence.add_subparsers(dest="evidence_command", required=True).add_parser("show")
     show.add_argument("run_id")
 
+    navigate = commands.add_parser(
+        "navigate", help="Navigate a fixed evidence pack (read-only, no model call)"
+    )
+    navigate.add_argument("--question", required=True)
+    navigate.add_argument(
+        "--evidence-pack",
+        required=True,
+        help="JSON array of evidence objects, or an object with evidence_pack; - for stdin",
+    )
+    navigate.add_argument("--algorithm", choices=("graph_v4", "graph_v5"), default="graph_v5")
+
     artifact = commands.add_parser("artifact", help="Inspect run artifacts")
     list_artifacts = artifact.add_subparsers(dest="artifact_command", required=True).add_parser(
         "list"
