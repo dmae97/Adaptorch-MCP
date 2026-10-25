@@ -163,6 +163,25 @@ model from this tenant's provider default or confirmed history and returns
 configure a tenant default or name a model once; the server does not invent an ID.
 This does not automatically submit tasks, discover keys, or guarantee provider access.
 
+## Evidence navigation
+
+`navigate_evidence(question, evidence_pack, algorithm_version="graph_v5")` calls
+`POST /v1/navigation/evidence` and returns an `EvidenceNavigation`. The server ranks
+the passages of a fixed pack; it makes no model call, debits no quota and stores
+nothing. `algorithm_version` is one of `NAVIGATION_ALGORITHMS` (`graph_v4`,
+`graph_v5`); other values are refused before any request. The result keeps the raw
+payload (`to_payload()`) and fails closed unless `evaluation.semantic_support` is
+`NOT_EVALUATED`: rankings are not support judgments.
+
+```python
+nav = client.navigate_evidence(
+    "How is public news reflected in prices?",
+    [{"source_id": "market.pdf", "page": 1, "chunk": "a",
+      "evidence_text": "Public news is reflected in market prices quickly."}],
+)
+nav.navigation_version  # "graph_v5"
+```
+
 ## License
 
 Proprietary — Copyright ClassicMate. All rights reserved. See [LICENSE](https://github.com/dmae97/Adaptorch-MCP/blob/main/LICENSE).

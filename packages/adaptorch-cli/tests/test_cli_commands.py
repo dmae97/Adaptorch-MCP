@@ -176,3 +176,56 @@ def test_artifact_list_prints_client_json(run_cli: CliRunner) -> None:
     assert _json_stdout(result.stdout) == {
         "artifacts": [{"name": "result.json", "run_id": "run-1"}]
     }
+
+
+def test_navigate_reads_the_pack_and_forwards_the_algorithm(
+    run_cli: CliRunner, tmp_path: Path
+) -> None:
+    pack = [{"source_id": "s", "page": 1, "chunk": "a", "evidence_text": "Prices move."}]
+    pack_path = tmp_path / "pack.json"
+    pack_path.write_text(json.dumps({"evidence_pack": pack}), encoding="utf-8")
+
+    result = run_cli(
+        [
+            "--output",
+            "json",
+            "navigate",
+            "--question",
+            "How do prices move?",
+            "--evidence-pack",
+            str(pack_path),
+            "--algorithm",
+            "graph_v4",
+        ]
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert _json_stdout(result.stdout) == {"navigation_version": "graph_v4", "evaluation": {}}
+    calls = [json.loads(line) for line in result.client_log.splitlines()]
+    assert calls[-1] == {
+        "args": ["How do prices move?", pack],
+        "kwargs": {"algorithm_version": "graph_v4"},
+        "method": "navigate_evidence",
+    }
+
+
+def test_navigate_defaults_to_graph_v5_and_accepts_a_bare_array(
+    run_cli: CliRunner, tmp_path: Path
+) -> None:
+    pack_path = tmp_path / "pack.json"
+    pack_path.write_text(
+        json.dumps([{"source_id": "s", "page": 1, "chunk": "a", "evidence_text": "x"}]),
+        encoding="utf-8",
+    )
+    result = run_cli(["navigate", "--question", "q", "--evidence-pack", str(pack_path)])
+    assert result.returncode == 0, result.stderr
+    calls = [json.loads(line) for line in result.client_log.splitlines()]
+    assert calls[-1]["kwargs"] == {"algorithm_version": "graph_v5"}
+
+
+def test_navigate_rejects_a_pack_that_is_not_a_list(run_cli: CliRunner, tmp_path: Path) -> None:
+    pack_path = tmp_path / "pack.json"
+    pack_path.write_text(json.dumps({"evidence": []}), encoding="utf-8")
+    result = run_cli(["navigate", "--question", "q", "--evidence-pack", str(pack_path)])
+    assert result.returncode == 2
+    assert "navigate_evidence" not in result.client_log

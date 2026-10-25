@@ -201,6 +201,15 @@ class AdaptOrchClient:
         _fail_if_requested()
         _record("list_artifacts", [run_id])
         return ApiResult({"artifacts": [{"name": "result.json", "run_id": run_id}]})
+
+    def navigate_evidence(self, question, evidence_pack, *, algorithm_version="graph_v5"):
+        _fail_if_requested()
+        _record(
+            "navigate_evidence",
+            [question, evidence_pack],
+            {"algorithm_version": algorithm_version},
+        )
+        return ApiResult({"navigation_version": algorithm_version, "evaluation": {}})
 """
 
 

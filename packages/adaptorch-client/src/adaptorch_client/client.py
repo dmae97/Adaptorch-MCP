@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from urllib.parse import quote, urlencode
 
 from adaptorch_client.config import ClientConfig
@@ -13,7 +13,9 @@ from adaptorch_client.polling import PollPolicy, RunPollResult
 from adaptorch_client.polling import wait_for_run as poll_run
 from adaptorch_client.provider import ProviderCredential
 from adaptorch_client.responses import (
+    NAVIGATION_ALGORITHMS,
     ArtifactListResponse,
+    EvidenceNavigation,
     EvidenceReport,
     RunListResponse,
 )
@@ -127,6 +129,25 @@ class AdaptOrchClient:
             self._resource(
                 RequestSpec("GET", f"/v1/runs/{self._segment(run_id)}/artifacts"), run_id
             )
+        )
+
+    def navigate_evidence(
+        self,
+        question: str,
+        evidence_pack: Sequence[Mapping[str, JSONValue]],
+        *,
+        algorithm_version: str = "graph_v5",
+    ) -> EvidenceNavigation:
+        """Navigate a fixed evidence pack. No model call, no quota, nothing stored."""
+        if algorithm_version not in NAVIGATION_ALGORITHMS:
+            raise ValueError(f"algorithm_version must be one of {list(NAVIGATION_ALGORITHMS)}")
+        payload: dict[str, JSONValue] = {
+            "question": question,
+            "evidence_pack": [dict(item) for item in evidence_pack],
+            "algorithm_version": algorithm_version,
+        }
+        return EvidenceNavigation.from_payload(
+            self._transport.request(RequestSpec("POST", "/v1/navigation/evidence", payload=payload))
         )
 
     def _resource(self, request: RequestSpec, run_id: str) -> JSONMapping:
