@@ -13,7 +13,7 @@ members = [
 [[package]]
 name = "adaptorch"
 version = "0.1.2"
-source = { git = "https://github.com/dmae97/adaptorch.git?rev=b19124b0d26be7812fc875fe21c223bb335634fa#b19124b0d26be7812fc875fe21c223bb335634fa" }
+source = { git = "https://github.com/dmae97/adaptorch.git?rev=0e265003fa707f246142cb3eeedf91cd15156c8e#0e265003fa707f246142cb3eeedf91cd15156c8e" }
 dependencies = [
     { name = "httpx" },
     { name = "pillow" },
@@ -80,7 +80,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=b19124b0d26be7812fc875fe21c223bb335634fa" },
+    { name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=0e265003fa707f246142cb3eeedf91cd15156c8e" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
     { name = "fpdf2", marker = "extra == 'dev'", specifier = "==2.8.9" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },

@@ -852,3 +852,82 @@ def test_remote_profile_still_withholds_the_local_router() -> None:
 
     assert response is not None
     assert response["error"]["code"] == -32601
+
+
+try:
+    from adaptorch.graphrag_navigation import (
+        QUERY_LANE_NAVIGATION_VERSION,
+        NavigationAlgorithm,
+    )
+except ImportError:  # pragma: no cover - depends on the installed engine revision
+    ENGINE_NAVIGATION_ALGORITHMS: tuple[str, ...] = ()
+    ENGINE_NAVIGATION_DEFAULT = ""
+else:
+    ENGINE_NAVIGATION_ALGORITHMS = get_args(NavigationAlgorithm)
+    ENGINE_NAVIGATION_DEFAULT = QUERY_LANE_NAVIGATION_VERSION
+
+_NAVIGATION_ARGS = {
+    "question": "How is public news reflected in prices?",
+    "evidence_pack": [
+        {
+            "source_id": "market.pdf",
+            "page": 1,
+            "chunk": "a",
+            "evidence_text": "Public news is reflected in market prices quickly.",
+        }
+    ],
+}
+
+
+def _navigation_tool(server: Any) -> dict[str, Any] | None:
+    response = server.handle_message(
+        {"jsonrpc": "2.0", "id": 8, "method": "tools/list", "params": {}}
+    )
+    assert response is not None
+    return next(
+        (t for t in response["result"]["tools"] if t["name"] == "adaptorch_navigate_evidence"),
+        None,
+    )
+
+
+def _navigate(server: Any, **extra: Any) -> dict[str, Any]:
+    response = server.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "tools/call",
+            "params": {
+                "name": "adaptorch_navigate_evidence",
+                "arguments": {**_NAVIGATION_ARGS, **extra},
+            },
+        }
+    )
+    assert response is not None
+    return response
+
+
+def test_remote_profile_withholds_evidence_navigation() -> None:
+    """A new read-only engine tool must not widen the remote exposure surface."""
+    server = _remote_server()
+    assert _navigation_tool(server) is None
+    assert _navigate(server)["error"]["code"] == -32601
+
+
+@pytest.mark.skipif(
+    not ENGINE_NAVIGATION_ALGORITHMS, reason="engine predates selectable navigation algorithms"
+)
+def test_full_profile_navigation_algorithms_match_engine() -> None:
+    server = AdaptOrchMCPServer(backend=FakeBackend())
+    tool = _navigation_tool(server)
+    assert tool is not None
+    prop = tool["inputSchema"]["properties"]["algorithm_version"]
+    assert tuple(prop["enum"]) == ENGINE_NAVIGATION_ALGORITHMS
+    assert prop["default"] == ENGINE_NAVIGATION_DEFAULT
+    assert tool["annotations"]["readOnlyHint"] is True
+    for version in ENGINE_NAVIGATION_ALGORITHMS:
+        assert (
+            _decoded_tool_text(_navigate(server, algorithm_version=version))["navigation_version"]
+            == version
+        )
+    assert _decoded_tool_text(_navigate(server))["navigation_version"] == ENGINE_NAVIGATION_DEFAULT
+    assert _navigate(server, algorithm_version="graph_v0")["error"]["code"] == -32602
