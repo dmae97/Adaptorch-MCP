@@ -444,7 +444,7 @@ validating a specific hosted/core release.
 | `adaptorch_usage` | Read the calling tenant's usage window (plan level, period, used, limit, remaining, percentage). |
 | `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
 
-The default `remote` profile exposes the nine tools other than `adaptorch_get_traces` and `adaptorch_route_topology`. `adaptorch_get_run` publishes a closed `outputSchema` and safe `structuredContent`; its optional `correctness_wall` is advisory observability, not a correctness proof, selector decision, or apply authorization.
+The default `remote` profile exposes the nine tools other than `adaptorch_get_traces` and `adaptorch_route_topology`. The engine's read-only `adaptorch_navigate_evidence` (fixed evidence-pack navigation, `algorithm_version` defaulting to `graph_v5`) is likewise `full`-profile only. `adaptorch_get_run` publishes a closed `outputSchema` and safe `structuredContent`; its optional `correctness_wall` is advisory observability, not a correctness proof, selector decision, or apply authorization.
 
 For trusted local clients, auto-approve only tools whose outputs are safe for
 that client. Keep `adaptorch_run` and `adaptorch_cancel_run` manually approved.

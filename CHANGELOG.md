@@ -20,6 +20,20 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 ## [Unreleased]
 
+### Changed — engine pin follows graph_v5 navigation (2026-10-25)
+
+- The workspace engine pin moves from `b19124b0d` to `0e265003f`, the revision the
+  hosted control plane serves (`/.well-known/adaptorch-build.json`, post-deploy verify
+  green). That engine makes `graph_v5` the default for its read-only navigation
+  surfaces and adds `algorithm_version` to `adaptorch_navigate_evidence`.
+- The remote profile still exposes nine tools: `adaptorch_navigate_evidence` stays
+  `full`-profile only, like the local router. New parity tests assert both that the
+  remote profile withholds it and that its `algorithm_version` enum and default derive
+  from the engine's `NavigationAlgorithm`.
+- No package version changes. The public `adaptorch`, `adaptorch-client` and
+  `adaptorch-cli` wheels carry no navigation code, and `adaptorch-mcp` stays
+  unpublishable while it depends on the private engine.
+
 ### Changed — engine pin follows the served control plane
 
 - The CI engine pin moves from `5b22381` to `7bd2aa7`, the revision the hosted
