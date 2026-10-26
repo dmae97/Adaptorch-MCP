@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import runpy
 import sys
+import time
 import tomllib
 from collections.abc import Sequence
 from pathlib import Path
@@ -362,3 +363,52 @@ def test_doctor_pointer_stays_out_of_json_and_configured_or_opted_out_runs(
     out = capsys.readouterr().out
     json.loads(out)
     assert "adaptorch.com" not in out
+
+
+def test_stdio_smoke_reads_both_responses_from_a_server_that_keeps_stdout_open(
+    tmp_path: Path,
+) -> None:
+    from adaptorch_mcp.stdio_smoke import run_stdio_smoke
+
+    # Both answers land in one pipe read and the process lingers, as an SSH session
+    # in front of the server can. A buffered reader used to hide the second line.
+    fake_server = tmp_path / "lingering_server.py"
+    fake_server.write_text(
+        "import json, sys, time\n"
+        "first, second = json.loads(sys.stdin.readline()), json.loads(sys.stdin.readline())\n"
+        "answers = [\n"
+        "    {'jsonrpc': '2.0', 'id': first['id'], 'result': {'protocolVersion': '2024-11-05'}},\n"
+        "    {'jsonrpc': '2.0', 'id': second['id'], 'result': {'tools': [{'name': 'tool'}]}},\n"
+        "]\n"
+        "sys.stdout.write('\\n'.join(json.dumps(a) for a in answers) + '\\n')\n"
+        "sys.stdout.flush()\n"
+        "time.sleep(30)\n",
+        encoding="utf-8",
+    )
+
+    started = time.monotonic()
+    payload = run_stdio_smoke(
+        [sys.executable, str(fake_server)], expected_tools=("tool",), timeout_seconds=5
+    )
+
+    assert payload["ok"] is True
+    assert time.monotonic() - started < 4
+
+
+def test_stdio_smoke_names_the_ssh_fix_for_a_noisy_login_banner(tmp_path: Path) -> None:
+    from adaptorch_mcp.stdio_smoke import MCPStdioSmokeError, run_stdio_smoke
+
+    fake_server = tmp_path / "banner_server.py"
+    fake_server.write_text(
+        "import sys\n"
+        "print('Welcome to build-host-banner-text', flush=True)\n"
+        "sys.stdin.read()\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(MCPStdioSmokeError) as excinfo:
+        run_stdio_smoke([sys.executable, str(fake_server)], timeout_seconds=5)
+
+    message = str(excinfo.value)
+    assert "ssh -T" in message
+    assert "build-host-banner-text" not in message

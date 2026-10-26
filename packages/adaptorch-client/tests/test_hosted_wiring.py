@@ -172,3 +172,51 @@ def test_sdk_byok_submit_retry_read_evidence_and_cancel_are_wired(hosted: Hosted
         for request in hosted.wire.requests
         if request.method != "POST"
     )
+
+
+def test_sdk_evidence_from_the_pinned_engine_separates_execution_and_verification(
+    hosted: HostedFixture,
+) -> None:
+    record, _ = hosted.service.create_or_get_run(
+        payload=RUN_SPEC["payload"], tenant_id="sdk-fixture"
+    )
+    report = hosted.client.get_evidence(record.run_id)
+
+    assert report.run_id == record.run_id
+    assert report.execution_status == "QUEUED"
+    # No verifier has reported, so no verdict exists however the run check reads.
+    assert report.verification_status == "NOT_RUN"
+    assert report.verification_source == "none"
+
+
+def test_sdk_navigation_reaches_the_pinned_engine_route(hosted: HostedFixture) -> None:
+    pack = [
+        {
+            "source_id": "market.pdf",
+            "page": 1,
+            "chunk": "a",
+            "evidence_text": "Public news is reflected in market prices quickly.",
+        }
+    ]
+    navigation = hosted.client.navigate_evidence("How is news reflected in prices?", pack)
+
+    assert navigation.navigation_version == "graph_v5"
+    assert navigation.semantic_support == "NOT_EVALUATED"
+
+
+def test_sdk_polling_only_reads_the_engine_run(hosted: HostedFixture) -> None:
+    from adaptorch_client import PollPolicy
+
+    record, _ = hosted.service.create_or_get_run(
+        payload=RUN_SPEC["payload"], tenant_id="sdk-fixture"
+    )
+    observed = hosted.client.wait_for_run(
+        record.run_id, policy=PollPolicy(timeout_seconds=5, interval_seconds=0.01, max_polls=3)
+    )
+
+    assert observed.polls == 3
+    assert observed.reason.value == "poll_limit"
+    assert observed.run is not None and observed.run.status == "QUEUED"
+    assert [(request.method, request.path) for request in hosted.wire.requests] == [
+        ("GET", f"/v1/runs/{record.run_id}")
+    ] * 3

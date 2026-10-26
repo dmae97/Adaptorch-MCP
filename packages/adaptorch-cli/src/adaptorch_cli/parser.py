@@ -18,6 +18,16 @@ def _idempotency_key(value: str) -> str:
     return value
 
 
+def _positive_int(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be a positive integer") from None
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return number
+
+
 def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     run = parent.add_parser("run", help="Manage runs")
     commands = run.add_subparsers(dest="run_command", required=True)
@@ -53,6 +63,15 @@ def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser
         type=float,
         default=1.0,
         help="Seconds between status reads (default: 1)",
+    )
+    wait.add_argument(
+        "--max-polls",
+        type=_positive_int,
+        default=None,
+        help=(
+            "Stop after this many status reads (default: enough reads for --timeout "
+            "at --interval, so the deadline is what ends the wait)"
+        ),
     )
 
     cancel = commands.add_parser("cancel", help="Cancel a run")

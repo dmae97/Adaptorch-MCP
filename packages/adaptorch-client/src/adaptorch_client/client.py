@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
+from typing import Self
 from urllib.parse import quote, urlencode
 
 from adaptorch_client.config import ClientConfig
@@ -33,6 +34,19 @@ class AdaptOrchClient:
 
     def __init__(self, config: ClientConfig) -> None:
         self._transport = HTTPTransport(config)
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_exc_info: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        """Close pooled keep-alive connections.
+
+        Later calls still work, each on a new connection that is closed afterwards.
+        """
+        self._transport.close()
 
     def capabilities(self) -> CapabilitySet:
         """Return API capabilities."""

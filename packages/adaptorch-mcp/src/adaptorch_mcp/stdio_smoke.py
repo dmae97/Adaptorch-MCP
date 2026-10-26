@@ -13,6 +13,8 @@ from typing import IO, Any, cast
 from adaptorch_mcp.diagnostics import EXPECTED_CORE_TOOLS
 
 _SMOKE_DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+_MAX_LINE_BYTES = 8 * 1024 * 1024
+_READ_CHUNK_BYTES = 65_536
 _SENSITIVE_ENV_MARKERS = ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "AUTH")
 _REDACTION_LABEL = "[redacted]"
 
@@ -30,22 +32,65 @@ def _jsonrpc_message(message_id: int, method: str, params: Mapping[str, Any]) ->
     )
 
 
-def _read_json_line(stdout: IO[str], *, timeout_seconds: float) -> JsonObject:
-    selector = selectors.DefaultSelector()
-    selector.register(stdout, selectors.EVENT_READ)
-    try:
-        if not selector.select(timeout_seconds):
-            raise MCPStdioSmokeError(f"timed out waiting for MCP response after {timeout_seconds}s")
-        line = stdout.readline()
-    finally:
-        selector.close()
+class _LineReader:
+    """Newline-framed reads straight from the pipe descriptor.
 
-    if not line:
-        raise MCPStdioSmokeError("MCP server stdout closed before a response was read")
+    A buffered text reader can hold the second response in its own buffer while
+    ``select`` waits on an empty pipe. That stalls whenever the server (or an SSH
+    session in front of it) keeps stdout open after answering, so lines are split
+    here and the pipe is only polled when no complete line is buffered.
+    """
+
+    def __init__(self, stream: IO[bytes]) -> None:
+        self._fd = stream.fileno()
+        self._buffer = bytearray()
+        self._eof = False
+
+    def read_object(self, *, timeout_seconds: float) -> JsonObject:
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            newline = self._buffer.find(b"\n")
+            if newline < 0 and self._eof and self._buffer:
+                newline = len(self._buffer)
+            if newline >= 0:
+                line = bytes(self._buffer[:newline])
+                del self._buffer[: newline + 1]
+                if line.strip():
+                    return _decode_json_line(line)
+                continue
+            if self._eof:
+                raise MCPStdioSmokeError("MCP server stdout closed before a response was read")
+            if len(self._buffer) > _MAX_LINE_BYTES:
+                raise MCPStdioSmokeError("MCP server response line exceeds 8 MiB")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not self._wait_readable(remaining):
+                raise MCPStdioSmokeError(
+                    f"timed out waiting for MCP response after {timeout_seconds}s"
+                )
+            chunk = os.read(self._fd, _READ_CHUNK_BYTES)
+            if chunk:
+                self._buffer += chunk
+            else:
+                self._eof = True
+
+    def _wait_readable(self, timeout_seconds: float) -> bool:
+        selector = selectors.DefaultSelector()
+        selector.register(self._fd, selectors.EVENT_READ)
+        try:
+            return bool(selector.select(timeout_seconds))
+        finally:
+            selector.close()
+
+
+def _decode_json_line(line: bytes) -> JsonObject:
     try:
-        payload = json.loads(line)
-    except json.JSONDecodeError as exc:
-        raise MCPStdioSmokeError("MCP server returned non-JSON stdout") from exc
+        payload = json.loads(line.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        # The line itself is not echoed: a login script may print anything.
+        raise MCPStdioSmokeError(
+            "MCP server returned non-JSON stdout; stdout must carry only JSON-RPC "
+            "(over SSH use `ssh -T` and keep remote login scripts silent)"
+        ) from exc
     if not isinstance(payload, dict):
         raise MCPStdioSmokeError("MCP server response must be a JSON object")
     return cast(JsonObject, payload)
@@ -77,7 +122,7 @@ def _format_jsonrpc_error(error: Any, sensitive_values: Collection[str]) -> str:
     return _redact_sensitive_text(rendered, sensitive_values)
 
 
-def _shutdown_process(process: subprocess.Popen[str]) -> None:
+def _shutdown_process(process: subprocess.Popen[bytes]) -> None:
     if process.poll() is not None:
         return
     process.terminate()
@@ -89,16 +134,17 @@ def _shutdown_process(process: subprocess.Popen[str]) -> None:
 
 
 def _collect_stderr(
-    process: subprocess.Popen[str],
+    process: subprocess.Popen[bytes],
     sensitive_values: Collection[str],
 ) -> str:
     stderr = process.stderr
     if stderr is None:
         return ""
     try:
-        return _redact_sensitive_text(stderr.read()[-4000:], sensitive_values)
+        text = stderr.read().decode("utf-8", errors="replace")
     except OSError:
         return ""
+    return _redact_sensitive_text(text[-4000:], sensitive_values)
 
 
 def run_stdio_smoke(
@@ -122,14 +168,14 @@ def run_stdio_smoke(
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
         env=process_env,
     )
     assert process.stdin is not None
     assert process.stdout is not None
+    reader = _LineReader(process.stdout)
 
     try:
-        process.stdin.write(
+        requests = (
             _jsonrpc_message(
                 1,
                 "initialize",
@@ -140,10 +186,15 @@ def run_stdio_smoke(
                 },
             )
             + "\n"
+            + _jsonrpc_message(2, "tools/list", {})
+            + "\n"
         )
-        process.stdin.write(_jsonrpc_message(2, "tools/list", {}) + "\n")
-        process.stdin.flush()
-        process.stdin.close()
+        try:
+            process.stdin.write(requests.encode("utf-8"))
+            process.stdin.flush()
+            process.stdin.close()
+        except BrokenPipeError as exc:
+            raise MCPStdioSmokeError("MCP server closed stdin before reading requests") from exc
 
         responses: dict[int, JsonObject] = {}
         deadline = started_at + timeout_seconds
@@ -153,7 +204,7 @@ def run_stdio_smoke(
                 raise MCPStdioSmokeError(
                     f"timed out waiting for MCP responses after {timeout_seconds}s"
                 )
-            response = _read_json_line(process.stdout, timeout_seconds=remaining)
+            response = reader.read_object(timeout_seconds=remaining)
             response_id = response.get("id")
             if isinstance(response_id, int):
                 responses[response_id] = response

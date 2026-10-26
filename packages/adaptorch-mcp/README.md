@@ -99,6 +99,23 @@ PY
 
 The built-in HTTP listener is loopback-only. Put an authenticated TLS reverse proxy in front of it for remote clients.
 
+The listener caps concurrent connections at `ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS` (engine default 64) plus 64, answering 503 beyond that, waits at most 10 seconds for open streams on shutdown, and sends no `server` header.
+
+## Connections to the control plane
+
+The connector keeps HTTP/1.1 connections alive through `adaptorch_client.keepalive`, now a declared dependency (`adaptorch-client>=0.1.5,<0.2`). Status, artifact and usage reads reuse one idle connection for up to 4 seconds, so `adaptorch_run` polling no longer repeats the TCP and TLS handshake on every read. Run submission and cancellation always open a fresh connection and are sent once. A read whose idle connection the server had already closed is written once more on a new connection; timeouts are never re-sent. Redirects and ambient proxies remain disabled, and TLS requires certificate verification and TLS 1.2 or newer.
+
+## stdio over SSH
+
+Run the wrapper on another host by letting SSH carry stdio. Keep `ADAPTORCH_CONTROL_PLANE_TOKEN` in that host's environment (SSH does not forward it unless `SendEnv`/`AcceptEnv` allow it), use `ssh -T`, and keep remote login scripts silent: any banner on stdout breaks JSON-RPC framing.
+
+```bash
+adaptorch-mcp-smoke --command "ssh -T build-host /opt/adaptorch/bin/adaptorch-mcp" \
+  --base-url https://adaptorch.com
+```
+
+The smoke reports non-JSON stdout with that hint, without echoing the line, and reads each response straight from the pipe, so an SSH session that keeps stdout open after answering no longer causes a false timeout. The appended `--transport stdio --base-url ... --stdio-framing newline` arguments travel through SSH to the remote command.
+
 ## CLI reference
 
 | Command | Purpose | Important options |

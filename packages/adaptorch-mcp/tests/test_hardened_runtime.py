@@ -212,3 +212,47 @@ def test_status_endpoints_require_the_client_bearer_token() -> None:
         assert valid.status_code == 200
 
     anyio.run(exercise)
+
+
+@pytest.mark.parametrize(
+    ("env", "limit"),
+    [
+        ({}, 128),
+        ({"ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS": "10"}, 74),
+        ({"ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS": "0"}, 128),
+        ({"ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS": "many"}, 128),
+    ],
+)
+def test_http_listener_limits_leave_room_for_sse_subscribers(
+    env: dict[str, str], limit: int
+) -> None:
+    assert runtime.http_listener_limits(env) == {
+        "limit_concurrency": limit,
+        "timeout_graceful_shutdown": 10,
+        "server_header": False,
+    }
+
+
+def test_http_server_runs_uvicorn_with_listener_limits(monkeypatch: pytest.MonkeyPatch) -> None:
+    import uvicorn
+
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(runtime, "create_mcp_http_app", lambda **_kwargs: FastAPI())
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kwargs: captured.update(kwargs))
+
+    result = runtime.run_hardened_http_server(
+        server=object(),  # type: ignore[arg-type]
+        host="127.0.0.1",
+        port=8765,
+        auth_token="client-token",
+        env={"ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS": "8"},
+    )
+
+    assert result == 0
+    assert captured == {
+        "host": "127.0.0.1",
+        "port": 8765,
+        "limit_concurrency": 72,
+        "timeout_graceful_shutdown": 10,
+        "server_header": False,
+    }

@@ -100,6 +100,9 @@ print(observed.reason, observed.polls)
   never in the JSON body or subsequent reads/cancellation. Errors redact both keys.
 - Submissions and failed requests are not automatically retried. A timeout can leave
   server execution unresolved; do not create a fresh idempotency key for a blind retry.
+  The one transport-level exception is a read (`GET`) on a reused keep-alive
+  connection that the server had already closed: it is written once more on a fresh
+  connection. Timeouts are never re-sent, and `POST`/`PUT` never use an idle connection.
 - Polling uses GET only. It stops at a terminal status, deadline, read-count limit or
   unknown status. It does not cancel server work or impose a provider-spend cap.
   The deadline is checked between HTTP calls; blocking transport interruption remains
@@ -116,6 +119,40 @@ print(observed.reason, observed.polls)
   rejected/disabled. JSON uses UTF-8 (an optional response BOM is accepted), is
   bounded to 8 MiB and at most 64 container levels. Error messages do not echo
   server-supplied link keys or expose raw recursion failures.
+
+## Connections and performance (0.1.5)
+
+One client keeps up to four idle HTTP/1.1 connections per origin and reuses them for
+reads within 4 seconds, so `wait_for_run` pays the TCP and TLS handshake once instead
+of on every poll. The TLS context (system trust store, hostname verification, TLS 1.2
+minimum) is built once per client, on first HTTPS use. Close the pool when done:
+
+```python
+with AdaptOrchClient(ClientConfig(api_url="https://adaptorch.com", api_key=key)) as client:
+    observed = client.wait_for_run(run_id)
+```
+
+`close()` is safe to call more than once; later calls still work, each on a connection
+that is closed afterwards. A client is safe to share between threads.
+
+Response JSON checks (64-level nesting, duplicate keys, finite numbers) run in C-backed
+regular expressions and a JSON-only deep copy, roughly halving parse time for large
+list pages. The accepted and rejected inputs are unchanged.
+
+## Evidence verdicts
+
+`EvidenceReport` carries `execution_status`, `verification_status` and
+`verification_source` when the server reports them. `verification_status` is
+`PASSED` only when every verifier check passed; a lone run-level check reports
+execution, not verification, and leaves the verdict at `NOT_RUN`. An older server
+omits all three (`None`), and an unknown value is preserved as reported. Never treat
+`None` or an unknown value as `PASSED`.
+
+```python
+report = client.get_evidence(run_id)
+if report.verification_status != "PASSED":
+    print("not verified:", report.verification_status, report.verification_source)
+```
 
 `capabilities()` also exposes the server-reported build, receipt/evidence schema,
 MCP toolset and protocol versions. REST version discovery and MCP algorithm discovery

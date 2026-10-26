@@ -52,7 +52,7 @@
 - 제출 실패가 이미 접수·청구된 요청을 뜻할 수 있으므로 자동 POST 재시도를 하지 않는다. logical run의 idempotency key는 호출자가 보존해야 한다.
 - MCP factory는 유효 retry 설정도 1회로 기록한다. 다른 직접 n8n 소비자의 부모 retry 정책까지 바꾼 것은 아니다.
 
-`PollPolicy` 기본값은 대기 120초, 조회 간격 1초, 최대 100회다. `terminal`, `deadline`, `poll_limit`, `unsupported_status` 중 중단 이유와 마지막 관측을 반환한다. 실패한 HTTP 요청은 즉시 예외를 반환하고 조용히 다시 읽지 않는다.
+`PollPolicy` 기본값은 대기 120초, 조회 간격 1초, 최대 100회다. `terminal`, `deadline`, `poll_limit`, `unsupported_status` 중 중단 이유와 마지막 관측을 반환한다. 실패한 HTTP 요청은 즉시 예외를 반환하고 조용히 다시 읽지 않는다. 0.1.5의 유일한 전송 계층 예외는 재사용한 keep-alive 연결이 응답 전에 이미 닫혀 있던 `GET`으로, 새 연결에서 한 번 더 보낸다. 타임아웃은 다시 보내지 않고 `POST`/`PUT`은 유휴 연결을 쓰지 않는다.
 
 대기 기한은 HTTP 호출 사이와 결과 수신 후 검사하며, 각 요청 timeout을 남은 예산으로 줄인다. 동기식 transport를 강제로 중단하거나 이미 실행 중인 서버 작업을 취소하지 않는다. 시간 제한과 호출 수 제한은 provider 비용 상한이 아니다.
 

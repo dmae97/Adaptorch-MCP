@@ -175,3 +175,61 @@ def test_submit_run_accepts_gateway_uuid_idempotency_keys(
     _client(local_api).submit_run({"goal": "boundary"}, idempotency_key)
 
     assert local_api.requests[0].headers["Idempotency-Key"] == idempotency_key
+
+
+def _reference_nesting_exceeds(text: str, limit: int) -> bool:
+    """The original per-character scanner, kept as the specification."""
+    depth = 0
+    quoted = escaped = False
+    for char in text:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+        elif char == '"':
+            quoted = True
+        elif char in "[{":
+            depth += 1
+            if depth > limit:
+                return True
+        elif char in "]}":
+            depth -= 1
+    return False
+
+
+def test_fast_depth_scan_matches_the_reference_scanner() -> None:
+    import random
+
+    from adaptorch_client.json_limits import max_nesting_exceeds
+
+    generator = random.Random(20261026)
+    alphabet = '[]{}"\\ab,:\n\u00e9'
+    for _ in range(20_000):
+        text = "".join(generator.choice(alphabet) for _ in range(generator.randint(0, 40)))
+        for limit in (0, 1, 2, 3):
+            assert max_nesting_exceeds(text, limit) == _reference_nesting_exceeds(text, limit), (
+                text,
+                limit,
+            )
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("[" * 65, True),
+        ("[" * 64, False),
+        ("]" * 70 + "[" * 64, False),
+        ('"' + "[" * 100, False),
+        ('["\\"' + "[" * 100 + '"]', False),
+        ("[]" * 200_000, False),
+        ("[" * 70_000 + "]" * 70_000, True),
+    ],
+)
+def test_fast_depth_scan_boundaries(text: str, expected: bool) -> None:
+    from adaptorch_client.json_limits import max_nesting_exceeds
+
+    assert max_nesting_exceeds(text, 64) is expected
+    assert _reference_nesting_exceeds(text, 64) is expected

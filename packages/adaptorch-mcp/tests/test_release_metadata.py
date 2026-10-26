@@ -19,7 +19,12 @@ def test_distribution_ships_the_canonical_classicmate_license() -> None:
 
 def test_wrapper_dependency_cannot_resolve_to_the_planned_codeless_meta_package() -> None:
     project = tomllib.loads((PACKAGE_ROOT / "pyproject.toml").read_text())["project"]
-    assert project["dependencies"] == ["adaptorch[api]>=0.1.2,<0.2"]
+    # The engine stays capped below the codeless 0.2 meta-package; the second entry is
+    # the stdlib-only SDK whose keep-alive transport the connector reuses.
+    assert project["dependencies"] == [
+        "adaptorch[api]>=0.1.2,<0.2",
+        "adaptorch-client>=0.1.5,<0.2",
+    ]
     assert project["requires-python"] == ">=3.11,<3.13"
 
 

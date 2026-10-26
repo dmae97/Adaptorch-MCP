@@ -30,6 +30,11 @@ from adaptorch_mcp.hardening import (
 
 _HOSTED_BASE_URL: Final = "https://adaptorch.com"
 _STATUS_PATHS: Final = frozenset({"/mcp/health", "/mcp/metrics"})
+# The engine reads this name for its SSE subscriber cap and defaults to 64.
+_MAX_SSE_SUBSCRIBERS_ENV: Final = "ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS"
+_DEFAULT_MAX_SSE_SUBSCRIBERS: Final = 64
+_REQUEST_CONNECTION_HEADROOM: Final = 64
+_GRACEFUL_SHUTDOWN_SECONDS: Final = 10
 MCP_PROVIDER_ENV: Final = "ADAPTORCH_MCP_PROVIDER"
 MCP_PROVIDER_MODEL_ENV: Final = "ADAPTORCH_MCP_PROVIDER_MODEL"
 MCP_PROVIDER_API_KEY_ENV: Final = "ADAPTORCH_MCP_PROVIDER_API_KEY"
@@ -344,12 +349,34 @@ def protect_status_endpoints(app: Any, client_token: str) -> Any:
     return app
 
 
+def http_listener_limits(env: Mapping[str, str]) -> dict[str, Any]:
+    """Bound the loopback listener: connections, shutdown time and fingerprint.
+
+    Open SSE streams count against uvicorn's concurrency limit, so the cap leaves
+    the engine's subscriber allowance plus headroom for ordinary requests. Past it
+    uvicorn answers 503 instead of accepting unbounded work. Shutdown stops
+    waiting for open streams after a fixed grace period.
+    """
+    try:
+        subscribers = int(env.get(_MAX_SSE_SUBSCRIBERS_ENV, "").strip())
+    except ValueError:
+        subscribers = _DEFAULT_MAX_SSE_SUBSCRIBERS
+    if subscribers <= 0:
+        subscribers = _DEFAULT_MAX_SSE_SUBSCRIBERS
+    return {
+        "limit_concurrency": subscribers + _REQUEST_CONNECTION_HEADROOM,
+        "timeout_graceful_shutdown": _GRACEFUL_SHUTDOWN_SECONDS,
+        "server_header": False,
+    }
+
+
 def run_hardened_http_server(
     *,
     server: HardenedMCPServer,
     host: str,
     port: int,
     auth_token: str,
+    env: Mapping[str, str] | None = None,
 ) -> int:
     """Run the canonical parent HTTP app with authenticated status endpoints."""
     try:
@@ -361,7 +388,8 @@ def run_hardened_http_server(
         create_mcp_http_app(server=server, auth_token=auth_token),
         auth_token,
     )
-    uvicorn.run(app, host=host, port=port)
+    limits = http_listener_limits(os.environ if env is None else env)
+    uvicorn.run(app, host=host, port=port, **limits)
     return 0
 
 
@@ -405,6 +433,7 @@ def run_hardened_main(
             host=args.http_host,
             port=args.http_port,
             auth_token=http_auth_token,
+            env=resolved_env,
         )
     return serve_stdio(server, framing=args.stdio_framing)
 

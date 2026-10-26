@@ -4,6 +4,56 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [adaptorch-client 0.1.5 / adaptorch-cli 0.1.5] — 2026-10-26
+
+### Changed — persistent connections
+
+- `adaptorch_client.keepalive` adds urllib handlers that keep HTTP/1.1 connections
+  alive. Reads (`GET`/`HEAD`) reuse an idle connection for up to 4 s while its socket
+  shows no EOF; at most four idle connections are kept per origin. `POST`/`PUT` always
+  open a fresh connection and are sent once. A read whose reused connection the server
+  had already closed is written once more on a fresh connection; a timeout is never
+  re-sent. The handlers keep the stock `http_open`/`https_open` entry points, so the
+  opener still has no redirect, proxy or retry handler.
+- The TLS context (system trust store, hostname verification, TLS 1.2 minimum) is built
+  once per client on first HTTPS use instead of once per request, which loaded the CA
+  store every time.
+- On Linux the client sets `TCP_QUICKACK` before each response, so a server that
+  leaves Nagle on cannot hold a reused connection on the 40 ms delayed-ACK timer.
+  Loopback HTTPS reads measured 4.1-5.6 ms with a connection per request and
+  0.4-0.6 ms with reuse (100 sequential reads).
+- `AdaptOrchClient.close()` and context-manager support release pooled connections.
+
+### Changed — parsing cost
+
+- The 64-level JSON nesting bound now strips strings with a possessive, non-backtracking
+  regular expression and sums brackets in C. A 20,000-input fuzz test pins it to the
+  previous per-character scanner, including unterminated strings and escapes.
+- `stored_copy` copies decoded JSON (dicts, lists, scalars) directly and keeps `deepcopy`
+  for anything else. `RunListResponse.from_payload` on a 3 MB, 5,000-run page fell from
+  268 ms to 129 ms; `to_payload` from 63 ms to 25 ms.
+
+### Added — evidence verdict
+
+- `EvidenceReport.execution_status`, `verification_status` and `verification_source`
+  type the engine's split between run execution and verification (`9549892d`, served
+  at `a490658c`). `PASSED` requires every verifier check to pass; a lone run-level check
+  leaves the verdict `NOT_RUN`. Older servers leave the fields `None`, unknown values
+  are preserved, and non-string values are contract errors.
+
+### Fixed — CLI
+
+- `adaptorchctl run wait` defaulted to a fixed 100-read cap, so the documented
+  `--timeout 300 --interval 2` stopped with `poll_limit` after about 200 s. The read
+  budget now defaults to `ceil(timeout / interval) + 1`, and `--max-polls N` sets an
+  explicit cap. One existing test that encoded the 100-read cut-off now expects the
+  deadline.
+- Output piped into a reader that exits early no longer ends in a `BrokenPipeError`
+  traceback with exit code 1; the exit code still reports the command.
+- A failure with no HTTP response prints `no HTTP response: network, TLS or timeout`
+  instead of `HTTP None`.
+- The CLI requires `adaptorch-client>=0.1.5,<0.2`.
+
 ## [adaptorch-client 0.1.4 / adaptorch-cli 0.1.4] — 2026-10-25
 
 - `AdaptOrchClient.navigate_evidence(question, evidence_pack, *, algorithm_version=
@@ -31,6 +81,48 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
   0.5.2; its public wheel gate and separate migration/release remain unchanged.
 
 ## [Unreleased]
+
+### Changed — engine pin follows the served `a490658c` (2026-10-26)
+
+- The workspace engine pin moves from `0e265003f` to `a490658ce`, the latest public
+  build identity the engine's own runbook records for `https://adaptorch.com`
+  (`/.well-known/adaptorch-build.json`, observed 2026-10-26). This session could not
+  reach that endpoint through its network proxy, so the pin rests on that record. The
+  next eight engine commits change billing, marketing and frontend code only.
+- The pinned engine adds the hosted `POST /v1/navigation/evidence` route the 0.1.4 SDK
+  calls, the evidence execution/verification split, verification-provenance gating for
+  router and bandit learning, and an opt-in `/v2` evidence basis route. New hosted-wiring
+  tests read the verdict and the navigation route from the real engine app.
+- The full suite passes unchanged on the new pin under Python 3.11 and 3.12.
+
+### Changed — MCP transports
+
+- `SafeControlPlaneConnector` builds one keep-alive opener per connector from
+  `adaptorch_client.keepalive`, so `adaptorch_run` polling reuses a connection.
+  `adaptorch-mcp` now declares `adaptorch-client>=0.1.5,<0.2`. Submission and
+  cancellation stay single-attempt on fresh connections. The urllib handler seams the
+  wire tests patch are unchanged.
+- The loopback HTTP listener caps concurrency at `ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS`
+  plus 64 (503 beyond it), bounds graceful shutdown to 10 s and omits the `server`
+  header.
+- `within_json_depth` shares the client's C-backed nesting scan.
+
+### Fixed — stdio smoke and SSH
+
+- `adaptorch-mcp-smoke` read responses through a buffered text reader while waiting on
+  the pipe with `select`. When both answers arrived in one read and the process kept
+  stdout open, as an SSH session can, the smoke timed out despite holding both. It now
+  splits lines from the descriptor itself, caps a line at 8 MiB, reports non-JSON
+  stdout with an `ssh -T` hint without echoing the line, and reports a server that
+  closes stdin early.
+- READMEs document stdio over SSH, the transport matrix, and that no UDP transport
+  exists (MCP defines stdio and Streamable HTTP; every AdaptOrch API is HTTP over TCP).
+
+### Tests
+
+- The client test server stops polling within 50 ms instead of 500 ms and treats a
+  peer reset like a broken pipe, which removed a stray server traceback. The SDK suite
+  dropped from 76 s to 13 s; the workspace suite from 94 s to 41 s.
 
 ### Changed — engine pin follows graph_v5 navigation (2026-10-25)
 
