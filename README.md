@@ -103,6 +103,9 @@ benchmark/eval or operator controls, not quickstart defaults.
 | `prefer_multi_model_ensemble_singleton` | Routing threshold | Tri-state: unset auto-enables when at least two ensemble providers exist and synthesis mode is not `direct`, unless an explicit debate-singleton preference wins; explicit `false` disables the auto preference. The MCP hint `prefer_ensemble_singleton` accepts `true`/`false`/`null` with the same semantics. |
 | `synthesis_mode` | Synthesis | Supported modes are `paper`, `robust`, `robust_lite`, and `stable_hybrid`. `fourier_aggressive` aliases `stable_hybrid`. Serving-only `auto` asks the control plane to choose; it is not an additional engine algorithm. |
 | `output_extractor` | Ensemble extraction | Engine extractors are `final_answer` and `multiple_choice_letter`. The MCP value `none` means "no extractor" and is not forwarded. |
+| `verification_status` | Evidence report | `GET /v1/runs/{run_id}/evidence` adds `execution_status`, `verification_status` (`NOT_RUN`, `PASSED`, `FAILED`, `INCONCLUSIVE`) and `verification_source` (`vera_v2`, `verification_items`, `none`). Only an all-`PASSED` set of verifier checks is `PASSED`; a lone run-level check reports execution, so its verdict stays `NOT_RUN`. `adaptorch-client` 0.1.5 types all three; older servers leave them `None`. |
+| `is_training_eligible` | Online-router learning | Only `verification` and `gold_label` outcome sources train the naive-Bayes router or update the LinUCB bandit; self-consistency and unrecorded sources are stored but never rewarded. Bandit state is saved as version 2, and a version 1 file replays only its eligible observations. |
+| `ADAPTORCH_EVIDENCE_BASIS_ENABLED` | Control-plane switch | Off by default. When a control plane enables it, `GET /v2/runs/{run_id}/evidence` adds a per-check `basis`. This wrapper's remote profile does not expose the engine's `include_evidence_basis` argument. |
 
 ## Research paper
 
@@ -128,6 +131,15 @@ There are three ways in. Pick by what you are: an agent, a program, or a termina
 > The client-only `adaptorch` 0.2.0 replacement is not published. New SDK polling
 > and response-safety features below describe this source revision; pushing it
 > does not republish any PyPI version or revoke an earlier license grant.
+
+**Source update (2026-10-26, not a publication):** the workspace engine pin moves to
+`a490658c`, the revision the engine's runbook last recorded as served by the hosted
+control plane. `adaptorch-client` and
+`adaptorch-cli` 0.1.5 reuse keep-alive connections for reads (TLS 1.2 minimum, one
+CA-store load per client), type the evidence verification verdict, and parse large
+responses about twice as fast. The local MCP connector shares the same transport, its
+HTTP listener is bounded, and `adaptorchctl run wait` now honours `--timeout`. See
+[network and transport notes](#network-and-transport-notes).
 
 **Source update (2026-09-08, not a publication):** this checkout adds request-scoped
 SDK BYOK, bounded read-only polling, subject-bound responses and typed algorithm
@@ -303,6 +315,29 @@ export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
 adaptorch-mcp --transport stdio --base-url https://adaptorch.com
 ```
 
+### stdio over SSH
+
+To run the wrapper on another machine, let SSH carry stdio. Keep the tokens in that
+host's environment, not on the command line, and make sure the remote shell prints
+nothing of its own:
+
+```bash
+claude mcp add adaptorch -- ssh -T build-host /opt/adaptorch/bin/adaptorch-mcp \
+  --transport stdio --base-url https://adaptorch.com
+```
+
+- `-T` disables the pseudo-terminal, so no CR/LF translation or echo reaches the
+  JSON-RPC stream. A login banner or an `echo` in a remote rc file corrupts it.
+- SSH does not forward `ADAPTORCH_CONTROL_PLANE_TOKEN` by default. Set it on the
+  remote host, or allow it explicitly with `SendEnv`/`AcceptEnv`.
+- Check the path before configuring a client:
+  `adaptorch-mcp-smoke --command "ssh -T build-host /opt/adaptorch/bin/adaptorch-mcp"`.
+  The smoke reports non-JSON stdout as such and no longer stalls when the SSH
+  session keeps stdout open after the answers arrive.
+- When the session drops, the server sees EOF on stdin and exits; a run it already
+  submitted keeps going on the control plane. Read it again with `resume_run_id`
+  or `adaptorchctl run wait`, never by submitting again.
+
 ## HTTP MCP
 
 Use HTTP for local gateways, reverse proxies, or remote MCP clients.
@@ -333,6 +368,36 @@ with urlopen(request) as response:
     print(response.read().decode("utf-8"))
 PY
 ```
+
+The listener binds loopback only and caps concurrent connections at
+`ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS` (engine default 64) plus 64 for ordinary
+requests; beyond that it answers 503 instead of queueing unbounded work. Shutdown
+waits at most 10 seconds for open streams, and responses carry no `server` header.
+
+## Network and transport notes
+
+| Path | Transport | Behaviour |
+| --- | --- | --- |
+| SDK / `adaptorchctl` → control plane | HTTPS (TCP) | `GET`/`HEAD` reuse an idle keep-alive connection for up to 4 s while its socket shows no EOF. `POST`/`PUT` always open a fresh connection and are sent once. A read whose reused connection the peer had already closed is written once more on a new connection; a timeout is never re-sent. |
+| Local MCP connector → control plane | HTTPS (TCP) | The same keep-alive handlers, so the engine's run polling no longer pays a TCP and TLS handshake per status read. |
+| MCP client ↔ local wrapper | stdio, or stdio over SSH | Newline JSON-RPC; see [stdio over SSH](#stdio-over-ssh). |
+| MCP client ↔ local wrapper | HTTP on loopback (TCP) | Bearer token, bounded concurrency, 10 s graceful shutdown. |
+
+TLS uses the system trust store with certificate and hostname verification and
+refuses anything older than TLS 1.2. Ambient `HTTP(S)_PROXY` variables and redirects
+are still ignored; `SSL_CERT_FILE` still selects a private CA bundle. On Linux the
+client acknowledges response segments immediately, so a server that leaves Nagle on
+cannot stall a reused connection on the 40 ms delayed-ACK timer.
+
+Measured on loopback HTTPS (100 sequential reads, this source revision): 4.1-5.6 ms
+per read with a new connection per request, 0.4-0.6 ms with keep-alive. Across a real
+network the saving per read is the TCP and TLS handshake round trips. Parsing a 3 MB,
+5,000-run list page dropped from 268 ms to 129 ms. These are local micro-benchmarks,
+not end-to-end claims.
+
+There is no UDP transport: MCP defines stdio and Streamable HTTP, and every
+AdaptOrch API is HTTP over TCP. HTTP/3 (QUIC) is not available in the standard
+library this client is limited to.
 
 ## CLI and environment reference
 

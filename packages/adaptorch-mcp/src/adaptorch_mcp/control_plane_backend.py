@@ -3,12 +3,17 @@
 Compatibility dependencies: n8n_connector._quota_exceeded_usage owns quota
 classification/projection; _redact_connector_secrets masks its string values.
 Neither the parent's unbounded body readers nor its retry loop are called.
+
+Reads reuse a keep-alive connection from ``adaptorch_client.keepalive``, so the
+engine's run polling no longer pays a TCP and TLS handshake per status read. A
+submission or cancellation always opens a fresh connection and is sent once.
 """
 
 from __future__ import annotations
 
 import json
 import math
+import threading
 from collections.abc import Mapping
 from http.client import HTTPException
 from typing import Any, Final, NoReturn
@@ -26,10 +31,13 @@ from adaptorch.n8n_connector import (
     _redact_connector_secrets,
 )
 
+from adaptorch_client.keepalive import keepalive_handlers
 from adaptorch_mcp.response_json import within_json_depth
 
 _MAX_JSON_BYTES: Final = 8 * 1024 * 1024
 _SAFE_METHODS: Final = frozenset({"GET", "HEAD", "OPTIONS"})
+_OPENER_ATTRIBUTE: Final = "_adaptorch_keepalive_opener"
+_OPENER_LOCK: Final = threading.Lock()
 
 
 def _reject_constant(value: str) -> NoReturn:
@@ -100,7 +108,37 @@ def _check_subject(payload: dict[str, Any], run_id: str) -> dict[str, Any]:
 
 
 class SafeControlPlaneConnector(N8nControlPlaneConnector):
-    """Use the parent config/constructor; each HTTP call has exactly one attempt."""
+    """Use the parent config/constructor; each HTTP call has exactly one attempt.
+
+    The one exception is transport-level: a read whose reused idle connection the
+    peer already closed is written once more on a fresh connection.
+    """
+
+    def _opener(self) -> request.OpenerDirector:
+        """Build the explicit handler set once; the parent constructor stays untouched."""
+        opener = self.__dict__.get(_OPENER_ATTRIBUTE)
+        if opener is None:
+            with _OPENER_LOCK:
+                opener = self.__dict__.get(_OPENER_ATTRIBUTE)
+                if opener is None:
+                    # An explicit handler set excludes redirects, ambient proxies and
+                    # auth retries.
+                    opener = request.OpenerDirector()
+                    for handler in (
+                        *keepalive_handlers(),
+                        request.HTTPDefaultErrorHandler(),
+                        request.HTTPErrorProcessor(),
+                    ):
+                        opener.add_handler(handler)
+                    self.__dict__[_OPENER_ATTRIBUTE] = opener
+        return opener
+
+    def close(self) -> None:
+        """Close pooled connections; later requests use one connection each."""
+        opener = self.__dict__.get(_OPENER_ATTRIBUTE)
+        if opener is not None:
+            for handler in opener.handlers:
+                handler.close()
 
     def get_run(self, run_id: str) -> dict[str, Any]:
         return _check_subject(super().get_run(run_id), run_id)
@@ -195,15 +233,7 @@ class SafeControlPlaneConnector(N8nControlPlaneConnector):
         except (ValueError, TypeError, RecursionError):
             raise N8nConnectorError("Invalid control-plane request") from None
 
-        # An explicit handler set excludes redirects, ambient proxies and auth retries.
-        opener = request.OpenerDirector()
-        for handler in (
-            request.HTTPHandler(),
-            request.HTTPSHandler(),
-            request.HTTPDefaultErrorHandler(),
-            request.HTTPErrorProcessor(),
-        ):
-            opener.add_handler(handler)
+        opener = self._opener()
         try:
             try:
                 response = opener.open(req, timeout=self._config.timeout_seconds)

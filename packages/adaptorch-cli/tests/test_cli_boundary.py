@@ -277,3 +277,63 @@ def test_keyboard_interrupt_maps_to_exit_130(
     assert result.returncode == 130
     assert result.stdout == ""
     assert result.stderr
+
+
+def test_closed_stdout_pipe_does_not_crash_the_command(tmp_path: Path) -> None:
+    import os
+    import subprocess
+    import sys
+
+    fake_root = tmp_path / "fake"
+    (fake_root / "adaptorch_client").mkdir(parents=True)
+    from cli_test_support import _FAKE_CLIENT
+
+    (fake_root / "adaptorch_client" / "__init__.py").write_text(_FAKE_CLIENT, encoding="utf-8")
+    source_root = Path(__file__).parents[1] / "src"
+    env = {
+        **os.environ,
+        "PYTHONPATH": os.pathsep.join((str(fake_root), str(source_root))),
+        "FAKE_CLIENT_LOG": str(tmp_path / "client.jsonl"),
+        "ADAPTORCH_API_KEY": "env-test-key",
+        "ADAPTORCH_CONFIG_DIR": str(tmp_path / "config"),
+        "FAKE_RUN_STATUS": "FAILED",
+    }
+    read_end, write_end = os.pipe()
+    os.close(read_end)  # the consumer is already gone, like `| head` after its lines
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-m", "adaptorch_cli", "run", "get", "run-1"],
+            stdout=write_end,
+            stderr=subprocess.PIPE,
+            env=env,
+            check=False,
+            text=True,
+            timeout=30,
+        )
+    finally:
+        os.close(write_end)
+
+    assert completed.returncode == 8
+    assert "Traceback" not in completed.stderr
+    assert "BrokenPipeError" not in completed.stderr
+
+
+def test_network_failure_message_names_the_missing_response(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from adaptorch_client import AdaptOrchAPIError
+
+    from adaptorch_cli import cli
+
+    def fail(*_args: object) -> tuple[cli.JSONMapping, bool]:
+        raise AdaptOrchAPIError("AdaptOrch network request failed")
+
+    monkeypatch.setattr(cli, "_execute", fail)
+    monkeypatch.setenv("ADAPTORCH_CONFIG_DIR", str(tmp_path / "isolated-config"))
+
+    assert cli.main(["whoami"]) == 7
+    err = capsys.readouterr().err
+    assert "no HTTP response" in err
+    assert "HTTP None" not in err

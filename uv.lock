@@ -13,7 +13,7 @@ members = [
 [[package]]
 name = "adaptorch"
 version = "0.1.2"
-source = { git = "https://github.com/dmae97/adaptorch.git?rev=0e265003fa707f246142cb3eeedf91cd15156c8e#0e265003fa707f246142cb3eeedf91cd15156c8e" }
+source = { git = "https://github.com/dmae97/adaptorch.git?rev=a490658ceb6a3e1f7bfdc53d24249148860ef323#a490658ceb6a3e1f7bfdc53d24249148860ef323" }
 dependencies = [
     { name = "httpx" },
     { name = "pillow" },
@@ -30,7 +30,7 @@ api = [
 
 [[package]]
 name = "adaptorch-cli"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "packages/adaptorch-cli" }
 dependencies = [
     { name = "adaptorch-client" },
@@ -41,7 +41,7 @@ requires-dist = [{ name = "adaptorch-client", editable = "packages/adaptorch-cli
 
 [[package]]
 name = "adaptorch-client"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "packages/adaptorch-client" }
 
 [package.optional-dependencies]
@@ -67,6 +67,7 @@ version = "0.5.2"
 source = { editable = "packages/adaptorch-mcp" }
 dependencies = [
     { name = "adaptorch", extra = ["api"] },
+    { name = "adaptorch-client" },
 ]
 
 [package.optional-dependencies]
@@ -80,7 +81,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=0e265003fa707f246142cb3eeedf91cd15156c8e" },
+    { name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=a490658ceb6a3e1f7bfdc53d24249148860ef323" },
+    { name = "adaptorch-client", editable = "packages/adaptorch-client" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
     { name = "fpdf2", marker = "extra == 'dev'", specifier = "==2.8.9" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },

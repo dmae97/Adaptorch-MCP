@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 import uuid
 from collections.abc import Sequence
@@ -32,7 +33,32 @@ class PayloadResult(Protocol):
 
 
 def _write_json(payload: JSONMapping) -> None:
-    print(json.dumps(payload, allow_nan=False, sort_keys=True, separators=(",", ":")))
+    text = json.dumps(payload, allow_nan=False, sort_keys=True, separators=(",", ":"))
+    try:
+        sys.stdout.write(text + "\n")
+        sys.stdout.flush()
+    except BrokenPipeError:
+        # The reader left early (`| head`); the exit code still reports the command.
+        _discard_stdout()
+
+
+def _discard_stdout() -> None:
+    """Point stdout at the null device so interpreter shutdown cannot fail on it."""
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+    except OSError:
+        return
+    try:
+        os.dup2(devnull, sys.stdout.fileno())
+    except (OSError, ValueError):
+        return
+    finally:
+        os.close(devnull)
+
+
+def _wait_poll_limit(timeout_seconds: float, interval_seconds: float) -> int:
+    """Reads needed for the deadline, plus the first read, so the deadline ends the wait."""
+    return max(1, math.ceil(timeout_seconds / interval_seconds) + 1)
 
 
 def _reject_json_constant(_value: str) -> Never:
@@ -274,10 +300,17 @@ def _run_command(
                 parser.error("--timeout must be finite positive seconds")
             if not math.isfinite(interval_seconds) or interval_seconds <= 0:
                 parser.error("--interval must be finite positive seconds")
+            max_polls: int | None = args.max_polls
             wait_result = _require_client(api_url).wait_for_run(
                 wait_run_id,
                 policy=PollPolicy(
-                    timeout_seconds=timeout_seconds, interval_seconds=interval_seconds
+                    timeout_seconds=timeout_seconds,
+                    interval_seconds=interval_seconds,
+                    max_polls=(
+                        max_polls
+                        if max_polls is not None
+                        else _wait_poll_limit(timeout_seconds, interval_seconds)
+                    ),
                 ),
             )
             wait_payload: dict[str, JSONValue] = {
@@ -417,7 +450,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     # pi-lens-ignore: unreachable-except
     except AdaptOrchAPIError as error:
         code = _api_exit_code(error)
-        print(f"request failed (HTTP {error.status_code})", file=sys.stderr)
+        if error.status_code is None:
+            print("request failed (no HTTP response: network, TLS or timeout)", file=sys.stderr)
+        else:
+            print(f"request failed (HTTP {error.status_code})", file=sys.stderr)
         return code
     except ValueError:
         parser.error("invalid CLI input")

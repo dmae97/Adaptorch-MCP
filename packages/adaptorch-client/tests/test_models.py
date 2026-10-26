@@ -242,6 +242,49 @@ def test_evidence_report_preserves_unknown_check_status() -> None:
     assert result.to_payload() == payload
 
 
+def test_evidence_report_keeps_execution_apart_from_verification() -> None:
+    payload: JSONMapping = {
+        "run_id": "run-1",
+        "execution_status": "SUCCEEDED",
+        "verification_status": "NOT_RUN",
+        "verification_source": "none",
+        "checks": [{"name": "run", "status": "PASSED"}],
+    }
+
+    result = EvidenceReport.from_payload(payload)
+
+    # A passed run-level check reports execution; it is not a verification verdict.
+    assert result.checks[0].status == "PASSED"
+    assert result.execution_status == "SUCCEEDED"
+    assert result.verification_status == "NOT_RUN"
+    assert result.verification_source == "none"
+    assert result.to_payload() == payload
+
+
+def test_evidence_report_from_an_older_server_reports_no_verdict() -> None:
+    result = EvidenceReport.from_payload({"run_id": "run-1", "checks": []})
+
+    assert result.execution_status is None
+    assert result.verification_status is None
+    assert result.verification_source is None
+
+
+def test_evidence_report_preserves_an_unknown_verification_status() -> None:
+    result = EvidenceReport.from_payload(
+        {"run_id": "run-1", "checks": [], "verification_status": "PARTIALLY_VERIFIED"}
+    )
+
+    assert result.verification_status == "PARTIALLY_VERIFIED"
+
+
+@pytest.mark.parametrize(
+    "field", ["execution_status", "verification_status", "verification_source"]
+)
+def test_evidence_report_rejects_a_non_string_verdict_field(field: str) -> None:
+    with pytest.raises(AdaptOrchAPIError, match=field):
+        EvidenceReport.from_payload({"run_id": "run-1", "checks": [], field: True})
+
+
 @pytest.mark.parametrize("missing", ["name", "status"])
 def test_evidence_report_rejects_incomplete_check(missing: str) -> None:
     check: JSONMapping = {"name": "tests", "status": "PASSED"}
@@ -331,3 +374,38 @@ def test_run_links_mutation_does_not_corrupt_to_payload() -> None:
     links_payload = payload["links"]
     assert isinstance(links_payload, dict)
     assert links_payload["self"] == "/v1/runs/run-1"
+
+
+def test_stored_copy_is_independent_and_equal_for_json_payloads() -> None:
+    from adaptorch_client.models import stored_copy
+
+    nested: JSONMapping = {"a": [1, 2.5, True, None, {"b": ["c", {"d": []}]}], "e": "f"}
+    copied = stored_copy(nested)
+
+    assert copied == nested
+    inner = copied["a"]
+    assert isinstance(inner, list)
+    inner.append("mutated")
+    assert nested["a"] == [1, 2.5, True, None, {"b": ["c", {"d": []}]}]
+
+
+def test_stored_copy_keeps_deepcopy_semantics_for_non_json_values() -> None:
+    from collections import OrderedDict
+
+    from adaptorch_client.models import stored_copy
+
+    ordered = OrderedDict(x=[1])
+    copied = stored_copy({"o": ordered, "t": (1, [2])})  # type: ignore[dict-item]
+
+    assert copied == {"o": ordered, "t": (1, [2])}
+    assert copied["o"] is not ordered
+    assert type(copied["o"]) is OrderedDict
+
+
+def test_stored_copy_maps_cycles_to_a_sanitized_error() -> None:
+    from adaptorch_client.models import stored_copy
+
+    loop: list[JSONValue] = []
+    loop.append(loop)
+    with pytest.raises(AdaptOrchAPIError, match="nesting"):
+        stored_copy({"loop": loop})

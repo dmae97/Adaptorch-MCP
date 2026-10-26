@@ -49,12 +49,23 @@ class RunListResponse(PayloadResult):
 
 @dataclass(frozen=True, slots=True)
 class EvidenceReport(PayloadResult):
-    """Direct ``GET /v1/runs/{run_id}/evidence`` report: ``run_id`` plus ``checks``."""
+    """Direct ``GET /v1/runs/{run_id}/evidence`` report: ``run_id`` plus ``checks``.
+
+    Current servers also separate run execution from verification:
+    ``verification_status`` is ``PASSED`` only when every verifier check passed,
+    ``NOT_RUN`` while a lone run-level check reports execution alone, and
+    ``verification_source`` names where the checks came from (``vera_v2``,
+    ``verification_items`` or ``none``). Older servers omit all three (``None``);
+    unknown values are preserved, never mapped to a verdict.
+    """
 
     run_id: str
     checks: tuple[EvidenceCheck, ...]
     verification_diagnostics: tuple[VerificationDiagnostic, ...] | None = None
     verification_diagnostics_schema_version: str | None = None
+    execution_status: str | None = None
+    verification_status: str | None = None
+    verification_source: str | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, JSONValue]) -> Self:
@@ -73,6 +84,9 @@ class EvidenceReport(PayloadResult):
             verification_diagnostics_schema_version=optional_string_at(
                 record, "verification_diagnostics_schema_version", ""
             ),
+            execution_status=optional_string_at(record, "execution_status", ""),
+            verification_status=optional_string_at(record, "verification_status", ""),
+            verification_source=optional_string_at(record, "verification_source", ""),
         )
 
 

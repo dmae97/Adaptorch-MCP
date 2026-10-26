@@ -6,6 +6,7 @@ import json
 import math
 from typing import Final, Never
 
+from adaptorch_client.json_limits import max_nesting_exceeds
 from adaptorch_mcp.run_output import JSONValue
 
 MAX_RESPONSE_BYTES: Final = 8 * 1024 * 1024
@@ -13,25 +14,7 @@ MAX_JSON_DEPTH: Final = 64
 
 
 def within_json_depth(text: str) -> bool:
-    depth = 0
-    quoted = escaped = False
-    for char in text:
-        if quoted:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == '"':
-                quoted = False
-        elif char == '"':
-            quoted = True
-        elif char in "[{":
-            depth += 1
-            if depth > MAX_JSON_DEPTH:
-                return False
-        elif char in "]}":
-            depth -= 1
-    return True
+    return not max_nesting_exceeds(text, MAX_JSON_DEPTH)
 
 
 def _reject_constant(value: str) -> Never:

@@ -1,4 +1,4 @@
-"""Bounded, redirect-free standard-library HTTP transport."""
+"""Bounded, redirect-free standard-library HTTP transport over persistent connections."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 from adaptorch_client.config import ClientConfig
 from adaptorch_client.errors import AdaptOrchAPIError
 from adaptorch_client.json_limits import require_json_depth
+from adaptorch_client.keepalive import keepalive_handlers
 from adaptorch_client.models import JSONMapping, JSONValue
 from adaptorch_client.provider import ProviderCredential, sanitize_error
 
@@ -108,12 +109,24 @@ class RequestSpec:
 
 
 class HTTPTransport:
-    """Execute one authenticated HTTP request without retries."""
+    """Execute one authenticated HTTP request without retries.
 
-    __slots__ = ("_config",)
+    Reads reuse a keep-alive connection (see :mod:`adaptorch_client.keepalive`);
+    submissions and cancellations always use a fresh one and are sent once.
+    """
+
+    __slots__ = ("_config", "_handlers", "_opener")
 
     def __init__(self, config: ClientConfig) -> None:
         self._config = config
+        self._handlers = keepalive_handlers()
+        # An explicit empty ProxyHandler keeps ambient proxy variables out.
+        self._opener = build_opener(ProxyHandler({}), _NoRedirectHandler(), *self._handlers)
+
+    def close(self) -> None:
+        """Close pooled connections; later requests use one connection each."""
+        for handler in self._handlers:
+            handler.close()
 
     def request(self, spec: RequestSpec) -> JSONMapping:
         """Execute one request and return the decoded JSON object."""
@@ -143,10 +156,7 @@ class HTTPTransport:
         if spec.timeout_seconds is not None:
             timeout = min(timeout, spec.timeout_seconds)
         try:
-            with build_opener(ProxyHandler({}), _NoRedirectHandler()).open(
-                request,
-                timeout=timeout,
-            ) as response:
+            with self._opener.open(request, timeout=timeout) as response:
                 return self._decode_mapping(self._read_bounded(response))
         except HTTPError as error:
             with error:

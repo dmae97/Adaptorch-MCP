@@ -222,7 +222,13 @@ adaptorchctl run cancel "$RUN_ID" --reason "중복 제출"
 ```bash
 adaptorchctl run wait "$RUN_ID"
 adaptorchctl run wait "$RUN_ID" --timeout 300 --interval 2
+adaptorchctl run wait "$RUN_ID" --timeout 300 --interval 2 --max-polls 50
 ```
+
+0.1.5부터 조회 횟수 상한의 기본값은 `ceil(timeout / interval) + 1`입니다. 그래서 긴 대기는
+고정 100회가 아니라 `--timeout`에서 끝납니다(이전에는 위 두 번째 예가 100회, 약 200초에서
+`poll_limit`으로 멈췄습니다). 상한을 직접 정하려면 `--max-polls`를 씁니다. 조회는 keep-alive
+연결 하나를 재사용하므로 매번 TCP/TLS 핸드셰이크를 하지 않습니다.
 
 응답은 `reason`(`terminal`/`deadline`/`poll_limit`/`unsupported_status`), `polls`,
 `elapsed_seconds`, 그리고 마지막으로 관측한 `run`을 담습니다. `terminal`이 아닌 종료는

@@ -32,6 +32,10 @@ Do not open a public issue for suspected secrets, authentication bypasses, trans
 - Keep `ADAPTORCH_MCP_MAX_PAYLOAD_SIZE_BYTES` bounded for public deployments.
 - Set `ADAPTORCH_MCP_ALLOWED_ORIGINS` narrowly when browser or remote clients can reach HTTP/SSE.
 - Avoid auto-approving run, artifact, and trace readers in shared or production MCP clients unless those payloads are sanitized.
+- The built-in HTTP listener binds loopback only, caps concurrent connections at `ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS` plus 64, and omits the `server` header.
+- Outbound SDK, CLI and connector HTTPS verifies certificates and hostnames and requires TLS 1.2 or newer. Ambient proxy variables and redirects are ignored, so credentials never follow a redirect or an unexpected proxy.
+- Keep-alive connections are reused only for `GET`/`HEAD`. Run submission and cancellation always use a fresh connection and are never re-sent; a read is re-sent once only when its reused idle connection was already closed by the server.
+- For stdio over SSH, keep tokens in the remote host environment rather than in the SSH command line, which other local users can see in the process list.
 
 ## Accuracy and Benchmark Data Hygiene
 

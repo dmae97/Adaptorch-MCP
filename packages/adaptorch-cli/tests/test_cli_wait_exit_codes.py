@@ -102,7 +102,9 @@ def test_wait_does_not_reinterpret_server_cancellation_encoding() -> None:
         ("FAILED", "terminal", 8, "5", 0.0, 1),
         ("CANCELLED", "terminal", 9, "5", 0.0, 1),
         ("RUNNING", "deadline", 10, "0.5", 0.0, 1),
-        ("RUNNING", "poll_limit", 10, "200", 0.0, 100),
+        # The read budget follows --timeout, so a long wait ends at its deadline
+        # (200 reads at t=0..199) instead of a fixed 100-read cut-off.
+        ("RUNNING", "deadline", 10, "200", 0.0, 200),
         ("NEW_STATUS", "unsupported_status", 10, "5", 0.0, 1),
         ("INCONCLUSIVE", "unsupported_status", 10, "5", 0.0, 1),
         ("SUCCEEDED", "deadline", 10, "0.5", 0.5, 1),
@@ -180,3 +182,55 @@ def test_get_retains_its_mapping_with_additive_wait_like_fields(
     captured = capsys.readouterr()
     assert json.loads(captured.out) == payload
     assert captured.err == ""
+
+
+def test_explicit_max_polls_still_bounds_the_wait(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    elapsed = 0.0
+    requests: list[RequestSpec] = []
+
+    def sleep(duration: float) -> None:
+        nonlocal elapsed
+        elapsed += duration
+
+    def request(_transport: HTTPTransport, spec: RequestSpec) -> cli.JSONMapping:
+        requests.append(spec)
+        return {"run_id": "run-1", "status": "RUNNING"}
+
+    def poll(fetch: Callable[[float], Run], policy: PollPolicy) -> RunPollResult:
+        return polling.wait_for_run(fetch, policy, clock=lambda: elapsed, sleep=sleep)
+
+    client = AdaptOrchClient(ClientConfig("https://api.example.test", "ado_test"))
+    monkeypatch.setenv("ADAPTORCH_CONFIG_DIR", str(tmp_path / "isolated-config"))
+    monkeypatch.setattr(cli, "_require_client", lambda _api_url: client)
+    monkeypatch.setattr(HTTPTransport, "request", request)
+    monkeypatch.setattr(client_module, "poll_run", poll)
+
+    code = cli.main(
+        ["run", "wait", "run-1", "--timeout", "300", "--interval", "2", "--max-polls", "7"]
+    )
+
+    assert code == 10
+    assert json.loads(capsys.readouterr().out)["reason"] == "poll_limit"
+    assert len(requests) == 7
+
+
+@pytest.mark.parametrize(
+    ("timeout", "interval", "expected"),
+    [(120.0, 1.0, 121), (300.0, 2.0, 151), (0.5, 1.0, 2), (5.0, 0.3, 18)],
+)
+def test_default_read_budget_covers_the_whole_timeout(
+    timeout: float, interval: float, expected: int
+) -> None:
+    assert cli._wait_poll_limit(timeout, interval) == expected
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "1.5", "many"])
+def test_max_polls_rejects_non_positive_integers(run_cli: CliRunner, value: str) -> None:
+    result = run_cli(["run", "wait", "run-1", "--max-polls", value])
+
+    assert result.returncode == 2
+    assert "wait_for_run" not in result.client_log

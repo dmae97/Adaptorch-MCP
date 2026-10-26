@@ -48,11 +48,21 @@ no model call, no quota, nothing stored.
 `SUCCEEDED` exits 0, `FAILED` exits 8, and `CANCELLED` exits 9. These codes describe
 run lifecycle, not result correctness or evidence verification.
 
+`--timeout` (default 120 s) and `--interval` (default 1 s) set the wait. Since 0.1.5
+the read budget defaults to `ceil(timeout / interval) + 1`, so the deadline, not a
+fixed 100-read cap, ends a long wait; `--max-polls N` sets an explicit cap. Reads
+reuse one keep-alive connection.
+
 A `deadline`, `poll_limit`, `unsupported_status`, or unrecognized stop reason exits
 10, even if the last observation looks terminal. Missing or unsupported terminal
 observations also exit 10. This means the observation is inconclusive, not that
 the server-side run failed. Inspect `reason` and retain the JSON; continue with the
 same run ID when appropriate. Waiting never resubmits or cancels a run.
+
+Output piped into a reader that exits early (`adaptorchctl run list | head -c 100`)
+no longer ends in a `BrokenPipeError` traceback; the exit code still reports the
+command. A failure with no HTTP response (DNS, connect, TLS or timeout) prints
+`request failed (no HTTP response: network, TLS or timeout)` and exits 7.
 
 Automation compatibility: `run wait` previously returned 0 for these observations.
 Scripts using `set -e` must now handle nonzero exits. `run get` keeps its existing
