@@ -41,6 +41,19 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
   leaves the verdict `NOT_RUN`. Older servers leave the fields `None`, unknown values
   are preserved, and non-string values are contract errors.
 
+### Added — saved run reports
+
+- `AdaptOrchClient.get_run_report(run_id, *, format="json", locale=None)` downloads
+  the hosted `GET /v1/runs/{run_id}/report.{json|pdf}` and returns a `RunReport` with
+  the served bytes unchanged, their `sha256`, and the JSON `snapshot_sha256`. The
+  report includes the saved, redacted final LLM answer (`io.output`); the engine PDF
+  shows it as readable text. A JSON report must belong to `run_id`; a PDF must carry
+  `application/pdf` and a `%PDF-` signature. `locale` is PDF only. Report downloads
+  use a separate 32 MiB response bound; other responses keep 8 MiB.
+- `adaptorchctl run report RUN_ID [--format json|pdf] [--locale en|ko|zh-CN] --out FILE`
+  writes a new file only (never overwrites) and prints a summary without content.
+- The public OpenAPI contract documents `GET /v1/runs/{run_id}/report.{format}`.
+
 ### Fixed — CLI
 
 - `adaptorchctl run wait` defaulted to a fixed 100-read cap, so the documented

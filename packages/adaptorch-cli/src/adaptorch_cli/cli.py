@@ -8,7 +8,7 @@ import sys
 import uuid
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Never, Protocol, TypeAlias
+from typing import TYPE_CHECKING, Never, Protocol, TypeAlias
 
 from adaptorch_client import (
     AdaptOrchAPIError,
@@ -21,6 +21,9 @@ from adaptorch_client import (
 
 from adaptorch_cli import config_store
 from adaptorch_cli.parser import build_parser, parse_args
+
+if TYPE_CHECKING:
+    from adaptorch_client import RunReportFormat, RunReportLocale
 
 JSONValue: TypeAlias = bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"] | None
 JSONMapping: TypeAlias = dict[str, JSONValue]
@@ -329,8 +332,37 @@ def _run_command(
                 reason=reason,
             )
             return _result_payload(cancel_result), False
+        case "report":
+            return _run_report(args, api_url, parser), False
         case _:
             parser.error("unknown run command")
+
+
+def _run_report(
+    args: argparse.Namespace,
+    api_url: str,
+    parser: argparse.ArgumentParser,
+) -> JSONMapping:
+    # argparse choices restrict both values to the client's literals.
+    report_format: RunReportFormat = args.format
+    locale: RunReportLocale | None = args.locale
+    out = Path(args.out)
+    if report_format == "json" and locale is not None:
+        parser.error("--locale applies to --format pdf only")
+    if out.exists() or out.is_symlink():
+        parser.error(f"--out {out} already exists; choose a new path")
+    report = _require_client(api_url).get_run_report(
+        args.run_id, format=report_format, locale=locale
+    )
+    try:
+        with out.open("xb") as stream:
+            stream.write(report.content)
+    except FileExistsError:
+        parser.error(f"--out {out} already exists; choose a new path")
+    except OSError:
+        out.unlink(missing_ok=True)
+        parser.error(f"could not write --out {out}")
+    return {**report.to_payload(), "path": str(out)}
 
 
 def _execute(

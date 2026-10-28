@@ -22,6 +22,8 @@ from adaptorch_client.provider import ProviderCredential, sanitize_error
 
 _MAX_REQUEST_BYTES = 8 * 1024 * 1024
 _MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+# Saved run reports embed the run's output (up to 2 MiB) several times in a PDF.
+MAX_DOCUMENT_BYTES = 32 * 1024 * 1024
 _MAX_ERROR_CODE_LENGTH = 100
 _MAX_ERROR_MESSAGE_LENGTH = 500
 
@@ -130,9 +132,17 @@ class HTTPTransport:
 
     def request(self, spec: RequestSpec) -> JSONMapping:
         """Execute one request and return the decoded JSON object."""
+        body, _content_type = self._send(spec, "application/json", _MAX_RESPONSE_BYTES)
+        return self._decode_mapping(body)
+
+    def request_document(self, spec: RequestSpec, accept: str) -> tuple[bytes, str]:
+        """Execute one request and return the raw body and its media type, unmodified."""
+        return self._send(spec, accept, MAX_DOCUMENT_BYTES)
+
+    def _send(self, spec: RequestSpec, accept: str, limit: int) -> tuple[bytes, str]:
         body = self._encode_payload(spec.payload)
         headers = {
-            "Accept": "application/json",
+            "Accept": accept,
             **{
                 name: value
                 for name, value in (spec.headers or {}).items()
@@ -157,7 +167,8 @@ class HTTPTransport:
             timeout = min(timeout, spec.timeout_seconds)
         try:
             with self._opener.open(request, timeout=timeout) as response:
-                return self._decode_mapping(self._read_bounded(response))
+                content = self._read_bounded(response, limit)
+                return content, response.headers.get_content_type()
         except HTTPError as error:
             with error:
                 raise self._from_http_error(error, spec.provider_credential) from None
@@ -185,20 +196,25 @@ class HTTPTransport:
         return encoded
 
     @staticmethod
-    def _read_bounded(response: _ReadableResponse) -> bytes:
+    def _read_bounded(response: _ReadableResponse, limit: int = _MAX_RESPONSE_BYTES) -> bytes:
         content_length = response.headers.get("Content-Length")
         if content_length is not None:
             try:
                 declared_length = int(content_length)
             except ValueError:
                 raise AdaptOrchAPIError("AdaptOrch response has an invalid size") from None
-            if declared_length < 0 or declared_length > _MAX_RESPONSE_BYTES:
+            if declared_length < 0 or declared_length > limit:
                 raise AdaptOrchAPIError("AdaptOrch response exceeds the size limit")
 
-        body = response.read(_MAX_RESPONSE_BYTES + 1)
-        if len(body) > _MAX_RESPONSE_BYTES:
+        body = response.read(limit + 1)
+        if len(body) > limit:
             raise AdaptOrchAPIError("AdaptOrch response exceeds the size limit")
         return body
+
+    @staticmethod
+    def decode_mapping(body: bytes) -> JSONMapping:
+        """Decode a JSON object with the same strict rules as API responses."""
+        return HTTPTransport._decode_mapping(body)
 
     @staticmethod
     def _decode_mapping(body: bytes) -> JSONMapping:

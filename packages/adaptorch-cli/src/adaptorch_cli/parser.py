@@ -78,6 +78,20 @@ def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser
     cancel.add_argument("run_id")
     cancel.add_argument("--reason")
 
+    report = commands.add_parser(
+        "report",
+        help=(
+            "Download a saved terminal-run report (JSON or PDF, including the saved "
+            "LLM answer). Read-only: it never submits or replays a run."
+        ),
+    )
+    report.add_argument("run_id")
+    report.add_argument("--format", choices=("json", "pdf"), default="json")
+    report.add_argument("--locale", choices=("en", "ko", "zh-CN"), help="PDF only (default: en)")
+    report.add_argument(
+        "--out", required=True, help="New file to write; an existing file is never overwritten"
+    )
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="adaptorchctl")

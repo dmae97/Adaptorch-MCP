@@ -219,6 +219,29 @@ nav = client.navigate_evidence(
 nav.navigation_version  # "graph_v5"
 ```
 
+## Saved run reports
+
+`get_run_report(run_id, *, format="json", locale=None)` downloads
+`GET /v1/runs/{run_id}/report.{json|pdf}` for a saved terminal run and returns a
+`RunReport`. It never submits or replays a run. The report contains the saved task
+input and the saved final LLM answer (`io.output`), redacted; the PDF shows that answer
+as readable text and embeds the exact JSON as `run-report.json`. The answer is the
+recorded output, not a correctness verdict.
+
+- `content` holds the served bytes unchanged; `sha256` hashes them. A JSON report is
+  checked to belong to `run_id` and to carry `snapshot_sha256`; a PDF is checked for
+  its media type and `%PDF-` signature only.
+- `locale` (`en`, `ko`, `zh-CN`) is for PDF only and defaults to `en`; passing it
+  with JSON raises `ValueError` before any request.
+- The server requires a key whose owner matches the run's owner. Non-terminal runs
+  answer 409; a PDF that cannot be rendered (for example an unsupported glyph) answers
+  503 while JSON stays available.
+
+```python
+report = client.get_run_report("run-1", format="pdf", locale="ko")
+Path("report.pdf").write_bytes(report.content)
+```
+
 ## License
 
 Proprietary — Copyright ClassicMate. All rights reserved. See [LICENSE](https://github.com/dmae97/Adaptorch-MCP/blob/main/LICENSE).

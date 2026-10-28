@@ -13,6 +13,15 @@ from adaptorch_client.models import CapabilitySet, JSONMapping, JSONValue, Princ
 from adaptorch_client.polling import PollPolicy, RunPollResult
 from adaptorch_client.polling import wait_for_run as poll_run
 from adaptorch_client.provider import ProviderCredential
+from adaptorch_client.report import (
+    REPORT_FORMATS,
+    REPORT_LOCALES,
+    RunReport,
+    RunReportFormat,
+    RunReportLocale,
+    parse_run_report,
+    report_media_type,
+)
 from adaptorch_client.responses import (
     NAVIGATION_ALGORITHMS,
     ArtifactListResponse,
@@ -143,6 +152,35 @@ class AdaptOrchClient:
             self._resource(
                 RequestSpec("GET", f"/v1/runs/{self._segment(run_id)}/artifacts"), run_id
             )
+        )
+
+    def get_run_report(
+        self,
+        run_id: str,
+        *,
+        format: RunReportFormat = "json",
+        locale: RunReportLocale | None = None,
+    ) -> RunReport:
+        """Download one saved terminal-run report (JSON or PDF). Read-only, no new run.
+
+        ``locale`` applies to PDF only and defaults to ``en``; translation changes the
+        PDF presentation, never the JSON data.
+        """
+        if format not in REPORT_FORMATS:
+            raise ValueError(f"format must be one of {list(REPORT_FORMATS)}")
+        if format == "json" and locale is not None:
+            raise ValueError("locale applies to the PDF report only")
+        if format == "pdf":
+            locale = "en" if locale is None else locale
+            if locale not in REPORT_LOCALES:
+                raise ValueError(f"locale must be one of {list(REPORT_LOCALES)}")
+        query = "" if locale is None else f"?{urlencode({'locale': locale})}"
+        path = f"/v1/runs/{self._segment(run_id)}/report.{format}{query}"
+        content, media_type = self._transport.request_document(
+            RequestSpec("GET", path), report_media_type(format)
+        )
+        return parse_run_report(
+            run_id, format, locale, content, media_type, HTTPTransport.decode_mapping
         )
 
     def navigate_evidence(

@@ -16,6 +16,7 @@ from adaptorch_client.models import (
 )
 from adaptorch_client.polling import PollPolicy, PollStopReason, RunPollResult
 from adaptorch_client.provider import ProviderCredential
+from adaptorch_client.report import RunReport, RunReportFormat, RunReportLocale
 from adaptorch_client.responses import (
     NAVIGATION_ALGORITHMS,
     ArtifactListResponse,
@@ -45,6 +46,9 @@ __all__ = [
     "RunPollResult",
     "Run",
     "RunListResponse",
+    "RunReport",
+    "RunReportFormat",
+    "RunReportLocale",
     "VerificationDiagnostic",
     "validate_api_url",
 ]
