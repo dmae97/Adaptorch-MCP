@@ -210,6 +210,15 @@ class AdaptOrchClient:
             {"algorithm_version": algorithm_version},
         )
         return ApiResult({"navigation_version": algorithm_version, "evaluation": {}})
+
+    def get_run_report(self, run_id, *, format="json", locale=None):
+        _fail_if_requested()
+        _record("get_run_report", [run_id], {"format": format, "locale": locale})
+        content = b'{"run":{"run_id":"' + run_id.encode() + b'"}}'
+        return SimpleNamespace(
+            content=content,
+            to_payload=lambda: {"run_id": run_id, "format": format, "bytes": len(content)},
+        )
 """
 
 

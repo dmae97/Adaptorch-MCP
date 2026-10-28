@@ -225,6 +225,50 @@ paths:
                     name: report.json
         default:
           $ref: "#/components/responses/Error"
+  /v1/runs/{run_id}/report.{format}:
+    parameters:
+      - $ref: "#/components/parameters/RunId"
+      - name: format
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [json, pdf]
+    get:
+      tags: [runs]
+      operationId: getRunReport
+      summary: Download the saved report of a terminal run
+      description: >-
+        Read-only export of one saved terminal run (SUCCEEDED, FAILED or CANCELLED)
+        owned by the caller. It never submits or replays a run. The JSON report
+        (schema adaptorch-run-report.v1) includes the saved task input and the saved,
+        redacted final output under io.output; the PDF shows that output as readable
+        text and embeds the exact JSON as run-report.json. 409 means the run is not
+        terminal; 503 means the PDF could not be rendered while JSON stays available.
+      parameters:
+        - name: locale
+          in: query
+          required: false
+          description: PDF presentation language. It does not change JSON data.
+          schema:
+            type: string
+            enum: [en, ko, zh-CN]
+            default: en
+      responses:
+        "200":
+          description: Saved run report
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schema_version, run, io, snapshot_sha256]
+                additionalProperties: true
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     tenantApiKey:

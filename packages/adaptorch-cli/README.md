@@ -42,6 +42,17 @@ adaptorchctl navigate --question "How is public news reflected in prices?" \
 an object with an `evidence_pack` field (`-` reads stdin). The command is read-only:
 no model call, no quota, nothing stored.
 
+```bash
+adaptorchctl run report RUN_ID --out report.json
+adaptorchctl run report RUN_ID --format pdf --locale ko --out report.pdf
+```
+
+Downloads a saved terminal run's report, including the saved LLM answer, to a new
+file and prints `{run_id, format, locale, media_type, bytes, sha256, snapshot_sha256,
+path}`. It never submits or replays a run and never overwrites an existing file
+(exit 2). `--locale` is PDF only. A run that is not terminal exits 5 (HTTP 409); an
+unrenderable PDF exits 7 (HTTP 503) and the JSON report remains available.
+
 ## Bounded wait exit codes
 
 `adaptorchctl run wait RUN_ID` emits the last observation as JSON. A terminal
