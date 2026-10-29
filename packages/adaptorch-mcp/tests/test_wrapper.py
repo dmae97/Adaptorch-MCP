@@ -161,7 +161,7 @@ def test_cli_invalid_explicit_base_url_raises_value_error(
     assert calls == []
 
 
-def test_cli_missing_adaptorch_dependency_returns_helpful_error(
+def test_cli_missing_remote_configuration_returns_helpful_error(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -173,7 +173,7 @@ def test_cli_missing_adaptorch_dependency_returns_helpful_error(
     monkeypatch.setattr(cli, "_load_runtime_main", missing_runtime)
 
     assert cli.main(["--transport", "stdio"]) == 2
-    assert "adaptorch-mcp requires AdaptOrch" in capsys.readouterr().err
+    assert "adaptorch-mcp is a remote client" in capsys.readouterr().err
 
 
 def test_cli_empty_equals_base_url_falls_through_to_env(monkeypatch: pytest.MonkeyPatch) -> None:

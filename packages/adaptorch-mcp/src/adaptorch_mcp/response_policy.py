@@ -271,6 +271,7 @@ def sanitize_tool_response(
     *,
     tool_name: str,
     expected_run_id: str | None = None,
+    expected_verification_id: str | None = None,
 ) -> dict[str, Any]:
     """Project a parent tool response onto its remote-safe public contract."""
     error = response.get("error")
@@ -301,6 +302,9 @@ def sanitize_tool_response(
         projected = project_tool_output(tool_name, decoded)
         if projected is not None and expected_run_id is not None:
             if projected.get("run_id") != expected_run_id:
+                return _unsupported_result(response)
+        if projected is not None and expected_verification_id is not None:
+            if projected.get("verification_id") != expected_verification_id:
                 return _unsupported_result(response)
     if projected is None:
         return _unsupported_result(response)

@@ -17,14 +17,12 @@ def test_distribution_ships_the_canonical_classicmate_license() -> None:
     assert (PACKAGE_ROOT / "LICENSE").read_bytes() == (REPO_ROOT / "LICENSE").read_bytes()
 
 
-def test_wrapper_dependency_cannot_resolve_to_the_planned_codeless_meta_package() -> None:
+def test_public_client_does_not_depend_on_the_private_engine() -> None:
     project = tomllib.loads((PACKAGE_ROOT / "pyproject.toml").read_text())["project"]
-    # The engine stays capped below the codeless 0.2 meta-package; the second entry is
-    # the stdlib-only SDK whose keep-alive transport the connector reuses.
-    assert project["dependencies"] == [
-        "adaptorch[api]>=0.1.2,<0.2",
-        "adaptorch-client>=0.1.5,<0.2",
-    ]
+    # Public execution needs only the stdlib SDK and its remote transport.
+    assert project["dependencies"] == ["adaptorch-client>=0.1.5,<0.2"]
+    assert "adaptorch[api]" not in " ".join(project["dependencies"])
+    assert "adaptorch[api]>=0.1.2,<0.2" in project["optional-dependencies"]["engine-dev"]
     assert project["requires-python"] == ">=3.11,<3.13"
 
 
