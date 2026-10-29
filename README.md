@@ -257,8 +257,8 @@ The aggregate verdict and predefined family gate **did not pass**. The public
 > third-party benchmark.
 
 Run your own workload through the hosted kernel at
-**[adaptorch.com](https://adaptorch.com)** — free starter includes an API key
-and 5,000 platform calls/month. BYOK provider usage is billed separately;
+**[adaptorch.com](https://adaptorch.com)** — the $0 Starter plan includes an API key
+and 50 admitted runs/month. BYOK provider usage is billed separately;
 confirm current limits in the [plan catalog](https://adaptorch.com/v1/plans).
 
 ## Scenario benchmark projection
