@@ -115,7 +115,7 @@ def test_diagnostics_redacts_base_url_userinfo() -> None:
 
 def test_expected_core_tools_are_canonical() -> None:
     from adaptorch_mcp.diagnostics import EXPECTED_CORE_TOOLS
-    from adaptorch_mcp.hardening import REMOTE_TOOL_NAMES
+    from adaptorch_mcp.thin_remote import REMOTE_TOOL_NAMES
 
     assert EXPECTED_CORE_TOOLS == (
         "adaptorch_run",
@@ -131,6 +131,13 @@ def test_expected_core_tools_are_canonical() -> None:
     # Doctor duplicates the list so it works without the engine installed; the
     # duplicate must never drift from the exposure policy it reports.
     assert EXPECTED_CORE_TOOLS == REMOTE_TOOL_NAMES
+
+
+def test_legacy_bridge_exposes_the_same_remote_tools() -> None:
+    hardening = pytest.importorskip("adaptorch_mcp_legacy.hardening")
+    from adaptorch_mcp.thin_remote import REMOTE_TOOL_NAMES
+
+    assert hardening.REMOTE_TOOL_NAMES == REMOTE_TOOL_NAMES
 
 
 def test_pyproject_registers_console_scripts() -> None:

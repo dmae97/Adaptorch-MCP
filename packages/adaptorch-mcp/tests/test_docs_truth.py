@@ -168,7 +168,7 @@ def test_auto_provider_docs_name_exactly_the_engine_key_variables() -> None:
     """
     from adaptorch.providers import DEFAULT_API_KEY_ENV
 
-    from adaptorch_mcp.runtime import auto_provider_key_envs
+    from adaptorch_mcp_legacy.runtime import auto_provider_key_envs
 
     engine_key_envs = set(DEFAULT_API_KEY_ENV.values())
     assert set(auto_provider_key_envs()) == engine_key_envs

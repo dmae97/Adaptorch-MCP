@@ -78,7 +78,7 @@ def hosted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[HostedFi
 
 
 def test_public_mcp_wrapper_is_wired_to_actual_hosted_rest_routes(hosted: HostedFixture) -> None:
-    hardening = pytest.importorskip("adaptorch_mcp.hardening")
+    hardening = pytest.importorskip("adaptorch_mcp_legacy.hardening")
     from adaptorch_client import ProviderCredential
 
     wrapper = hardening.build_hardened_mcp_server(

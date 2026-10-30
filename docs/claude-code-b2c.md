@@ -75,7 +75,7 @@ For verification:
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-uvx --with "adaptorch[api]" adaptorch-mcp-smoke --base-url https://adaptorch.com
+uvx --from adaptorch-mcp adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 ## Product message

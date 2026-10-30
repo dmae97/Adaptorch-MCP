@@ -4,26 +4,25 @@
 
 ```bash
 pip install adaptorch-mcp
-uvx --from "adaptorch-mcp==0.5.2" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-client --help
 ```
 
 ## Package dependency order
 
-`adaptorch-mcp` delegates runtime behavior to `adaptorch.mcp_server`. The 0.5.x
-wrapper supports the existing `adaptorch` 0.1.x engine and excludes the planned
-code-free 0.2.x meta-package. This wrapper release does not republish private
-engine code, the API client, the CLI, or the meta-package.
+Since 0.6.0 `adaptorch-mcp` is a remote client: its only runtime dependency is
+`adaptorch-client`, and it never installs or imports the private engine. The
+in-process engine bridge (`hardening`, `runtime`, `control_plane_backend`,
+`backend_config`) lives in `packages/adaptorch-mcp/legacy/adaptorch_mcp_legacy`,
+outside `src/`, and is not part of any distribution. Maintainers install the engine
+for parity tests with `uv sync --all-packages --extra dev --group engine` or
+`make engine-check`.
 
-1. Verify against the already published compatible engine and the CI-pinned source.
-2. Publish only the wrapper after test, package, and install checks pass.
-3. Smoke-test the unambiguous `adaptorch-mcp-client` launcher in a clean environment.
+1. Publish `adaptorch-client` first if the wrapper needs a newer client.
+2. Publish the wrapper after test, package, public wheel gate and install checks pass.
+3. Smoke-test the `adaptorch-mcp-client` launcher in a clean environment.
 
-If `adaptorch` is not on PyPI yet, users can still install from GitHub:
-
-```bash
-pip install "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git"
-pip install adaptorch-mcp
-```
+`adaptorch-mcp` 0.3.0–0.5.2 on PyPI depend on the engine distribution and do not
+work against the code-free `adaptorch` 0.2.0 meta-package; 0.6.0 replaces them.
 
 ## Local build and checks
 
@@ -48,33 +47,15 @@ Run a redacted secret scan and store the evidence:
 gitleaks detect --source . --redact
 ```
 
-## Local global refresh from current AdaptOrch source
+## Local global refresh
 
-Build immutable wheel snapshots for both the wrapper and the current local AdaptOrch tree, record their SHA-256 hashes, then install only those artifacts:
+Build an immutable wheel snapshot, record its SHA-256 hash, then install only that
+artifact:
 
 ```bash
 uv run --no-sync python -m build packages/adaptorch-mcp --outdir dist
-uv run --no-sync python -m build --wheel \
-  --outdir /absolute/path/to/core-dist /absolute/path/to/adaptorch
-sha256sum \
-  dist/adaptorch_mcp-0.5.2-py3-none-any.whl \
-  /absolute/path/to/core-dist/adaptorch-0.1.2-py3-none-any.whl
-uv tool install --offline --force \
-  --with "adaptorch[api] @ file:///absolute/path/to/core-dist/adaptorch-0.1.2-py3-none-any.whl" \
-  dist/adaptorch_mcp-0.5.2-py3-none-any.whl
-```
-
-Both distributions publish an `adaptorch-mcp` console script. Prefer the wrapper-only
-`adaptorch-mcp-client` command. If an existing client requires the legacy name,
-restore that entry point after installing the core and verify its import target:
-
-```bash
-uv pip install --offline \
-  --python "$HOME/.local/share/uv/tools/adaptorch-mcp/bin/python" \
-  --force-reinstall --no-deps \
-  dist/adaptorch_mcp-0.5.2-py3-none-any.whl
-grep -q "from adaptorch_mcp.cli import main" \
-  "$HOME/.local/share/uv/tools/adaptorch-mcp/bin/adaptorch-mcp"
+sha256sum dist/adaptorch_mcp-0.6.0-py3-none-any.whl
+uv tool install --force dist/adaptorch_mcp-0.6.0-py3-none-any.whl
 ```
 
 Run `adaptorch-mcp-smoke` afterward and require the default remote surface to contain exactly nine tools. Do not use a deleted temporary source directory as the uv receipt origin.
@@ -105,7 +86,7 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 1. Create the PyPI project `adaptorch-mcp`.
 2. In PyPI, add a trusted publisher for this repository.
 3. Require the GitHub `pypi` environment.
-4. Tag a release like `adaptorch-mcp-v0.5.2`.
+4. Tag a release like `adaptorch-mcp-v0.6.0`.
 5. Let `.github/workflows/publish.yml` build and publish without storing a PyPI API token.
 
 ## One workflow, four packages
@@ -117,25 +98,25 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 | `adaptorch-client-v<version>` | `packages/adaptorch-client` | stdlib-only hosted API client |
 | `adaptorch-cli-v<version>` | `packages/adaptorch-cli` | `adaptorchctl`; depends on `adaptorch-client` |
 | `adaptorch-v<version>` | `packages/adaptorch` | meta-package: installs client + cli, no code |
-| `adaptorch-mcp-v<version>` | `packages/adaptorch-mcp` | local-engine wrapper |
+| `adaptorch-mcp-v<version>` | `packages/adaptorch-mcp` | remote MCP client; depends on `adaptorch-client` |
 
 The tag version must equal the package's `pyproject.toml` version, and every
 wheel passes `scripts/check_public_wheels.py` (no engine code, no dependency on
-the `adaptorch` core distribution) before upload. Order for a first release of
+the `adaptorch` core distribution, no module-level engine import) before upload. Order for a first release of
 the meta-package: `adaptorch-client` → `adaptorch-cli` → `adaptorch`, because
 the meta-package pins both. Run the gate locally first:
 
 ```bash
-uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli
+uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli adaptorch-mcp
 ```
 
 ## Post-publish smoke
 
 ```bash
-uvx --from "adaptorch-mcp==0.5.2" adaptorch-mcp-client --help
-uvx --with "adaptorch[api]" adaptorch-mcp-doctor --json
+uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-doctor --json
 ADAPTORCH_CONTROL_PLANE_TOKEN="<token>" \
-  uvx --with "adaptorch[api]" adaptorch-mcp-smoke --base-url https://adaptorch.com
+  uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 Expected MCP tools include `adaptorch_plan_catalog`. For HTTP, also verify `/mcp/health`, `initialize`, and `tools/list` with a client-facing `ADAPTORCH_MCP_HTTP_AUTH_TOKEN`.

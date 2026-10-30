@@ -8,6 +8,12 @@ license = "LicenseRef-Proprietary"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "ClassicMate" }]
 
+# The private engine is a maintainer-only dependency of this unpublished workspace
+# root, never of a published package: `uv sync --all-packages --extra dev --group engine`
+# installs the served pin below for the legacy bridge and parity tests.
+[dependency-groups]
+engine = ["adaptorch[api]>=0.1.2,<0.2"]
+
 [tool.uv.workspace]
 members = [
   "packages/adaptorch-mcp",
@@ -28,6 +34,7 @@ src = [
   "packages/adaptorch-cli/src",
   "packages/adaptorch-cli/tests",
   "packages/adaptorch-mcp/src",
+  "packages/adaptorch-mcp/legacy",
   "packages/adaptorch-mcp/tests",
 ]
 
@@ -37,7 +44,6 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-exclude = "packages/adaptorch-mcp/src/adaptorch_mcp/(backend_config|control_plane_backend|hardening|runtime)\\.py$"
 mypy_path = [
   "packages/adaptorch-client/src",
   "packages/adaptorch-cli/src",
@@ -55,11 +61,16 @@ extraPaths = [
   "packages/adaptorch-client/src",
   "packages/adaptorch-cli/src",
   "packages/adaptorch-mcp/src",
+  "packages/adaptorch-mcp/legacy",
   "../src",
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["packages/adaptorch-client/src", "packages/adaptorch-cli/src"]
+pythonpath = [
+  "packages/adaptorch-client/src",
+  "packages/adaptorch-cli/src",
+  "packages/adaptorch-mcp/legacy",
+]
 testpaths = [
   "packages/adaptorch/tests",
   "packages/adaptorch-client/tests",

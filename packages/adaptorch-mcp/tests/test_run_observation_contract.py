@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 
-from adaptorch_mcp.hardening import HardenedMCPServer
 from adaptorch_mcp.output_schema import project_tool_output
 from adaptorch_mcp.response_policy import sanitize_tool_response
 from adaptorch_mcp.security_policy import REMOTE_EXPOSURE_PROFILE
+from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 from mcp_test_support import FakeBackend
 
 

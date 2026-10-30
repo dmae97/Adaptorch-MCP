@@ -43,13 +43,8 @@ jobs:
             | env -u ADAPTORCH_CONTROL_PLANE_TOKEN uv run adaptorch-mcp --transport stdio > introspection.jsonl
           uv run python -c 'import json; r=[json.loads(l) for l in open("introspection.jsonl")]; assert r[0]["result"]["serverInfo"]["name"]=="adaptorch-mcp"; assert len(r[1]["result"]["tools"])==9, r'
       - name: Build package
-        # The in-process adaptorch-mcp wrapper still depends on the private
-        # engine, so it is build-checked but not a publishable wheel.
         run: uv run python -m build packages/adaptorch-mcp
       - name: Public wheel gate
-        # No public wheel may carry engine code or depend on the private core.
-        # adaptorch-mcp is intentionally excluded: it still wraps the engine
-        # in-process, so a core dependency is expected and the gate would fail
-        # it. It is gated again at publish time (publish.yml) if a release tag
-        # ever tries to ship it.
-        run: uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli
+        # No public wheel may carry engine code, import it at module level, or
+        # depend on the private core. The engine bridge lives outside src/.
+        run: uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli adaptorch-mcp

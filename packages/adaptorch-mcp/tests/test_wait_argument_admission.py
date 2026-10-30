@@ -7,12 +7,12 @@ from typing import Any
 
 import pytest
 
-from adaptorch_mcp.hardening import HardenedMCPServer
 from adaptorch_mcp.security_policy import (
     FULL_EXPOSURE_PROFILE,
     REMOTE_EXPOSURE_PROFILE,
     ExposureProfile,
 )
+from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 from mcp_test_support import FakeBackend
 
 

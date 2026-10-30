@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from adaptorch_mcp import runtime
+from adaptorch_mcp_legacy import runtime
 
 
 def test_stdio_runtime_builds_remote_profile_and_serves(monkeypatch: pytest.MonkeyPatch) -> None:

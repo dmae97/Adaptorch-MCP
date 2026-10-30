@@ -31,7 +31,6 @@ from adaptorch_mcp.first_run_receipt_output import (
 from adaptorch_mcp.first_run_receipt_output import (
     CLAIM_BOUNDARY_FIELDS as RECEIPT_CLAIM_FIELDS,
 )
-from adaptorch_mcp.hardening import build_hardened_mcp_server
 from adaptorch_mcp.orchestration_value_output import (
     CLAIM_BOUNDARY_FIELDS as WRAPPER_CLAIM_BOUNDARY,
 )
@@ -46,6 +45,7 @@ from adaptorch_mcp.orchestration_value_output import (
 )
 from adaptorch_mcp.output_schema import project_tool_output
 from adaptorch_mcp.security_policy import REMOTE_EXPOSURE_PROFILE
+from adaptorch_mcp_legacy.hardening import build_hardened_mcp_server
 from mcp_test_support import FakeBackend
 
 try:
@@ -265,7 +265,7 @@ def test_malformed_verification_metadata_drops_only_optional_field(diagnostics: 
 
 
 def _remote_server() -> Any:
-    from adaptorch_mcp.hardening import HardenedMCPServer
+    from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 
     return HardenedMCPServer(
         backend=FakeBackend(),
@@ -761,7 +761,7 @@ class _RecordingBackend(FakeBackend):
 
 def _remote_singleton_hint(arguments: Mapping[str, Any]) -> Any:
     """Run through the remote profile; return the forwarded hint or the error code."""
-    from adaptorch_mcp.hardening import HardenedMCPServer
+    from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 
     backend = _RecordingBackend()
     server = HardenedMCPServer(

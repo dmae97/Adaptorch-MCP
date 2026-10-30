@@ -19,7 +19,7 @@ from adaptorch.mcp_server import (
 )
 from adaptorch.providers import DEFAULT_API_KEY_ENV
 
-from adaptorch_mcp.hardening import (
+from adaptorch_mcp_legacy.hardening import (
     HardenedMCPServer,
     build_hardened_mcp_server,
     insecure_control_plane_allowed,

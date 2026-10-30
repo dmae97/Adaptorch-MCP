@@ -22,7 +22,8 @@ def test_public_client_does_not_depend_on_the_private_engine() -> None:
     # Public execution needs only the stdlib SDK and its remote transport.
     assert project["dependencies"] == ["adaptorch-client>=0.1.5,<0.2"]
     assert "adaptorch[api]" not in " ".join(project["dependencies"])
-    assert "adaptorch[api]>=0.1.2,<0.2" in project["optional-dependencies"]["engine-dev"]
+    extras = " ".join(" ".join(deps) for deps in project["optional-dependencies"].values())
+    assert "adaptorch[" not in extras
     assert project["requires-python"] == ">=3.11,<3.13"
 
 

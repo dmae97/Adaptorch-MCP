@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 import adaptorch_mcp
-from adaptorch_mcp.hardening import (
+from adaptorch_mcp_legacy.hardening import (
     FULL_EXPOSURE_PROFILE,
     REMOTE_EXPOSURE_PROFILE,
     REMOTE_TOOL_NAMES,
