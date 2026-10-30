@@ -93,6 +93,13 @@ jobs:
         env:
           PACKAGE: ${{ steps.target.outputs.package }}
         run: uv run python scripts/check_public_wheels.py --package "$PACKAGE"
+      - name: Installed-wheel tests against PyPI
+        # Dependencies resolve from PyPI only, at the declared floor: a package cannot
+        # ship before the release it requires is published and passes its tests.
+        if: steps.target.outputs.package != 'adaptorch'
+        env:
+          PACKAGE: ${{ steps.target.outputs.package }}
+        run: bash scripts/test_installed_wheel.sh "$PACKAGE"
       - name: Build
         env:
           PACKAGE: ${{ steps.target.outputs.package }}

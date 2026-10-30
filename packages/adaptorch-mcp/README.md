@@ -93,7 +93,7 @@ The listener caps concurrent connections at `ADAPTORCH_MCP_MAX_SSE_SUBSCRIBERS` 
 
 ## Connections to the control plane
 
-The connector keeps HTTP/1.1 connections alive through `adaptorch_client.keepalive`, now a declared dependency (`adaptorch-client>=0.1.5,<0.2`). Status, artifact and usage reads reuse one idle connection for up to 4 seconds, so `adaptorch_run` polling no longer repeats the TCP and TLS handshake on every read. Run submission and cancellation always open a fresh connection and are sent once. A read whose idle connection the server had already closed is written once more on a new connection; timeouts are never re-sent. Redirects and ambient proxies remain disabled, and TLS requires certificate verification and TLS 1.2 or newer.
+The connector keeps HTTP/1.1 connections alive through `adaptorch_client.keepalive`, a declared dependency (`adaptorch-client>=0.1.6,<0.2`). Status, artifact and usage reads reuse one idle connection for up to 4 seconds, so `adaptorch_run` polling no longer repeats the TCP and TLS handshake on every read. Run submission and cancellation always open a fresh connection and are sent once. A read whose idle connection the server had already closed is written once more on a new connection; timeouts are never re-sent. Redirects and ambient proxies remain disabled, and TLS requires certificate verification and TLS 1.2 or newer.
 
 ## stdio over SSH
 

@@ -20,7 +20,7 @@ def test_distribution_ships_the_canonical_classicmate_license() -> None:
 def test_public_client_does_not_depend_on_the_private_engine() -> None:
     project = tomllib.loads((PACKAGE_ROOT / "pyproject.toml").read_text())["project"]
     # Public execution needs only the stdlib SDK and its remote transport.
-    assert project["dependencies"] == ["adaptorch-client>=0.1.5,<0.2"]
+    assert project["dependencies"] == ["adaptorch-client>=0.1.6,<0.2"]
     assert "adaptorch[api]" not in " ".join(project["dependencies"])
     extras = " ".join(" ".join(deps) for deps in project["optional-dependencies"].values())
     assert "adaptorch[" not in extras

@@ -22,7 +22,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
 ]
-dependencies = ["adaptorch-client>=0.1.5,<0.2"]
+dependencies = ["adaptorch-client>=0.1.6,<0.2"]
 
 [project.optional-dependencies]
 http = ["fastapi>=0.112", "uvicorn[standard]>=0.30"]

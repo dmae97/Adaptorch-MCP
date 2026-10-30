@@ -300,3 +300,26 @@ def test_duplicate_guard_allows_keys_reused_in_distinct_objects(local_api: Local
     local_api.enqueue_json(payload)
 
     assert _transport(local_api).request(RequestSpec("GET", "/v1/whoami")) == payload
+
+
+@pytest.mark.parametrize("method,path", [("POST", "/v1/runs"), ("POST", "/v1/mcp")])
+def test_provider_credential_is_accepted_for_run_submission(
+    method: Literal["POST"], path: str
+) -> None:
+    credential = ProviderCredential("test-provider", "test/model", "synthetic-byok")
+
+    spec = RequestSpec(method, path, {"goal": "test"}, provider_credential=credential)
+
+    assert spec.provider_credential is credential
+
+
+@pytest.mark.parametrize(
+    "method,path", [("GET", "/v1/mcp"), ("GET", "/v1/runs"), ("POST", "/v1/runs/run-1/cancel")]
+)
+def test_provider_credential_is_refused_outside_run_submission(
+    method: Literal["GET", "POST"], path: str
+) -> None:
+    credential = ProviderCredential("test-provider", "test/model", "synthetic-byok")
+
+    with pytest.raises(ValueError, match="run submission"):
+        RequestSpec(method, path, provider_credential=credential)
