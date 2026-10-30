@@ -32,6 +32,19 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 - Added a root `Dockerfile` that installs the client and wrapper from one pinned public commit, for local reproduction of registry checks. Glama builds from its admin build spec instead; `docs/glama.md` records the values, and `glama.json` names the maintainer.
 - `make test` runs on the public install alone; engine-bound tests are skipped at collection.
 
+## [adaptorch-client 0.1.6] — Unreleased
+
+### Fixed — BYOK through the remote MCP client
+
+- `RequestSpec` accepts a provider credential for `POST /v1/mcp` as well as
+  `POST /v1/runs`; any other method or path still raises `ValueError`. With 0.1.5,
+  `adaptorch-mcp` 0.6.0 failed every `adaptorch_run` call that carried a BYOK
+  credential. `adaptorch-mcp` now requires `adaptorch-client>=0.1.6`.
+- `scripts/test_installed_wheel.sh` installs a built wheel with its workspace
+  dependencies at the declared floor and runs the package tests against it. CI runs
+  it for every package; `publish.yml` runs it against PyPI alone, so a package cannot
+  be released before the floor it requires.
+
 ## [adaptorch-client 0.1.5 / adaptorch-cli 0.1.5] — 2026-10-26
 
 ### Changed — persistent connections

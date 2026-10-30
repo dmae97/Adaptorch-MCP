@@ -48,3 +48,11 @@ jobs:
         # No public wheel may carry engine code, import it at module level, or
         # depend on the private core. The engine bridge lives outside src/.
         run: uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-client adaptorch-cli adaptorch-mcp
+      - name: Installed-wheel tests
+        # Install each built wheel like a user, with workspace dependencies at their
+        # declared floor, and run its tests against it. Wheels from this checkout are
+        # offered too, so a floor that is not yet released still resolves here.
+        run: |
+          for package in adaptorch-client adaptorch-cli adaptorch-mcp; do
+            bash scripts/test_installed_wheel.sh "$package" --workspace-links
+          done
