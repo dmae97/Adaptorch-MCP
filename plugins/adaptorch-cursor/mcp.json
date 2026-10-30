@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "adaptorch": {
+      "command": "uvx",
+      "args": [
+        "--python",
+        "3.12",
+        "--from",
+        "adaptorch-mcp==0.6.0",
+        "adaptorch-mcp-client",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "ADAPTORCH_CONTROL_PLANE_TOKEN": "${ADAPTORCH_CONTROL_PLANE_TOKEN}",
+        "ADAPTORCH_MCP_EXPOSURE_PROFILE": "remote",
+        "ADAPTORCH_MCP_PROVIDER": "${ADAPTORCH_MCP_PROVIDER}",
+        "ADAPTORCH_MCP_PROVIDER_MODEL": "${ADAPTORCH_MCP_PROVIDER_MODEL}",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY": "${ADAPTORCH_MCP_PROVIDER_API_KEY}"
+      }
+    }
+  }
+}

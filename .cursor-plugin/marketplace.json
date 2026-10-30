@@ -1,0 +1,8 @@
+{
+  "name": "adaptorch",
+  "owner": {"name": "Geunbin Yu", "email": "classicmate@classicmate.app"},
+  "metadata": {"description": "AdaptOrch hosted MCP client and usage skill for Cursor"},
+  "plugins": [
+    {"name": "adaptorch", "source": "plugins/adaptorch-cursor", "description": "Run hosted AdaptOrch tasks and inspect run receipts, artifacts and usage."}
+  ]
+}

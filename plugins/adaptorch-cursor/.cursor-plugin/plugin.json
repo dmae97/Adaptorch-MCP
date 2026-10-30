@@ -1,0 +1,50 @@
+{
+  "name": "adaptorch",
+  "displayName": "AdaptOrch",
+  "version": "0.1.0",
+  "description": "Run multi-step coding tasks on the hosted AdaptOrch service and get replayable run receipts, artifacts and usage back in the conversation.",
+  "author": {
+    "name": "Geunbin Yu",
+    "email": "classicmate@classicmate.app",
+    "url": "https://adaptorch.com"
+  },
+  "homepage": "https://adaptorch.com",
+  "repository": "https://github.com/dmae97/Adaptorch-MCP",
+  "license": "LicenseRef-Proprietary",
+  "logo": "assets/logo.png",
+  "keywords": [
+    "mcp",
+    "orchestration",
+    "agents",
+    "receipts",
+    "verification"
+  ],
+  "variables": {
+    "type": "object",
+    "properties": {
+      "ADAPTORCH_CONTROL_PLANE_TOKEN": {
+        "type": "string",
+        "title": "AdaptOrch API key",
+        "description": "Key from https://adaptorch.com/app/api-keys (starts with ado_)."
+      },
+      "ADAPTORCH_MCP_PROVIDER": {
+        "type": "string",
+        "title": "Model provider",
+        "description": "Provider identifier from the AdaptOrch dashboard. Needed only for model runs."
+      },
+      "ADAPTORCH_MCP_PROVIDER_MODEL": {
+        "type": "string",
+        "title": "Provider model ID",
+        "description": "Exact model ID; tokens are billed separately by the provider."
+      },
+      "ADAPTORCH_MCP_PROVIDER_API_KEY": {
+        "type": "string",
+        "title": "Model-provider API key",
+        "description": "BYOK provider key for model runs."
+      }
+    },
+    "required": [
+      "ADAPTORCH_CONTROL_PLANE_TOKEN"
+    ]
+  }
+}
