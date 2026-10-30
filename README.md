@@ -126,13 +126,13 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
 
 ## Install
 
-There are three ways in. Pick by what you are: an agent, a program, or a terminal.
+There are four ways in. Pick by what you are: a Claude Code user, an agent, a program, or a
+terminal.
 
-> **Release status:** `adaptorch-mcp` 0.5.2 on PyPI still depends on the engine
-> distribution and cannot resolve against the code-free `adaptorch` 0.2.0 now on
-> PyPI. The remote-only 0.6.0 in this source revision is not yet published. New SDK polling
-> and response-safety features below describe this source revision; pushing it
-> does not republish any PyPI version or revoke an earlier license grant.
+> **Release status (2026-10-30):** `adaptorch-mcp` 0.6.0 and `adaptorch-client` 0.1.6 are
+> published. `adaptorch-mcp` 0.6.0 is a remote client with no engine dependency.
+> `adaptorch-mcp` 0.3.0–0.5.2 depend on the engine distribution and do not install
+> against the code-free `adaptorch` 0.2.0; use 0.6.0 or later.
 
 **Source update (2026-10-26, not a publication):** the workspace engine pin moves to
 `a490658c`, the revision the engine's runbook last recorded as served by the hosted
@@ -148,6 +148,23 @@ SDK BYOK, bounded read-only polling, subject-bound responses and typed algorithm
 observations. The local MCP facade uses a one-attempt, redirect-free transport and
 preserves requested/selected modes without exposing private diagnostics. See the
 [client contract and verification record](docs/2026-09-08-algorithm-client-contract.md).
+
+### Claude Code plugin
+
+The plugin adds the AdaptOrch MCP tools and a skill that tells Claude when and how to use
+them. It needs [`uv`](https://docs.astral.sh/uv/) on your `PATH`.
+
+```bash
+claude plugin marketplace add dmae97/Adaptorch-MCP
+claude plugin install adaptorch@adaptorch
+```
+
+Claude Code asks for your API key when you enable the plugin; set or change it later with
+`/plugin configure adaptorch@adaptorch`. Without a key the tools
+still list, and each call returns a setup error that points to signup. The key goes to
+Claude Code's secure credential store, not to a settings file. The plugin runs the
+published `adaptorch-mcp` 0.6.x client over stdio in the `remote` profile. Details are
+in [plugins/adaptorch](plugins/adaptorch/).
 
 ### 1. Hosted MCP — nothing to install (recommended)
 
@@ -213,7 +230,7 @@ run submission/list/detail/cancellation, evidence, and artifact listings. The cu
 source adds per-submission `ProviderCredential` for hosted BYOK. A repository push
 is separate from a PyPI release; see the [source install and BYOK example](packages/adaptorch-client/README.md).
 
-### 3. This package — local engine required
+### 3. This package — remote MCP client
 
 `adaptorch-mcp` 0.6.0 is a remote client over the hosted endpoint above; it depends
 only on `adaptorch-client` and never installs or imports the private engine.

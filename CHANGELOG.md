@@ -4,7 +4,23 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
-## [adaptorch-mcp 0.6.0] — Unreleased
+## [Claude Code plugin 0.1.0] — Unreleased
+
+### Added — `adaptorch` plugin and marketplace
+
+- `plugins/adaptorch`: a Claude Code plugin that runs the published `adaptorch-mcp`
+  0.6.x client over stdio in the `remote` profile and adds a public `adaptorch` skill.
+  The API key is a `sensitive` plugin option, so Claude Code keeps it in its secure
+  store and passes it only to the MCP server's environment. Without a key the tools
+  list and calls return a setup error.
+- `.claude-plugin/marketplace.json` makes this repository a marketplace:
+  `claude plugin marketplace add dmae97/Adaptorch-MCP`, then
+  `claude plugin install adaptorch@adaptorch`.
+- `test_claude_plugin.py` pins the plugin to the remote tool set, the current
+  `adaptorch-mcp` version range and a sensitive token, and keeps internal-only terms
+  out of the public skill.
+
+## [adaptorch-mcp 0.6.0] — 2026-10-30
 
 ### Added — optional candidate verification
 
@@ -32,7 +48,7 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 - Added a root `Dockerfile` that installs the client and wrapper from one pinned public commit, for local reproduction of registry checks. Glama builds from its admin build spec instead; `docs/glama.md` records the values, and `glama.json` names the maintainer.
 - `make test` runs on the public install alone; engine-bound tests are skipped at collection.
 
-## [adaptorch-client 0.1.6] — Unreleased
+## [adaptorch-client 0.1.6] — 2026-10-30
 
 ### Fixed — BYOK through the remote MCP client
 

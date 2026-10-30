@@ -1,0 +1,43 @@
+{
+  "name": "adaptorch",
+  "displayName": "AdaptOrch",
+  "version": "0.1.0",
+  "description": "Run multi-step coding tasks on the hosted AdaptOrch service from Claude Code and get replayable run receipts and evidence back in the conversation.",
+  "author": {
+    "name": "ClassicMate",
+    "url": "https://adaptorch.com"
+  },
+  "homepage": "https://adaptorch.com",
+  "repository": "https://github.com/dmae97/Adaptorch-MCP",
+  "license": "LicenseRef-Proprietary",
+  "keywords": ["mcp", "orchestration", "agents", "receipts", "verification"],
+  "documentationUrl": "https://adaptorch.com/mcp-docs",
+  "privacyPolicyUrl": "https://adaptorch.com/privacy",
+  "termsOfServiceUrl": "https://adaptorch.com/terms",
+  "mcpServers": {
+    "adaptorch": {
+      "command": "uvx",
+      "args": [
+        "--python",
+        "3.12",
+        "--from",
+        "adaptorch-mcp>=0.6,<0.7",
+        "adaptorch-mcp-client",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "ADAPTORCH_CONTROL_PLANE_TOKEN": "${user_config.api_token}",
+        "ADAPTORCH_MCP_EXPOSURE_PROFILE": "remote"
+      }
+    }
+  },
+  "userConfig": {
+    "api_token": {
+      "type": "string",
+      "title": "AdaptOrch API key",
+      "description": "Key from https://adaptorch.com/app/api-keys (starts with ado_). Leave empty to browse the tools before signing up; tool calls then return a setup error.",
+      "sensitive": true
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "adaptorch",
+  "description": "Official AdaptOrch plugins for Claude Code",
+  "owner": {
+    "name": "ClassicMate",
+    "url": "https://adaptorch.com"
+  },
+  "plugins": [
+    {
+      "name": "adaptorch",
+      "source": "./plugins/adaptorch",
+      "description": "Run multi-step coding tasks on the hosted AdaptOrch service and get run receipts and evidence back in Claude Code."
+    }
+  ]
+}
