@@ -7,12 +7,17 @@ import hmac
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-try:
+# FastAPI resolves the string annotation `Request` from module globals, so the name
+# must exist at runtime; type checkers see only the real class.
+if TYPE_CHECKING:
     from starlette.requests import Request
-except ModuleNotFoundError:  # stdio-only installation
-    Request = object  # type: ignore[misc,assignment]
+else:
+    try:
+        from starlette.requests import Request
+    except ModuleNotFoundError:  # stdio-only installation
+        Request = object
 
 from adaptorch_mcp import __version__
 from adaptorch_mcp.thin_remote import RemoteMCPServer
