@@ -25,7 +25,7 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 ### Added — credential-free stdio introspection
 
 - Without `ADAPTORCH_CONTROL_PLANE_TOKEN`, stdio now starts and answers `initialize`, `ping` and `tools/list` from a pinned catalog (`remote_tool_catalog.json`, projected from hosted engine `fe286c7e6`). `tools/call` and `resources/read` return `-32001` and make no network request. HTTP serving still requires the token; the hosted `/mcp` endpoint is unchanged. With a token configured, tools are listed live as before.
-- Added a root `Dockerfile` that installs the client and wrapper from one pinned public commit, for registry start and introspection checks.
+- Added a root `Dockerfile` that installs the client and wrapper from one pinned public commit, for local reproduction of registry checks. Glama builds from its admin build spec instead; `docs/glama.md` records the values, and `glama.json` names the maintainer.
 - `make test` now excludes every test that needs the private engine, so it runs on the public install alone.
 
 ## [adaptorch-client 0.1.5 / adaptorch-cli 0.1.5] — 2026-10-26

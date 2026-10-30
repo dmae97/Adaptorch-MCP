@@ -321,7 +321,7 @@ Without the token, stdio still starts so registries can inspect it: `initialize`
 `ping` and `tools/list` come from a pinned catalog shipped in the package, and every
 tool call fails with `-32001` before any network request. Listing tools proves only
 that the server starts; it does not run anything. The root `Dockerfile` builds this
-stdio server from a pinned commit.
+stdio server from a pinned commit; Glama uses the build spec in `docs/glama.md`.
 
 ### stdio over SSH
 
