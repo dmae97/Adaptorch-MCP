@@ -109,6 +109,16 @@ provides-extras = ["http", "dev", "engine-dev"]
 name = "adaptorch-mcp-monorepo"
 version = "0.1.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "adaptorch-client" },
+    { name = "adaptorch-mcp" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "adaptorch-client", editable = "packages/adaptorch-client" },
+    { name = "adaptorch-mcp", editable = "packages/adaptorch-mcp" },
+]
 
 [[package]]
 name = "annotated-doc"
