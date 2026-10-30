@@ -128,9 +128,9 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
 
 There are three ways in. Pick by what you are: an agent, a program, or a terminal.
 
-> **Release status (2026-09-20):** `adaptorch-mcp` 0.5.2 is published with the
-> `adaptorch-mcp-client` launcher and `adaptorch[api]>=0.1.2,<0.2` dependency.
-> The client-only `adaptorch` 0.2.0 replacement is not published. New SDK polling
+> **Release status:** `adaptorch-mcp` 0.5.2 on PyPI still depends on the engine
+> distribution and cannot resolve against the code-free `adaptorch` 0.2.0 now on
+> PyPI. The remote-only 0.6.0 in this source revision is not yet published. New SDK polling
 > and response-safety features below describe this source revision; pushing it
 > does not republish any PyPI version or revoke an earlier license grant.
 
@@ -215,12 +215,11 @@ is separate from a PyPI release; see the [source install and BYOK example](packa
 
 ### 3. This package — local engine required
 
-`adaptorch-mcp` wraps the AdaptOrch parent engine in-process; it is for
-environments where the compatible engine is installed. Its package dependency
-installs the published 0.1.x engine; the hosted endpoint above needs no local engine.
+`adaptorch-mcp` 0.6.0 is a remote client over the hosted endpoint above; it depends
+only on `adaptorch-client` and never installs or imports the private engine.
 
 ```bash
-uvx --python 3.12 --from adaptorch-mcp==0.5.2 adaptorch-mcp-client --help
+uvx --python 3.12 --from adaptorch-mcp==0.6.0 adaptorch-mcp-client --help
 ```
 
 ## Why Claude Code users feel it quickly

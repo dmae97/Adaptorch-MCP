@@ -11,9 +11,9 @@ import json
 from typing import Any
 
 from adaptorch_mcp.diagnostics import EXPECTED_CORE_TOOLS
-from adaptorch_mcp.hardening import REMOTE_TOOL_NAMES, HardenedMCPServer
 from adaptorch_mcp.output_schema import project_tool_output
 from adaptorch_mcp.security_policy import REMOTE_EXPOSURE_PROFILE
+from adaptorch_mcp_legacy.hardening import REMOTE_TOOL_NAMES, HardenedMCPServer
 from mcp_test_support import ControlPlaneFakeBackend
 
 USAGE_PAYLOAD = {

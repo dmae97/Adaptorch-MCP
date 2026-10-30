@@ -2,9 +2,9 @@
 
 import pytest
 
-from adaptorch_mcp.control_plane_backend import SafeControlPlaneConnector
-from adaptorch_mcp.hardening import build_hardened_mcp_server
 from adaptorch_mcp.security_policy import REMOTE_EXPOSURE_PROFILE
+from adaptorch_mcp_legacy.control_plane_backend import SafeControlPlaneConnector
+from adaptorch_mcp_legacy.hardening import build_hardened_mcp_server
 
 
 def test_public_factory_installs_the_safe_parent_compatible_backend() -> None:

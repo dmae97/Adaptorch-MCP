@@ -14,7 +14,7 @@ The package forwards a restricted MCP surface to the hosted control plane over a
 ## Install
 
 ```bash
-pip install --upgrade "adaptorch-mcp>=0.5.2,<0.6"
+pip install --upgrade "adaptorch-mcp>=0.6,<0.7"
 adaptorch-mcp-client --help
 ```
 
@@ -24,7 +24,7 @@ Use `adaptorch-mcp-client` to select this remote client explicitly. The
 One-shot with `uvx`, without an engine checkout:
 
 ```bash
-uvx --from "adaptorch-mcp==0.5.2" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-client --help
 ```
 
 For contributors inside this monorepo:

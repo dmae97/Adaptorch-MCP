@@ -24,9 +24,9 @@ from adaptorch.n8n_connector import (
     N8nQuotaExceededError,
 )
 
-from adaptorch_mcp.control_plane_backend import SafeControlPlaneConnector
-from adaptorch_mcp.hardening import HardenedMCPServer
 from adaptorch_mcp.security_policy import REMOTE_EXPOSURE_PROFILE
+from adaptorch_mcp_legacy.control_plane_backend import SafeControlPlaneConnector
+from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 
 LIMIT = 8 * 1024 * 1024
 TENANT_KEY = "ado_synthetic-tenant-canary"

@@ -4,7 +4,7 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
-## [Unreleased]
+## [adaptorch-mcp 0.6.0] — Unreleased
 
 ### Added — optional candidate verification
 
@@ -20,13 +20,17 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
 
 - `adaptorch-mcp` no longer requires the private `adaptorch` engine at runtime. The public CLI, stdio and loopback HTTP paths forward a restricted JSON-RPC MCP surface to the configured hosted service through `adaptorch-client`.
 - Added bounded stdio framing, authenticated HTTP request handling, upstream response identity checks, remote tool projection and run-scoped BYOK forwarding. HTTP serving remains opt-in through the `http` extra.
-- Kept engine-dependent maintainer tests behind the separate `engine-dev` extra. Platform connector registration and hosted deployment are not included.
+- Moved the in-process engine bridge (`hardening`, `runtime`, `control_plane_backend`, `backend_config`) out of the wheel into the unpublished `adaptorch_mcp_legacy` package under `packages/adaptorch-mcp/legacy`. Code importing `adaptorch_mcp.hardening` or `adaptorch_mcp.runtime` must move to the remote client or the maintainer bridge.
+- Removed the `engine-dev` extra. The engine is a maintainer-only `engine` dependency group of the unpublished workspace root; test modules that need it are skipped at collection when it is absent (`packages/adaptorch-mcp/tests/conftest.py`), replacing the hand-kept Makefile ignore and deselect lists.
+- `adaptorch-mcp-doctor` reports `ok` from `adaptorch-client`, not the engine; the engine is listed only as an optional parity probe.
+- `scripts/check_public_wheels.py` also fails a wheel that imports the private engine at module level, and CI now gates `adaptorch-mcp`.
+- Platform connector registration and hosted deployment are not included.
 
 ### Added — credential-free stdio introspection
 
 - Without `ADAPTORCH_CONTROL_PLANE_TOKEN`, stdio now starts and answers `initialize`, `ping` and `tools/list` from a pinned catalog (`remote_tool_catalog.json`, projected from hosted engine `fe286c7e6`). `tools/call` and `resources/read` return `-32001` and make no network request. HTTP serving still requires the token; the hosted `/mcp` endpoint is unchanged. With a token configured, tools are listed live as before.
 - Added a root `Dockerfile` that installs the client and wrapper from one pinned public commit, for local reproduction of registry checks. Glama builds from its admin build spec instead; `docs/glama.md` records the values, and `glama.json` names the maintainer.
-- `make test` now excludes every test that needs the private engine, so it runs on the public install alone.
+- `make test` runs on the public install alone; engine-bound tests are skipped at collection.
 
 ## [adaptorch-client 0.1.5 / adaptorch-cli 0.1.5] — 2026-10-26
 

@@ -7,8 +7,8 @@ from adaptorch.n8n_connector import N8nConnectorError
 
 from adaptorch_client import AdaptOrchAPIError, JSONMapping, JSONValue
 from adaptorch_client.transport import HTTPTransport
-from adaptorch_mcp.control_plane_backend import _json_object
 from adaptorch_mcp.response_json import decode_response_text
+from adaptorch_mcp_legacy.control_plane_backend import _json_object
 
 
 @pytest.mark.parametrize("arrays,allowed", [(63, True), (64, False), (1100, False)])

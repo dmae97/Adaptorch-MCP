@@ -27,9 +27,9 @@ from adaptorch_mcp.security_policy import (
 
 __all__ = ["EXPECTED_CORE_TOOLS", "collect_diagnostics", "format_diagnostics"]
 
-# Kept literal (not imported from hardening) so `adaptorch-mcp-doctor` still
-# reports a posture when the engine package is missing. Must stay in sync with
-# hardening.REMOTE_TOOL_NAMES; test_diagnostics_policy asserts the equality.
+# Kept literal so `adaptorch-mcp-doctor` reports a posture without the engine. Must
+# stay in sync with adaptorch_mcp_legacy.hardening.REMOTE_TOOL_NAMES and the remote
+# client's tool set; test_diagnostics_policy asserts the equality.
 EXPECTED_CORE_TOOLS: tuple[str, ...] = (
     "adaptorch_run",
     "adaptorch_get_run",
@@ -48,7 +48,10 @@ _FULL_ONLY_TOOLS: tuple[str, ...] = (
 )
 
 _FULL_CORE_TOOLS: tuple[str, ...] = (*EXPECTED_CORE_TOOLS, *_FULL_ONLY_TOOLS)
+# The remote client needs only adaptorch-client. The private engine is reported for
+# maintainer parity runs but is never required: the published wheel does not load it.
 _RUNTIME_PACKAGES: tuple[tuple[str, str], ...] = (
+    ("adaptorch_client", "adaptorch-client"),
     ("adaptorch", "adaptorch"),
     ("fastapi", "fastapi"),
     ("uvicorn", "uvicorn"),
@@ -267,7 +270,7 @@ def collect_diagnostics(env: Mapping[str, str] | None = None) -> dict[str, Any]:
         "algorithmSurface": algorithm_surface,
         "expectedTools": list(expected_tools),
         "ok": (
-            packages["adaptorch"]["importable"]
+            packages["adaptorch-client"]["importable"]
             and security["profileValid"]
             and not control_plane["invalidEnvUrl"]
             and control_plane["policyValid"]

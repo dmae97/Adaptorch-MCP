@@ -17,7 +17,7 @@ from adaptorch.n8n_connector import (
 )
 
 from adaptorch_client import keepalive
-from adaptorch_mcp.control_plane_backend import SafeControlPlaneConnector
+from adaptorch_mcp_legacy.control_plane_backend import SafeControlPlaneConnector
 
 RUN = {"run_id": "run-1", "status": "QUEUED"}
 

@@ -63,7 +63,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "adaptorch-mcp"
-version = "0.5.2"
+version = "0.6.0"
 source = { editable = "packages/adaptorch-mcp" }
 dependencies = [
     { name = "adaptorch-client" },
@@ -80,9 +80,6 @@ dev = [
     { name = "ruff" },
     { name = "uvicorn", extra = ["standard"] },
 ]
-engine-dev = [
-    { name = "adaptorch", extra = ["api"] },
-]
 http = [
     { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
@@ -90,7 +87,6 @@ http = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adaptorch", extras = ["api"], marker = "extra == 'engine-dev'", git = "https://github.com/dmae97/adaptorch.git?rev=a490658ceb6a3e1f7bfdc53d24249148860ef323" },
     { name = "adaptorch-client", editable = "packages/adaptorch-client" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
     { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.112" },
@@ -103,12 +99,22 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'dev'", specifier = ">=0.30" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'http'", specifier = ">=0.30" },
 ]
-provides-extras = ["http", "dev", "engine-dev"]
+provides-extras = ["http", "dev"]
 
 [[package]]
 name = "adaptorch-mcp-monorepo"
 version = "0.1.0"
 source = { virtual = "." }
+
+[package.dev-dependencies]
+engine = [
+    { name = "adaptorch", extra = ["api"] },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+engine = [{ name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=a490658ceb6a3e1f7bfdc53d24249148860ef323" }]
 
 [[package]]
 name = "annotated-doc"

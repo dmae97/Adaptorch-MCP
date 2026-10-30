@@ -9,7 +9,10 @@ The rule is mechanical:
   (``adaptorch-client`` -> ``adaptorch_client`` ...); the ``adaptorch``
   meta-package may contain no code at all;
 * no wheel may declare a ``Requires-Dist`` on the ``adaptorch`` distribution
-  (the core, or the meta-package itself).
+  (the core, or the meta-package itself);
+* no shipped module may import the private ``adaptorch`` engine at module level.
+  A guarded import inside a function (an optional parity probe) is allowed; a
+  module-level one means the module cannot load without the engine.
 
 Usage::
 
@@ -18,13 +21,14 @@ Usage::
         --distribution adaptorch
 
 Exit ``0`` when every checked wheel passes, ``1`` on any FAIL, ``2`` when a
-build or read fails. The legacy in-process ``adaptorch-mcp`` wrapper is not
-publishable: a core dependency fails the gate, with no package-name exemption.
+build or read fails. There is no package-name exemption: the in-process engine
+bridge lives in ``packages/adaptorch-mcp/legacy`` and never ships.
 """
 
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import subprocess
 import sys
@@ -35,6 +39,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CORE_DISTRIBUTIONS = frozenset({"adaptorch", "adaptorch-core"})
+CORE_IMPORT_ROOTS = frozenset({"adaptorch", "adaptorch_core"})
 ALLOWED_TOP_LEVEL: dict[str, frozenset[str]] = {
     "adaptorch": frozenset(),
     "adaptorch-client": frozenset({"adaptorch_client"}),
@@ -57,6 +62,21 @@ class WheelFacts:
     distribution: str
     top_level: frozenset[str]
     requires: tuple[str, ...]
+    engine_importers: tuple[str, ...] = ()
+
+
+def module_level_engine_import(source: bytes) -> bool:
+    """Return whether a module imports the private engine at module level."""
+    for node in ast.parse(source).body:
+        if isinstance(node, ast.Import):
+            roots = {alias.name.split(".")[0] for alias in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            roots = {node.module.split(".")[0]}
+        else:
+            continue
+        if roots & CORE_IMPORT_ROOTS:
+            return True
+    return False
 
 
 def inspect_wheel(path: Path) -> WheelFacts:
@@ -72,6 +92,16 @@ def inspect_wheel(path: Path) -> WheelFacts:
         if len(metadata_names) != 1:
             raise GateError(f"{path.name} has {len(metadata_names)} METADATA files, expected 1")
         metadata = archive.read(metadata_names[0]).decode("utf-8")
+        try:
+            engine_importers = tuple(
+                sorted(
+                    n
+                    for n in names
+                    if n.endswith(".py") and module_level_engine_import(archive.read(n))
+                )
+            )
+        except SyntaxError as exc:
+            raise GateError(f"{path.name} ships an unparseable module: {exc}") from exc
     top_level = frozenset(
         n.split("/", 1)[0] for n in names if not n.split("/", 1)[0].endswith(".dist-info")
     )
@@ -82,7 +112,7 @@ def inspect_wheel(path: Path) -> WheelFacts:
             distribution = normalize(line.removeprefix("Name: ").strip())
         elif line.startswith("Requires-Dist: "):
             requires.append(line.removeprefix("Requires-Dist: ").strip())
-    return WheelFacts(distribution, top_level, tuple(requires))
+    return WheelFacts(distribution, top_level, tuple(requires), engine_importers)
 
 
 def evaluate(facts: WheelFacts, distribution: str) -> tuple[list[str], list[str]]:
@@ -97,6 +127,8 @@ def evaluate(facts: WheelFacts, distribution: str) -> tuple[list[str], list[str]
         allowed = frozenset()
     for module in sorted(facts.top_level - allowed):
         failures.append(f"top-level module {module!r} must not ship in {distribution}")
+    for module in facts.engine_importers:
+        failures.append(f"{module} imports the private engine at module level")
     for requirement in facts.requires:
         match = _REQUIREMENT_NAME.match(requirement)
         if match is None:

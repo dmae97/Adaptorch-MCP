@@ -6,8 +6,8 @@ from typing import Any
 import pytest
 from adaptorch.n8n_connector import N8nQuotaExceededError
 
-from adaptorch_mcp.hardening import HardenedMCPServer
 from adaptorch_mcp.security_policy import REMOTE_EXPOSURE_PROFILE
+from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 from mcp_test_support import FakeBackend
 
 

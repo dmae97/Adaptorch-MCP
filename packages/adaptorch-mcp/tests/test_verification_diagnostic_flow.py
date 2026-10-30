@@ -22,8 +22,8 @@ from adaptorch.verification import CommandVerifier, SandboxLimits
 from fastapi.testclient import TestClient
 
 from adaptorch_client import AdaptOrchClient, ClientConfig, EvidenceReport, Run
-from adaptorch_mcp.hardening import HardenedMCPServer
 from adaptorch_mcp.output_schema import project_tool_output
+from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 from mcp_test_support import FakeBackend
 
 

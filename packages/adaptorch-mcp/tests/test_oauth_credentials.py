@@ -7,9 +7,9 @@ from urllib import request
 import pytest
 from adaptorch.n8n_connector import ControlPlaneProviderCredential, N8nConnectorConfig, N8nHttpError
 
-from adaptorch_mcp.backend_config import build_parent_config, parent_n8n_connector
-from adaptorch_mcp.control_plane_backend import SafeControlPlaneConnector
-from adaptorch_mcp.runtime import resolve_provider_credential
+from adaptorch_mcp_legacy.backend_config import build_parent_config, parent_n8n_connector
+from adaptorch_mcp_legacy.control_plane_backend import SafeControlPlaneConnector
+from adaptorch_mcp_legacy.runtime import resolve_provider_credential
 from test_control_plane_backend import Wire
 
 _ENV = {

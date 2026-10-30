@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from adaptorch.providers import DEFAULT_API_KEY_ENV
 
-from adaptorch_mcp import hardening, runtime
+from adaptorch_mcp_legacy import hardening, runtime
 
 _EVERY_KEY_ENV = tuple(sorted(DEFAULT_API_KEY_ENV.values()))
 

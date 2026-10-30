@@ -41,3 +41,39 @@ def test_public_gate_rejects_core_dependency_or_relocated_code(
     assert result.returncode == 1, result.stdout + result.stderr
     assert "FAIL" in result.stdout
     assert "PASS" not in result.stdout
+
+
+def _gate(tmp_path: Path, distribution: str, files: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    wheel = tmp_path / "candidate.whl"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        for name, source in files.items():
+            archive.writestr(name, source)
+        archive.writestr(
+            f"{distribution}-9.9.9.dist-info/METADATA",
+            f"Metadata-Version: 2.4\nName: {distribution}\nVersion: 9.9.9\n",
+        )
+    return subprocess.run(
+        [sys.executable, str(GATE), "--wheel", str(wheel), "--distribution", distribution],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_public_gate_rejects_module_level_engine_import(tmp_path: Path) -> None:
+    result = _gate(
+        tmp_path,
+        "adaptorch-mcp",
+        {"adaptorch_mcp/hardening.py": "from adaptorch.mcp_server import AdaptOrchMCPServer\n"},
+    )
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "adaptorch_mcp/hardening.py imports the private engine" in result.stdout
+
+
+def test_public_gate_allows_guarded_function_level_engine_probe(tmp_path: Path) -> None:
+    probe = "def probe():\n    try:\n        import adaptorch.hosted_hint\n    except ImportError:\n        return None\n"
+    result = _gate(tmp_path, "adaptorch-mcp", {"adaptorch_mcp/doctor.py": probe})
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.startswith("PASS")

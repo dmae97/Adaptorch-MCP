@@ -19,9 +19,9 @@ from adaptorch.n8n_connector import ControlPlaneProviderCredential, N8nConnector
 from fastapi.testclient import TestClient
 
 from adaptorch_client import AdaptOrchClient, ClientConfig, ProviderCredential
-from adaptorch_mcp.control_plane_backend import SafeControlPlaneConnector
-from adaptorch_mcp.hardening import HardenedMCPServer
 from adaptorch_mcp.security_policy import REMOTE_EXPOSURE_PROFILE
+from adaptorch_mcp_legacy.control_plane_backend import SafeControlPlaneConnector
+from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 
 plan = pytest.importorskip(
     "adaptorch.modelstudio_plan", reason="installed engine predates ModelStudio Token Plan support"

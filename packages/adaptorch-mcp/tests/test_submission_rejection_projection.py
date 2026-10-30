@@ -6,9 +6,9 @@ import json
 
 import pytest
 
-from adaptorch_mcp.control_plane_backend import SafeControlPlaneConnector
-from adaptorch_mcp.hardening import HardenedMCPServer
 from adaptorch_mcp.response_policy import sanitize_tool_response
+from adaptorch_mcp_legacy.control_plane_backend import SafeControlPlaneConnector
+from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 from test_control_plane_backend import PAYLOAD, PROVIDER_KEY, TENANT_KEY, Wire
 from test_control_plane_backend import backend as backend
 from test_control_plane_backend import wire as wire

@@ -50,7 +50,7 @@ def test_diagnostics_fail_closed_for_remote_plaintext_control_plane() -> None:
 
 def test_diagnostics_reports_hardened_posture_without_token_length() -> None:
     from adaptorch_mcp.diagnostics import collect_diagnostics
-    from adaptorch_mcp.hardening import REMOTE_TOOL_NAMES
+    from adaptorch_mcp.thin_remote import REMOTE_TOOL_NAMES
 
     payload = collect_diagnostics({"ADAPTORCH_CONTROL_PLANE_TOKEN": "ado_live_secret"})
 
@@ -72,6 +72,7 @@ def test_diagnostics_reports_hardened_posture_without_token_length() -> None:
 
 def test_diagnostics_report_engine_algorithm_surface_parity() -> None:
     """A published wrapper can meet an older or newer engine; say which one."""
+    pytest.importorskip("adaptorch.orchestration_value")
     from adaptorch_mcp.diagnostics import collect_diagnostics
 
     payload = collect_diagnostics({})
@@ -88,8 +89,7 @@ def test_diagnostics_report_engine_algorithm_surface_parity() -> None:
 def test_diagnostics_fail_closed_when_the_engine_vocabulary_drifts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import adaptorch.orchestration_value as engine_surface
-
+    engine_surface = pytest.importorskip("adaptorch.orchestration_value")
     from adaptorch_mcp.diagnostics import collect_diagnostics
 
     monkeypatch.setattr(
@@ -124,6 +124,7 @@ def test_diagnostics_report_unavailable_surface_without_calling_it_drift(
 
 
 def test_formatted_diagnostics_surface_the_parity_line() -> None:
+    pytest.importorskip("adaptorch.orchestration_value")
     from adaptorch_mcp.diagnostics import collect_diagnostics, format_diagnostics
 
     rendered = format_diagnostics(collect_diagnostics({}))
@@ -134,7 +135,7 @@ def test_formatted_diagnostics_surface_the_parity_line() -> None:
 
 def test_diagnostics_full_profile_is_explicit_and_invalid_profile_fails_closed() -> None:
     from adaptorch_mcp.diagnostics import collect_diagnostics
-    from adaptorch_mcp.hardening import REMOTE_TOOL_NAMES
+    from adaptorch_mcp.thin_remote import REMOTE_TOOL_NAMES
 
     full = collect_diagnostics({"ADAPTORCH_MCP_EXPOSURE_PROFILE": "full"})
     assert full["security"]["localAlgorithmOraclesExposed"] is True

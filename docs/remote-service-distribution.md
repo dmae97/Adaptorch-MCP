@@ -13,8 +13,8 @@ MCP 호스트
   → 비공개 AdaptOrch 엔진과 실행 환경
 ```
 
-- `adaptorch-mcp`의 런타임 의존성은 `adaptorch-client`뿐이다. 비공개 `adaptorch`는 maintainer 전용 `engine-dev` extra로 분리했다.
-- 공개 CLI와 HTTP factory는 `thin_runtime`을 사용한다. 기존 `hardening.py`와 `runtime.py`의 코어 상속 경로를 공개 진입점에서 import하지 않는다.
+- `adaptorch-mcp`의 런타임 의존성은 `adaptorch-client`뿐이다. 비공개 `adaptorch`는 배포되지 않는 workspace 루트의 `engine` dependency group에만 있다.
+- 공개 CLI와 HTTP factory는 `thin_runtime`을 사용한다. 엔진을 import하는 `hardening`, `runtime`, `control_plane_backend`, `backend_config`는 `packages/adaptorch-mcp/legacy/adaptorch_mcp_legacy`로 옮겨 휠에 포함되지 않는다.
 - `thin_remote`는 원격 tool 목록을 최소 공개 프로필로 투영하고, 낯선 도구, verification command, 잘못된 wait 인자를 로컬에서 거부한다. 응답 ID가 요청과 다르면 실패한다.
 - `thin_stdio`는 newline과 Content-Length framing을 지원하고 종료 시 transport를 닫는다.
 - `thin_http`는 loopback 전용으로 구성하고, 별도의 client-facing bearer token, protocol version 확인, 스트리밍 요청 크기 제한과 요청 시간 제한을 적용한다. `fastapi`와 `uvicorn`은 `http` extra다.

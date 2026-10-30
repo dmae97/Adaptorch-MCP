@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from adaptorch.mcp_server import AdaptOrchMCPServer
 
-from adaptorch_mcp.hardening import HardenedMCPServer
+from adaptorch_mcp_legacy.hardening import HardenedMCPServer
 from mcp_test_support import FakeBackend
 
 

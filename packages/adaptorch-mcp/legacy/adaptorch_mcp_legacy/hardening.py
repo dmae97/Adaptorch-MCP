@@ -13,13 +13,6 @@ from adaptorch.mcp_server import (
 )
 
 from adaptorch_mcp import __version__
-from adaptorch_mcp.backend_config import ProviderCredentialConfig as ProviderCredentialConfig
-from adaptorch_mcp.backend_config import build_parent_config as _parent_connector_config
-from adaptorch_mcp.backend_config import parent_n8n_connector as parent_n8n_connector
-from adaptorch_mcp.backend_config import valid_wait_controls
-from adaptorch_mcp.control_plane_backend import (
-    SafeControlPlaneConnector as N8nControlPlaneConnector,
-)
 from adaptorch_mcp.public_schema import (
     ParentContractError,
     project_remote_tool,
@@ -38,6 +31,13 @@ from adaptorch_mcp.security_policy import (
     validate_control_plane_url,
     validate_http_binding,
     validate_separate_tokens,
+)
+from adaptorch_mcp_legacy.backend_config import ProviderCredentialConfig as ProviderCredentialConfig
+from adaptorch_mcp_legacy.backend_config import build_parent_config as _parent_connector_config
+from adaptorch_mcp_legacy.backend_config import parent_n8n_connector as parent_n8n_connector
+from adaptorch_mcp_legacy.backend_config import valid_wait_controls
+from adaptorch_mcp_legacy.control_plane_backend import (
+    SafeControlPlaneConnector as N8nControlPlaneConnector,
 )
 
 __all__ = [
