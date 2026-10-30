@@ -32,9 +32,16 @@ jobs:
       - name: Typecheck
         run: uv run mypy
       - name: Test
-        run: uv run pytest packages/adaptorch-mcp/tests packages/adaptorch-client/tests packages/adaptorch-cli/tests packages/adaptorch/tests -q
-      - name: Doctor
-        run: uv run adaptorch-mcp-doctor --json
+        # Public install only; engine-dependent tests run via `make engine-check`.
+        run: uv run make test
+      - name: Credential-free stdio introspection
+        # What a registry checks: start without a token and list the pinned tools.
+        run: |
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+            | env -u ADAPTORCH_CONTROL_PLANE_TOKEN uv run adaptorch-mcp --transport stdio > introspection.jsonl
+          uv run python -c 'import json; r=[json.loads(l) for l in open("introspection.jsonl")]; assert r[0]["result"]["serverInfo"]["name"]=="adaptorch-mcp"; assert len(r[1]["result"]["tools"])==9, r'
       - name: Build package
         # The in-process adaptorch-mcp wrapper still depends on the private
         # engine, so it is build-checked but not a publishable wheel.

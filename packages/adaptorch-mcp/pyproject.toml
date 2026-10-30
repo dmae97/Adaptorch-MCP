@@ -22,10 +22,16 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
 ]
-dependencies = ["adaptorch[api]>=0.1.2,<0.2", "adaptorch-client>=0.1.5,<0.2"]
+dependencies = ["adaptorch-client>=0.1.5,<0.2"]
 
 [project.optional-dependencies]
-dev = ["build>=1.2", "mypy>=1.10", "pytest>=8.2", "ruff>=0.6", "fpdf2==2.8.9"]
+http = ["fastapi>=0.112", "uvicorn[standard]>=0.30"]
+dev = [
+  "build>=1.2", "mypy>=1.10", "pytest>=8.2", "ruff>=0.6", "fpdf2==2.8.9",
+  "fastapi>=0.112", "uvicorn[standard]>=0.30", "httpx>=0.27",
+]
+# Maintainer-only legacy and engine parity tests; never required by the public client.
+engine-dev = ["adaptorch[api]>=0.1.2,<0.2"]
 
 [project.urls]
 Homepage = "https://adaptorch.com"
@@ -43,7 +49,7 @@ adaptorch-mcp-smoke = "adaptorch_mcp.stdio_smoke:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-adaptorch_mcp = ["py.typed"]
+adaptorch_mcp = ["py.typed", "remote_tool_catalog.json"]
 
 [tool.pyright]
 pythonVersion = "3.11"

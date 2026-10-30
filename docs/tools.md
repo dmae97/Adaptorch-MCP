@@ -9,13 +9,17 @@ changes the server verdict. Malformed or unknown-version observations are omitte
 while the run remains available. stdout/stderr, paths, arguments and environment
 values remain outside this optional public schema.
 
-The package delegates tool registration to `adaptorch.mcp_server`. The default `remote` profile exposes nine hardened tools. The two rows marked `full only` are available only with `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`.
+The public CLI/stdio/loopback bridge uses `thin_remote`, without a private engine
+runtime dependency. The service owns tool registration and enforcement. Its default
+public catalog exposes nine tools; approved tenants may additionally discover the
+two candidate verification tools below. Rows marked `full only` describe the separate
+engine/maintainer surface, not tools enabled by the public thin client.
 
 | Tool | Type | Purpose |
 | --- | --- | --- |
 | `adaptorch_run` | write | Submit an AdaptOrch task payload and optionally wait for terminal status. |
 | `adaptorch_get_run` | read | Fetch a run summary plus an optional bounded Correctness Wall view by `run_id`. |
-| `adaptorch_get_artifacts` | read | Fetch artifact metadata for a run. |
+| `adaptorch_get_artifacts` | read | Public artifacts only; raw artifacts currently return `not_published`. |
 | `adaptorch_list_runs` | read | List recent control-plane runs. |
 | `adaptorch_get_traces` | read/full only | Fetch execution traces for a run. |
 | `adaptorch_cancel_run` | write/destructive | Request cancellation for an in-flight run. Keep manually approved. |
@@ -24,6 +28,33 @@ The package delegates tool registration to `adaptorch.mcp_server`. The default `
 | `adaptorch_capabilities` | read/local | Read synthesis modes, topologies, extractors, verifier/VERA vocabularies, connectors, server features, and plan catalog. |
 | `adaptorch_usage` | read | Read the calling tenant's usage window: plan level, period, used, limit, remaining, percentage. |
 | `adaptorch_plan_catalog` | read/local | Read hosted plan catalog: Starter $0, Pro $39, Team $149. |
+
+## Optional existing-candidate verification
+
+| Tool | Type | Inputs |
+| --- | --- | --- |
+| `adaptorch_verify_candidate` | write/idempotent | `repository_id`, exact 40-character `revision`, 8–128-character `idempotency_key` |
+| `adaptorch_get_verification_report` | read | 64-character `verification_id` |
+
+These tools require service authentication and an operator-approved repository/profile.
+The client cannot supply commands, paths, URLs, models or verifier configuration.
+Verification bypasses generation/model selection and never forwards provider credentials.
+A configured platform model is not a fallback. Unregistered tenants do not discover
+these tools; direct HTTP calls remain subject to server authorization and closed schemas.
+
+Reports include commit/candidate/subject, verifier version/bundle, profile, parameters
+and measured environment digests, required check IDs and `COMPLETED` outcomes (`PASS`,
+`FAIL`, `ENV_ERROR`, `TIMEOUT`, `INCONCLUSIVE`). `RUNNING/NOT_RUN` after interruption is
+unknown, not a pass. Reuse the same key and unchanged candidate; replay returns stored
+state without reexecution. A conflicting key reuse is rejected. Report reads never
+execute checks. Raw JUnit, stdout/stderr, paths, policies and debug data are not returned.
+
+`provider_calls=0`, `model_fallback=false`, `harness_isolation=in_process`,
+`generation_identity=unknown`, `correctness_proof=false` and `release_authorized=false`
+state the boundary: the approved pytest scope is not an independent correctness oracle.
+The initial service is single-process with bounded concurrency/storage, not a distributed
+worker or production attestation system. OMK 1.5.10 native MCP acceptance used actual
+stdio → loopback HTTP → sandbox → saved-report lookup, not hosted HTTPS or user OAuth.
 
 ## Engine algorithm surface (delegated)
 

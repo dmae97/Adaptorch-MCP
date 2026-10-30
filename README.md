@@ -15,6 +15,8 @@
   ·
   <a href="docs/claude-code-b2c.md">Claude Code guide</a>
   ·
+  [Remote service boundary](docs/remote-service-distribution.md)
+  ·
   <a href="docs/publishing.md">Publishing</a>
   ·
   <a href="https://arxiv.org/abs/2602.16873">Paper</a>
@@ -29,7 +31,7 @@
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
 </p>
 
-**AdaptOrch MCP** is the MCP adapter for [AdaptOrch](https://adaptorch.com). From Claude Code or another MCP client it submits work to the hosted control plane and returns available run status, bounded observations and artifact references. The engine owns routing and execution. Trace access requires the explicit `full` profile; this adapter does not expose the research-only inference-tape replay API.
+**AdaptOrch MCP** is the remote-only MCP adapter for [AdaptOrch](https://adaptorch.com). From Claude Code or another MCP client it submits work to the hosted control plane and returns available run status, bounded observations and artifact references. The private engine owns routing and execution on the server; it is not installed by this package. Trace access requires the explicit `full` profile; this adapter does not expose the research-only inference-tape replay API.
 
 Use it when your coding agent says a patch works and you want the receipt before you merge, or when a task is too large, too ambiguous, or too expensive to trust to one single-pass response.
 
@@ -89,8 +91,8 @@ Plan prices and monthly run quotas come from [the hosted plan catalog](https://a
 
 ### Engine-delegated optional algorithm controls (latest)
 
-AdaptOrch MCP forwards optional algorithm controls to the installed `adaptorch`
-engine. The wrapper does not implement these algorithms. Treat these as
+AdaptOrch MCP forwards optional algorithm controls to the hosted `adaptorch`
+engine. The public client does not implement these algorithms. Treat these as
 benchmark/eval or operator controls, not quickstart defaults.
 
 | Control | Scope | Verified behavior |
@@ -314,6 +316,12 @@ Use stdio for local clients such as Claude Code or desktop MCP hosts.
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
 adaptorch-mcp --transport stdio --base-url https://adaptorch.com
 ```
+
+Without the token, stdio still starts so registries can inspect it: `initialize`,
+`ping` and `tools/list` come from a pinned catalog shipped in the package, and every
+tool call fails with `-32001` before any network request. Listing tools proves only
+that the server starts; it does not run anything. The root `Dockerfile` builds this
+stdio server from a pinned commit; Glama uses the build spec in `docs/glama.md`.
 
 ### stdio over SSH
 

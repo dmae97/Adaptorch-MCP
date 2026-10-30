@@ -94,11 +94,10 @@ class RequestSpec:
     timeout_seconds: float | None = None
 
     def __post_init__(self) -> None:
-        if self.provider_credential is not None and (self.method, self.path) != (
-            "POST",
-            "/v1/runs",
-        ):
-            raise ValueError("provider_credential is allowed only for POST /v1/runs")
+        if self.provider_credential is not None and (self.method, self.path) not in {
+            ("POST", "/v1/runs"), ("POST", "/v1/mcp"),
+        }:
+            raise ValueError("provider_credential is allowed only for run submission")
         if self.timeout_seconds is not None:
             if type(self.timeout_seconds) not in (int, float):
                 raise ValueError("timeout_seconds must be positive and finite")

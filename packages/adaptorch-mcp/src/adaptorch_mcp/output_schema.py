@@ -6,6 +6,7 @@ from collections.abc import Callable, Mapping
 from typing import Any, Final
 from urllib.parse import urlsplit
 
+from adaptorch_mcp.candidate_output import project_verification_report
 from adaptorch_mcp.correctness_wall_output import project_correctness_wall
 from adaptorch_mcp.discovery_output import project_capabilities as _project_capabilities
 from adaptorch_mcp.discovery_output import project_catalog as project_catalog
@@ -442,6 +443,8 @@ _PROJECTORS: Final[dict[str, _Projector]] = {
     "adaptorch_capabilities": _project_capabilities,
     "adaptorch_usage": _project_usage,
     "adaptorch_plan_catalog": project_catalog,
+    "adaptorch_verify_candidate": project_verification_report,
+    "adaptorch_get_verification_report": project_verification_report,
 }
 
 

@@ -5,11 +5,11 @@ observations, including an untrusted `project_report` from explicit PDF checks.
 `verification_diagnostics_schema_version` is `verification.diagnostics/v1`.
 Only closed codes, source, scope and four allowlisted tool names survive remote
 projection. Logs remain redacted; malformed optional metadata is dropped while
-the original result survives. This does not make the legacy wheel publishable.
+the original result survives.
 
-Installable Python wrapper for the AdaptOrch MCP server.
+Installable **remote-only** Python client for the AdaptOrch MCP service.
 
-The package runs a hardened facade over `adaptorch.mcp_server`, so routing and synthesis stay aligned with AdaptOrch core without copying those algorithms into the wrapper. The default `remote` exposure profile keeps local topology and trace oracles out of the public MCP surface.
+The package forwards a restricted MCP surface to the hosted control plane over authenticated JSON-RPC. It does not install or execute the private AdaptOrch engine. Routing, synthesis, policy and execution remain on the server. The public `remote` exposure profile keeps local topology and trace oracles out of the MCP surface.
 
 ## Install
 
@@ -18,23 +18,13 @@ pip install --upgrade "adaptorch-mcp>=0.5.2,<0.6"
 adaptorch-mcp-client --help
 ```
 
-Use `adaptorch-mcp-client` to select this hardened wrapper explicitly. The legacy
-`adaptorch-mcp` name is retained, but the engine also installs that name and some
-installers can overwrite it. This release supports the `adaptorch` 0.1.x engine,
-not the planned code-free 0.2.x meta-package.
+Use `adaptorch-mcp-client` to select this remote client explicitly. The
+`adaptorch-mcp` launcher name is retained for compatibility.
 
-If AdaptOrch is not published to your package index yet:
-
-```bash
-pip install "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git"
-pip install adaptorch-mcp
-```
-
-One-shot with `uvx`:
+One-shot with `uvx`, without an engine checkout:
 
 ```bash
 uvx --from "adaptorch-mcp==0.5.2" adaptorch-mcp-client --help
-uvx --from "adaptorch-mcp==0.5.2" --with "adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git" adaptorch-mcp-client --help
 ```
 
 For contributors inside this monorepo:
@@ -61,7 +51,7 @@ export ADAPTORCH_MCP_PROVIDER_MODEL="gpt-4.1-mini"
 export ADAPTORCH_MCP_PROVIDER_API_KEY="<provider-api-key>"
 ```
 
-The key is never exposed as an MCP tool argument or JSON body field. It is sent only on run submission, redacted from errors, and omitted from status, artifact, usage, and catalog requests. Older engines without provider-credential support fail closed; source checkouts can install the current engine with `make engine-local ENGINE_PATH=../adaptorch`.
+The key is never exposed as an MCP tool argument or JSON body field. It is sent only on run submission, redacted from errors, and omitted from status, artifact, usage, and catalog requests. Provider credentials are forwarded only to the configured AdaptOrch service, never executed by a local engine.
 
 Runs submitted through this wrapper are stamped `metadata.connector_source="mcp"` by the engine, so they appear in the dashboard MCP status card and `https://adaptorch.com/app/runs` for the key's tenant.
 

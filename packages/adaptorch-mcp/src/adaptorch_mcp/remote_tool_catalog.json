@@ -1,0 +1,682 @@
+{
+  "schema": "adaptorch-mcp.discovery-catalog/v1",
+  "source": {
+    "engine_revision": "fe286c7e6545a1da5b19f2ecb16d38ea8bbd955b",
+    "hosted_profile": "tenant /v1/mcp, evidence basis off, candidate verification off",
+    "projection": "adaptorch_mcp.thin_remote tools/list projection",
+    "use": "unauthenticated stdio introspection only; configured clients list tools live"
+  },
+  "tools": [
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "title": "Run AdaptOrch task"
+      },
+      "description": "Submit a task payload to AdaptOrch control-plane and optionally wait.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_policy": {
+            "additionalProperties": {
+              "type": [
+                "integer",
+                "number",
+                "string",
+                "boolean"
+              ]
+            },
+            "type": "object"
+          },
+          "connector_name": {
+            "default": "mcp",
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "ensemble_members": {
+            "description": "BYOK request-scoped ensemble fan-out: 2-5 'provider:model' members riding the process provider credential (ADAPTORCH_MCP_PROVIDER, ADAPTORCH_MCP_PROVIDER_MODEL, ADAPTORCH_MCP_PROVIDER_API_KEY). Quota: one run debits one unit regardless of member count; model token cost bills to the caller's own provider account.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 2,
+            "type": "array"
+          },
+          "model": {
+            "description": "Model ID, or 'auto' on control-plane backends to resolve this tenant's provider default or confirmed run history. Provider credentials are still required.",
+            "type": "string"
+          },
+          "output_extractor": {
+            "description": "Ensemble output extraction mode hint. Engine extractors: final_answer, multiple_choice_letter. Use 'none' to request no extractor; it is not forwarded to the engine.",
+            "enum": [
+              "none",
+              "final_answer",
+              "multiple_choice_letter"
+            ],
+            "type": "string"
+          },
+          "payload": {
+            "description": "Task DAG. subtasks is required and non-empty; dependencies may be omitted.",
+            "properties": {
+              "dependencies": {
+                "description": "Optional edge list; defaults to [] (engine TaskDAG parity).",
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "subtasks": {
+                "description": "Non-empty list of subtask objects, e.g. {\"id\": \"t1\", \"description\": \"...\"}.",
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "poll_interval_seconds": {
+            "default": 1.0,
+            "type": "number"
+          },
+          "prefer_ensemble_singleton": {
+            "default": null,
+            "description": "Hint the router to prefer multi_model_ensemble for single-node DAGs. true = explicit on, false = explicit off (the ensemble auto preference will not re-enable it), null/omitted = auto policy.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "synthesis_mode": {
+            "default": "robust",
+            "description": "Synthesis strategy executed by the installed engine. Supported modes: paper, robust, robust_lite, stable_hybrid. Deprecated aliases resolve to a supported mode: fourier_aggressive -> stable_hybrid. The serving-layer value 'auto' asks the control plane to pick a supported engine mode per run (control-plane backends only; the choice is reported via synthesis_mode_used). Hosted callers that omit the field receive robust.",
+            "enum": [
+              "paper",
+              "robust",
+              "robust_lite",
+              "stable_hybrid",
+              "fourier_aggressive",
+              "auto"
+            ],
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 120.0,
+            "type": "number"
+          },
+          "wait_for_terminal": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "adaptorch_run"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "title": "Get AdaptOrch run summary"
+      },
+      "description": "Get run summary by run_id.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "adaptorch_get_run",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "artifact_urls": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "auto_synthesis_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "collection_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "consistency": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "correctness_wall": {
+            "additionalProperties": false,
+            "properties": {
+              "advisories": {
+                "items": {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "type": "array"
+              },
+              "blockers": {
+                "items": {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "type": "array"
+              },
+              "claim_boundary": {
+                "additionalProperties": false,
+                "properties": {
+                  "is_active_selector": {
+                    "const": false
+                  },
+                  "is_correctness_proof": {
+                    "const": false
+                  },
+                  "is_shadow_observability_only": {
+                    "const": true
+                  },
+                  "real_docker_paired_required_for_promotion": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "is_correctness_proof",
+                  "is_active_selector",
+                  "is_shadow_observability_only",
+                  "real_docker_paired_required_for_promotion"
+                ],
+                "type": "object"
+              },
+              "correctness_claim": {
+                "const": false
+              },
+              "evidence_notes": {
+                "items": {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 16,
+                "type": "array"
+              },
+              "recommended_action": {
+                "enum": [
+                  "deep_check",
+                  "human_review",
+                  "observe"
+                ],
+                "type": "string"
+              },
+              "selection_mutated": {
+                "type": "boolean"
+              },
+              "verdict": {
+                "enum": [
+                  "ADVISORY",
+                  "BLOCKED",
+                  "INCONCLUSIVE",
+                  "PASS"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "verdict",
+              "blockers",
+              "advisories",
+              "evidence_notes",
+              "correctness_claim",
+              "selection_mutated",
+              "recommended_action",
+              "claim_boundary"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cse_state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "duration_ms": {
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "error_class": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evaluation_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "first_run_receipt": {
+            "additionalProperties": false,
+            "properties": {
+              "budget_state": {
+                "enum": [
+                  "within_cap",
+                  "cap_missing",
+                  "cap_untrusted",
+                  "cost_unknown",
+                  "cap_exceeded"
+                ],
+                "type": "string"
+              },
+              "claims": {
+                "additionalProperties": false,
+                "properties": {
+                  "b2c_launch_ready": {
+                    "const": false
+                  },
+                  "full50_claimed": {
+                    "const": false
+                  },
+                  "official_correctness_claimed": {
+                    "const": false
+                  },
+                  "positioning": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "enum": [
+                      "beta_only"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "positioning",
+                  "b2c_launch_ready",
+                  "full50_claimed",
+                  "official_correctness_claimed"
+                ],
+                "type": "object"
+              },
+              "schema_version": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "verdict": {
+                "enum": [
+                  "OK",
+                  "DEGRADED",
+                  "FAILED"
+                ],
+                "type": "string"
+              },
+              "verification_state": {
+                "enum": [
+                  "passed",
+                  "failed",
+                  "not_run",
+                  "error"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "schema_version",
+              "verdict",
+              "budget_state",
+              "verification_state"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_selection_source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "request_idempotency_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "result_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "run_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "score_validity_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "synthesis_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "synthesis_mode_requested": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "synthesis_mode_used": {
+            "description": "Serving-layer selected mode as reported by the parent; not proof of final engine execution.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "topology": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verification_diagnostics": {
+            "description": "Optional bounded observations. project_report is an untrusted project claim; process_spawn is a verifier launch observation. Neither changes a verdict.",
+            "items": {
+              "additionalProperties": false,
+              "oneOf": [
+                {
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "ENV_DEPENDENCY_MISSING",
+                        "ENV_DEPENDENCY_NOT_EXECUTABLE"
+                      ]
+                    },
+                    "scope": {
+                      "const": "verification_command"
+                    },
+                    "source": {
+                      "const": "process_spawn"
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "scope": {
+                      "const": "child_tool"
+                    },
+                    "source": {
+                      "const": "project_report"
+                    }
+                  }
+                }
+              ],
+              "properties": {
+                "code": {
+                  "enum": [
+                    "ENV_DEPENDENCY_MISSING",
+                    "ENV_DEPENDENCY_NOT_EXECUTABLE",
+                    "PDF_TOOL_EXECUTION_FAILED"
+                  ],
+                  "type": "string"
+                },
+                "scope": {
+                  "enum": [
+                    "verification_command",
+                    "child_tool"
+                  ],
+                  "type": "string"
+                },
+                "source": {
+                  "enum": [
+                    "process_spawn",
+                    "project_report"
+                  ],
+                  "type": "string"
+                },
+                "tool": {
+                  "enum": [
+                    "pdftotext",
+                    "pdffonts",
+                    "pdftoppm",
+                    "pdfinfo"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "source",
+                "scope"
+              ],
+              "type": "object"
+            },
+            "maxItems": 16,
+            "type": "array"
+          },
+          "verification_diagnostics_schema_version": {
+            "const": "verification.diagnostics/v1",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "title": "Get AdaptOrch run artifacts"
+      },
+      "description": "Get run artifacts by run_id.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "adaptorch_get_artifacts"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "title": "List AdaptOrch runs"
+      },
+      "description": "List recent AdaptOrch control-plane runs, newest first.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "adaptorch_list_runs"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "title": "Cancel AdaptOrch run"
+      },
+      "description": "Request cancellation of an in-flight run by run_id.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "adaptorch_cancel_run"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Read AdaptOrch MCP metrics"
+      },
+      "description": "Return redacted MCP tool-call counters and latency percentiles.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "name": "adaptorch_server_metrics"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "AdaptOrch capabilities"
+      },
+      "description": "Return supported synthesis modes, connectors, and server capabilities.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "name": "adaptorch_capabilities"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "title": "Read AdaptOrch tenant usage"
+      },
+      "description": "Return the calling tenant's current usage window: plan level, period, used, limit, remaining, and usage percentage. The tenant is resolved server-side from the configured API key.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "name": "adaptorch_usage"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Read AdaptOrch cloud plan catalog"
+      },
+      "description": "Return the current AdaptOrch hosted cloud plan catalog: Starter $0, Pro $39, Team $149.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "name": "adaptorch_plan_catalog"
+    }
+  ]
+}

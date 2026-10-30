@@ -4,6 +4,30 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [Unreleased]
+
+### Added — optional candidate verification
+
+- Accept the service-advertised `adaptorch_verify_candidate` and
+  `adaptorch_get_verification_report` tools without a private engine dependency.
+  Verification never forwards BYOK credentials. Reports use a closed projection,
+  bind candidate/revision/verifier/environment identities, and preserve failure,
+  timeout and unknown states. No generation, correctness proof or release approval
+  is implied. Local OMK native MCP acceptance passed; deployment and publication
+  remain separate.
+
+### Changed — remote-only public client
+
+- `adaptorch-mcp` no longer requires the private `adaptorch` engine at runtime. The public CLI, stdio and loopback HTTP paths forward a restricted JSON-RPC MCP surface to the configured hosted service through `adaptorch-client`.
+- Added bounded stdio framing, authenticated HTTP request handling, upstream response identity checks, remote tool projection and run-scoped BYOK forwarding. HTTP serving remains opt-in through the `http` extra.
+- Kept engine-dependent maintainer tests behind the separate `engine-dev` extra. Platform connector registration and hosted deployment are not included.
+
+### Added — credential-free stdio introspection
+
+- Without `ADAPTORCH_CONTROL_PLANE_TOKEN`, stdio now starts and answers `initialize`, `ping` and `tools/list` from a pinned catalog (`remote_tool_catalog.json`, projected from hosted engine `fe286c7e6`). `tools/call` and `resources/read` return `-32001` and make no network request. HTTP serving still requires the token; the hosted `/mcp` endpoint is unchanged. With a token configured, tools are listed live as before.
+- Added a root `Dockerfile` that installs the client and wrapper from one pinned public commit, for local reproduction of registry checks. Glama builds from its admin build spec instead; `docs/glama.md` records the values, and `glama.json` names the maintainer.
+- `make test` now excludes every test that needs the private engine, so it runs on the public install alone.
+
 ## [adaptorch-client 0.1.5 / adaptorch-cli 0.1.5] — 2026-10-26
 
 ### Changed — persistent connections

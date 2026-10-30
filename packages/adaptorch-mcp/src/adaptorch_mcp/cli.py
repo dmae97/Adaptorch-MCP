@@ -10,8 +10,8 @@ _HOSTED_BASE_URL = "https://adaptorch.com"
 _ALLOWED_CONTROL_PLANE_SCHEMES = frozenset({"http", "https"})
 
 _MISSING_ADAPTORCH_MESSAGE = (
-    "adaptorch-mcp requires AdaptOrch. Install with: "
-    "pip install 'adaptorch[api] @ git+https://github.com/dmae97/adaptorch.git'"
+    "adaptorch-mcp is a remote client. Configure ADAPTORCH_CONTROL_PLANE_TOKEN "
+    "and an HTTPS AdaptOrch service URL."
 )
 
 
@@ -91,13 +91,13 @@ def _with_hosted_base_url_default(argv: Sequence[str] | None) -> list[str] | Non
 
 
 def _load_runtime_main() -> Callable[[Sequence[str] | None], int]:
-    from adaptorch_mcp.runtime import run_hardened_main
+    from adaptorch_mcp.thin_runtime import run_remote_main
 
-    return run_hardened_main
+    return run_remote_main
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the canonical AdaptOrch engine behind the hardened MCP facade."""
+    """Run the remote AdaptOrch MCP client without a local engine."""
     try:
         runtime_main = _load_runtime_main()
     except ModuleNotFoundError as exc:
