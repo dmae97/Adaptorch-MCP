@@ -1,0 +1,97 @@
+name: AdaptOrch Run and Evidence
+description: Run an AdaptOrch task in GitHub Actions and inspect its execution and verification status.
+author: ClassicMate
+branding:
+  icon: layers
+  color: blue
+inputs:
+  api-key:
+    description: AdaptOrch API key; pass a GitHub Actions secret.
+    required: true
+  provider:
+    description: BYOK provider name, supplied together with provider-model and provider-api-key.
+    required: false
+  provider-model:
+    description: BYOK model name.
+    required: false
+  provider-api-key:
+    description: BYOK provider key; pass a GitHub Actions secret.
+    required: false
+  prompt:
+    description: Task prompt; choose exactly one of prompt, run-spec-file, or resume-run-id.
+    required: false
+  run-spec-file:
+    description: Workspace-relative path to a JSON run specification.
+    required: false
+  context-file:
+    description: Optional workspace-relative UTF-8 context file to send with prompt.
+    required: false
+  resume-run-id:
+    description: Observe an existing run instead of submitting a new one.
+    required: false
+  idempotency-key:
+    description: UUID for safely recovering the same logical submission; generated if omitted.
+    required: false
+  api-url:
+    description: AdaptOrch API origin; HTTPS or loopback HTTP only.
+    required: false
+    default: https://adaptorch.com
+  wait-timeout-seconds:
+    description: Maximum time to wait for a terminal run status, from 1 to 3600 seconds.
+    required: false
+    default: '180'
+  poll-interval-seconds:
+    description: Time between status reads, from 1 to 60 seconds.
+    required: false
+    default: '2'
+  verification:
+    description: off, report, or required. Required fails unless verification is PASSED.
+    required: false
+    default: report
+  report-file:
+    description: Optional new workspace-relative path to save the terminal run JSON report.
+    required: false
+outputs:
+  run-id:
+    description: ID of the submitted or resumed run.
+    value: ${{ steps.run.outputs.run-id }}
+  status:
+    description: Run execution status; SUCCEEDED alone is not a correctness verdict.
+    value: ${{ steps.run.outputs.status }}
+  result-status:
+    description: Server-reported result status, when available.
+    value: ${{ steps.run.outputs.result-status }}
+  evaluation-status:
+    description: Server-reported evaluation status, when available.
+    value: ${{ steps.run.outputs.evaluation-status }}
+  verification-status:
+    description: Evidence verification status, NOT_REQUESTED, NOT_REPORTED, or UNAVAILABLE.
+    value: ${{ steps.run.outputs.verification-status }}
+  idempotency-key:
+    description: Submission UUID; retain this for recovery after an uncertain response.
+    value: ${{ steps.run.outputs.idempotency-key }}
+  report-sha256:
+    description: SHA-256 of the downloaded report file, if requested.
+    value: ${{ steps.run.outputs.report-sha256 }}
+runs:
+  using: composite
+  steps:
+    - id: run
+      shell: bash
+      env:
+        ADAPTORCH_ACTION_PATH: ${{ github.action_path }}
+        AO_API_KEY: ${{ inputs.api-key }}
+        AO_PROVIDER: ${{ inputs.provider }}
+        AO_PROVIDER_MODEL: ${{ inputs.provider-model }}
+        AO_PROVIDER_KEY: ${{ inputs.provider-api-key }}
+        AO_PROMPT: ${{ inputs.prompt }}
+        AO_SPEC_FILE: ${{ inputs.run-spec-file }}
+        AO_CONTEXT_FILE: ${{ inputs.context-file }}
+        AO_RESUME_RUN_ID: ${{ inputs.resume-run-id }}
+        AO_IDEMPOTENCY_KEY: ${{ inputs.idempotency-key }}
+        AO_API_URL: ${{ inputs.api-url }}
+        AO_WAIT_TIMEOUT: ${{ inputs.wait-timeout-seconds }}
+        AO_POLL_INTERVAL: ${{ inputs.poll-interval-seconds }}
+        AO_VERIFICATION: ${{ inputs.verification }}
+        AO_REPORT_FILE: ${{ inputs.report-file }}
+      run: python3 -I "$ADAPTORCH_ACTION_PATH/github_action/main.py"

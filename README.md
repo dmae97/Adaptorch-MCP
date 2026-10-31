@@ -15,6 +15,8 @@
   ·
   <a href="docs/claude-code-b2c.md">Claude Code guide</a>
   ·
+  <a href="docs/github-action.md">GitHub Action</a>
+  ·
   [Remote service boundary](docs/remote-service-distribution.md)
   ·
   <a href="docs/publishing.md">Publishing</a>
@@ -539,6 +541,14 @@ For trusted local clients, auto-approve only tools whose outputs are safe for
 that client. Keep `adaptorch_run` and `adaptorch_cancel_run` manually approved.
 For shared or production clients, avoid auto-approving run, artifact, and trace
 readers unless those payloads are already sanitized.
+
+## GitHub Action
+
+Run a task from a trusted workflow with the [GitHub Action](docs/github-action.md).
+It uses the public client in this repository and calls the hosted API; no private
+engine is installed on the runner. It reports execution and verification separately,
+and can optionally save a JSON run report. API credentials belong in GitHub Secrets.
+Its tests use a loopback fixture and do not require a real key or incur model charges.
 
 ## Branding assets
 

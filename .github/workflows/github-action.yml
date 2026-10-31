@@ -1,0 +1,51 @@
+name: github-action
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run client integration tests
+        run: python3 -m unittest discover -s github_action/tests -v
+      - id: fixture
+        name: Start loopback control-plane fixture
+        shell: bash
+        run: |
+          python3 github_action/tests/mock_server.py "$RUNNER_TEMP/adaptorch-address" > "$RUNNER_TEMP/adaptorch-fixture.log" 2>&1 &
+          for attempt in {1..50}; do
+            if [[ -s "$RUNNER_TEMP/adaptorch-address" ]]; then
+              echo "api-url=$(cat "$RUNNER_TEMP/adaptorch-address")" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 0.1
+          done
+          exit 1
+      - id: adaptorch
+        name: Run the composite action against the fixture
+        uses: ./
+        with:
+          api-url: ${{ steps.fixture.outputs.api-url }}
+          api-key: ado_mock_key
+          provider: openai
+          provider-model: mock-model
+          provider-api-key: mock_provider_key
+          prompt: Test the Action.
+          verification: required
+      - name: Check action outputs
+        shell: bash
+        env:
+          RUN_ID: ${{ steps.adaptorch.outputs.run-id }}
+          RUN_STATUS: ${{ steps.adaptorch.outputs.status }}
+          VERIFICATION: ${{ steps.adaptorch.outputs.verification-status }}
+        run: |
+          [[ "$RUN_ID" == "mock-run" ]]
+          [[ "$RUN_STATUS" == "SUCCEEDED" ]]
+          [[ "$VERIFICATION" == "PASSED" ]]

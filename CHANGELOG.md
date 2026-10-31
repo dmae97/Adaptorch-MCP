@@ -4,6 +4,17 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [GitHub Action] — Unreleased
+
+### Added
+
+- Root composite action for remote task submission, bounded status observation,
+  optional evidence verification gating, JSON report download, and read-only recovery.
+- The action reuses the public SDK at its pinned action ref. Provider credentials are
+  submission-only, and a submission is not automatically retried on a lost response.
+- Local HTTP integration tests and a GitHub Actions workflow exercise the action
+  without hosted credentials or private engine dependencies.
+
 ## [Claude Code plugin 0.1.0] — Unreleased
 
 ### Added — `adaptorch` plugin and marketplace
