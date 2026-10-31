@@ -39,13 +39,30 @@ jobs:
           provider-api-key: mock_provider_key
           prompt: Test the Action.
           verification: required
+      - id: marketplace
+        name: Run the published Marketplace action against the fixture
+        uses: dmae97/adaptorch-action@v0.1.0
+        with:
+          api-url: ${{ steps.fixture.outputs.api-url }}
+          api-key: ado_mock_key
+          provider: openai
+          provider-model: mock-model
+          provider-api-key: mock_provider_key
+          prompt: Test the Action.
+          verification: required
       - name: Check action outputs
         shell: bash
         env:
           RUN_ID: ${{ steps.adaptorch.outputs.run-id }}
           RUN_STATUS: ${{ steps.adaptorch.outputs.status }}
           VERIFICATION: ${{ steps.adaptorch.outputs.verification-status }}
+          MARKETPLACE_RUN_ID: ${{ steps.marketplace.outputs.run-id }}
+          MARKETPLACE_STATUS: ${{ steps.marketplace.outputs.status }}
+          MARKETPLACE_VERIFICATION: ${{ steps.marketplace.outputs.verification-status }}
         run: |
           [[ "$RUN_ID" == "mock-run" ]]
           [[ "$RUN_STATUS" == "SUCCEEDED" ]]
           [[ "$VERIFICATION" == "PASSED" ]]
+          [[ "$MARKETPLACE_RUN_ID" == "mock-run" ]]
+          [[ "$MARKETPLACE_STATUS" == "SUCCEEDED" ]]
+          [[ "$MARKETPLACE_VERIFICATION" == "PASSED" ]]
