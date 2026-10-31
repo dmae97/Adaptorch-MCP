@@ -17,6 +17,8 @@
   ·
   <a href="docs/github-action.md">GitHub Action</a>
   ·
+  <a href="https://github.com/marketplace/actions/adaptorch-run-and-evidence">GitHub Marketplace</a>
+  ·
   [Remote service boundary](docs/remote-service-distribution.md)
   ·
   <a href="docs/publishing.md">Publishing</a>
@@ -545,10 +547,12 @@ readers unless those payloads are already sanitized.
 ## GitHub Action
 
 Run a task from a trusted workflow with the [GitHub Action](docs/github-action.md).
-It uses the public client in this repository and calls the hosted API; no private
-engine is installed on the runner. It reports execution and verification separately,
-and can optionally save a JSON run report. API credentials belong in GitHub Secrets.
-Its tests use a loopback fixture and do not require a real key or incur model charges.
+The [Marketplace preview](https://github.com/marketplace/actions/adaptorch-run-and-evidence)
+uses a separate repository containing only the remote Action and public API client;
+no private engine is installed on the runner. It reports execution and verification
+separately and can optionally save a JSON run report. API credentials belong in
+GitHub Secrets. Its tests use a loopback fixture and do not incur model charges;
+compatibility with a hosted deployment still needs a real run.
 
 ## Branding assets
 

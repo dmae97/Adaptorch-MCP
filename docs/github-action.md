@@ -6,9 +6,10 @@ Python client checked out with the action's Git ref; it does not install or incl
 the private engine. Python 3.11 or newer and Bash must be available on the runner.
 The example below targets GitHub-hosted Ubuntu runners.
 
-The following example is usable after this action is merged into `main`. For a
-production workflow, replace `main` with the full commit SHA of a reviewed release.
-The action is not published to GitHub Marketplace merely by merging it.
+The dedicated, remote-only Action is listed in the
+[GitHub Marketplace](https://github.com/marketplace/actions/adaptorch-run-and-evidence)
+as preview `v0.1.0`. For a production workflow, pin a reviewed release to its
+full commit SHA. A hosted run still needs to be verified with real credentials.
 
 ## Minimal workflow
 
@@ -29,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: adaptorch
-        uses: dmae97/Adaptorch-MCP@main
+        uses: dmae97/adaptorch-action@v0.1.0
         with:
           api-key: ${{ secrets.ADAPTORCH_API_KEY }}
           provider: openai
@@ -65,7 +66,7 @@ For example, after a workflow checks out its own repository and creates a curate
 
 ```yaml
       - id: adaptorch
-        uses: dmae97/Adaptorch-MCP@main
+        uses: dmae97/adaptorch-action@v0.1.0
         with:
           api-key: ${{ secrets.ADAPTORCH_API_KEY }}
           provider: openai
