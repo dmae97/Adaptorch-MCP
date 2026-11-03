@@ -30,7 +30,7 @@ api = [
 
 [[package]]
 name = "adaptorch-cli"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "packages/adaptorch-cli" }
 dependencies = [
     { name = "adaptorch-client" },
@@ -63,7 +63,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "adaptorch-mcp"
-version = "0.6.0"
+version = "0.6.1"
 source = { editable = "packages/adaptorch-mcp" }
 dependencies = [
     { name = "adaptorch-client" },

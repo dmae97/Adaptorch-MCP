@@ -4,6 +4,25 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [adaptorch-mcp 0.6.1, adaptorch-cli 0.1.6] — 2026-11-03
+
+### Fixed
+
+- `adaptorch-mcp-smoke` defaults to `https://adaptorch.com`, the same hosted fallback as
+  `adaptorch-mcp`, instead of `http://127.0.0.1:8000`, and waits up to 30 seconds
+  instead of 10. Run without `--base-url`, it used to time out against a local port
+  nothing listens on. Pass `--base-url http://127.0.0.1:8000` for a local control plane.
+- `adaptorchctl run submit --help` now says how to send your own provider key (BYOK):
+  `ADAPTORCH_PROVIDER`, `ADAPTORCH_PROVIDER_MODEL`, `ADAPTORCH_PROVIDER_API_KEY`, or
+  `config set provider.*`. The behavior already existed in 0.1.5; keys still never go
+  on the command line.
+
+### Notes
+
+- adaptorch.com did not route `POST /v1/mcp`, the path every 0.6.x call is forwarded to,
+  until 2026-11-03, so 0.6.0 answered every call with "Remote MCP request failed". That
+  was a server-side fix; 0.6.0 works against adaptorch.com now.
+
 ## [GitHub Action] — Unreleased
 
 ### Added

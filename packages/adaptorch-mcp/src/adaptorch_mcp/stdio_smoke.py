@@ -12,7 +12,10 @@ from typing import IO, Any, cast
 
 from adaptorch_mcp.diagnostics import EXPECTED_CORE_TOOLS
 
-_SMOKE_DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+# Same hosted fallback as the `adaptorch-mcp` wrapper; local development passes
+# --base-url or ADAPTORCH_CONTROL_PLANE_BASE_URL explicitly.
+_SMOKE_DEFAULT_BASE_URL = "https://adaptorch.com"
+_SMOKE_DEFAULT_TIMEOUT_SECONDS = 30.0
 _MAX_LINE_BYTES = 8 * 1024 * 1024
 _READ_CHUNK_BYTES = 65_536
 _SENSITIVE_ENV_MARKERS = ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "AUTH")
@@ -262,14 +265,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--base-url",
         default=os.getenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", _SMOKE_DEFAULT_BASE_URL),
-        help="AdaptOrch control-plane or gateway URL",
+        help=(
+            "AdaptOrch control-plane or gateway URL; defaults to "
+            "ADAPTORCH_CONTROL_PLANE_BASE_URL, then https://adaptorch.com"
+        ),
     )
     parser.add_argument(
         "--api-token",
         default=os.getenv("ADAPTORCH_CONTROL_PLANE_TOKEN"),
         help="Control-plane token; defaults to ADAPTORCH_CONTROL_PLANE_TOKEN",
     )
-    parser.add_argument("--timeout-seconds", type=float, default=10.0)
+    parser.add_argument(
+        "--timeout-seconds", type=float, default=_SMOKE_DEFAULT_TIMEOUT_SECONDS
+    )
     parser.add_argument(
         "--expected-tool",
         action="append",

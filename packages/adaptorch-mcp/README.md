@@ -24,7 +24,7 @@ Use `adaptorch-mcp-client` to select this remote client explicitly. The
 One-shot with `uvx`, without an engine checkout:
 
 ```bash
-uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.1" adaptorch-mcp-client --help
 ```
 
 For contributors inside this monorepo:
@@ -114,7 +114,7 @@ The smoke reports non-JSON stdout with that hint, without echoing the line, and 
 | `adaptorch-mcp-doctor` | Print redacted local diagnostics. | `--json`, `--strict` |
 | `adaptorch-mcp-smoke` | Verify stdio `initialize` + `tools/list`. | `--command`, `--base-url`, `--api-token`, `--timeout-seconds`, repeatable `--expected-tool` |
 
-For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this order: explicit `--base-url`, then trimmed/validated `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then the hosted fallback `https://adaptorch.com`. `adaptorch-mcp-smoke` keeps a local-dev fallback of `http://127.0.0.1:8000` when no base URL is configured. Pass `--base-url` explicitly in checked-in MCP client configs for reproducible behavior.
+For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this order: explicit `--base-url`, then trimmed/validated `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then the hosted fallback `https://adaptorch.com`. `adaptorch-mcp-smoke` uses the same order and hosted fallback. Pass `--base-url` explicitly in checked-in MCP client configs for reproducible behavior.
 
 ## Environment variables
 
@@ -192,7 +192,7 @@ export ADAPTORCH_CONTROL_PLANE_TOKEN="<ado_live_your-key>"
 adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
-Expected JSON includes `"ok": true`, `adaptorch_plan_catalog`, and the expected core tool subset. If no base URL is supplied, smoke targets `http://127.0.0.1:8000` for local development. Add repeatable `--expected-tool <name>` flags when validating a specific hosted/core release.
+Expected JSON includes `"ok": true`, `adaptorch_plan_catalog`, and the expected core tool subset. If no base URL is supplied, smoke targets `https://adaptorch.com`; pass `--base-url http://127.0.0.1:8000` for a local control plane. Add repeatable `--expected-tool <name>` flags when validating a specific hosted/core release.
 
 ## Example configs
 

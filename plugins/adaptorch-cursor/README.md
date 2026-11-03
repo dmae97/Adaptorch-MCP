@@ -3,7 +3,7 @@
 Run multi-step coding tasks on the hosted [AdaptOrch](https://adaptorch.com) service and get run status, artifacts, usage and replayable evidence receipts back in chat.
 
 ## Components
-- `mcp.json` — `adaptorch` MCP server: `uvx --from adaptorch-mcp==0.6.0 adaptorch-mcp-client --transport stdio` (thin client to the hosted control plane; Python 3.12 via uv).
+- `mcp.json` — `adaptorch` MCP server: `uvx --from adaptorch-mcp==0.6.1 adaptorch-mcp-client --transport stdio` (thin client to the hosted control plane; Python 3.12 via uv).
 - `skills/adaptorch` — when and how to use the AdaptOrch tools.
 
 ## Requirements

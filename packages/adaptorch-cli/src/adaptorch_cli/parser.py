@@ -32,7 +32,22 @@ def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser
     run = parent.add_parser("run", help="Manage runs")
     commands = run.add_subparsers(dest="run_command", required=True)
 
-    submit = commands.add_parser("submit", help="Submit a run")
+    submit = commands.add_parser(
+        "submit",
+        help="Submit a run",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Your own provider key (BYOK) is sent only with this submission, as\n"
+            "X-Provider/X-Provider-Model/X-Provider-Key. Keys never go on the command\n"
+            "line. Set all three in the environment (it overrides stored config):\n"
+            "  ADAPTORCH_PROVIDER, ADAPTORCH_PROVIDER_MODEL, ADAPTORCH_PROVIDER_API_KEY\n"
+            "or persist them:\n"
+            "  adaptorchctl config set provider.name openrouter\n"
+            "  adaptorchctl config set provider.model deepseek/deepseek-chat\n"
+            "  adaptorchctl config set provider.api_key --value-stdin < key.txt\n"
+            "Without them the server's own provider credential is used, if your plan has one."
+        ),
+    )
     submit.add_argument("--file", required=True, help="JSON request path, or - for stdin")
     submit.add_argument("--request-id", type=_idempotency_key, help="UUID idempotency key")
 

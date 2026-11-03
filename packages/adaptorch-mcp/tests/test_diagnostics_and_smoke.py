@@ -419,3 +419,23 @@ def test_stdio_smoke_names_the_ssh_fix_for_a_noisy_login_banner(tmp_path: Path) 
     message = str(excinfo.value)
     assert "ssh -T" in message
     assert "build-host-banner-text" not in message
+
+
+def test_stdio_smoke_defaults_to_the_hosted_service_like_the_wrapper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without a base URL, smoke checks the same hosted service `adaptorch-mcp` uses.
+
+    It used to target http://127.0.0.1:8000, so a customer running the documented
+    `adaptorch-mcp-smoke` saw a bare 10 s timeout instead of a result.
+    """
+    from adaptorch_mcp.stdio_smoke import build_parser
+
+    monkeypatch.delenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", raising=False)
+    args = build_parser().parse_args([])
+    assert args.base_url == "https://adaptorch.com"
+    # Two hosted round trips (initialize, tools/list) need more than 10 s on slow links.
+    assert args.timeout_seconds == 30.0
+
+    monkeypatch.setenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", "http://127.0.0.1:8000")
+    assert build_parser().parse_args([]).base_url == "http://127.0.0.1:8000"

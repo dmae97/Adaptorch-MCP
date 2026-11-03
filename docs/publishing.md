@@ -4,7 +4,7 @@
 
 ```bash
 pip install adaptorch-mcp
-uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.1" adaptorch-mcp-client --help
 ```
 
 ## Package dependency order
@@ -54,8 +54,8 @@ artifact:
 
 ```bash
 uv run --no-sync python -m build packages/adaptorch-mcp --outdir dist
-sha256sum dist/adaptorch_mcp-0.6.0-py3-none-any.whl
-uv tool install --force dist/adaptorch_mcp-0.6.0-py3-none-any.whl
+sha256sum dist/adaptorch_mcp-0.6.1-py3-none-any.whl
+uv tool install --force dist/adaptorch_mcp-0.6.1-py3-none-any.whl
 ```
 
 Run `adaptorch-mcp-smoke` afterward and require the default remote surface to contain exactly nine tools. Do not use a deleted temporary source directory as the uv receipt origin.
@@ -113,10 +113,10 @@ uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-clien
 ## Post-publish smoke
 
 ```bash
-uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-client --help
-uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-doctor --json
+uvx --from "adaptorch-mcp==0.6.1" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.1" adaptorch-mcp-doctor --json
 ADAPTORCH_CONTROL_PLANE_TOKEN="<token>" \
-  uvx --from "adaptorch-mcp==0.6.0" adaptorch-mcp-smoke --base-url https://adaptorch.com
+  uvx --from "adaptorch-mcp==0.6.1" adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 Expected MCP tools include `adaptorch_plan_catalog`. For HTTP, also verify `/mcp/health`, `initialize`, and `tools/list` with a client-facing `ADAPTORCH_MCP_HTTP_AUTH_TOKEN`.
