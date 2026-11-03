@@ -7,7 +7,8 @@ description: Use when the user wants to hand a multi-step coding task to AdaptOr
 
 AdaptOrch runs a task on the hosted service at adaptorch.com and returns a run record with
 artifacts and evidence. The plugin's MCP server is a thin client: it forwards calls to the
-service and runs nothing locally. Each submitted run counts against the user's plan.
+service and runs no orchestration locally. A submission can consume plan quota and model
+tokens can be billed separately by the provider.
 
 ## Setup
 
@@ -16,10 +17,13 @@ Tell the user:
 
 1. Create an account at https://adaptorch.com/app/signup (the Starter plan is free).
 2. Create a key at https://adaptorch.com/app/api-keys. It starts with `ado_`.
-3. In Claude Code, run `/plugin configure adaptorch@adaptorch` and paste the key, then run
-   `/reload-plugins`.
+3. In Claude Code, run `/plugin configure adaptorch@adaptorch` and enter the key in the
+   configuration dialog, then run `/reload-plugins`.
+4. For model execution, configure the model provider, its exact model ID, and provider API
+   key in that dialog. Leave all three empty for read-only queries. The current chat model
+   is not automatically available to the hosted service.
 
-Never ask the user to paste the key into the chat, and never write it into a file.
+Never ask the user to paste either key into chat, tool arguments or a committed file.
 
 ## Tools
 
@@ -41,12 +45,16 @@ only when they appear in the tool list.
 
 ## Running a task
 
-- Submit a run only when the user asked for one. Say that it uses one run from their plan.
+- Submit a run only when the user asked for one. Explain potential plan and provider costs.
+- Ask before sending private code or other sensitive context unless the user has already
+  authorized that scope. The service receives submitted prompts and context.
 - Keep secrets, credentials and private keys out of `prompt`, `context` and `payload`.
 - Check `adaptorch_capabilities` before setting `synthesis_mode` or `output_extractor`
   instead of guessing values.
 - For long work, set `wait_for_terminal` to `false`, then poll `adaptorch_get_run`. Use
   `adaptorch_cancel_run` if the user wants to stop.
+- Do not blindly resubmit after a timeout: the original submission may have succeeded.
+  Check existing runs first.
 - If a call returns `QUOTA_EXCEEDED`, stop retrying. Show the usage from
   `adaptorch_usage` and point the user to https://adaptorch.com/pricing.
 

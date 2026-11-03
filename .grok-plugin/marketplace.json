@@ -1,0 +1,12 @@
+{
+  "name": "adaptorch",
+  "description": "AdaptOrch-maintained plugins for Grok Build",
+  "owner": {"name": "ClassicMate", "url": "https://adaptorch.com"},
+  "plugins": [
+    {
+      "name": "adaptorch",
+      "source": "./plugins/adaptorch-grok",
+      "description": "Connect to hosted AdaptOrch runs, artifacts and usage."
+    }
+  ]
+}

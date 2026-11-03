@@ -4,6 +4,20 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [Agent platform integrations] — Unreleased
+
+### Added
+
+- A Kimi Code plugin manifest, a Grok Build plugin and marketplace, and a shared usage
+  skill, all using the published remote-only client. The existing Cursor plugin is
+  documented as the Grok Bot marketplace submission candidate.
+- Setup, credential handling, data transfer and platform-specific publication steps.
+
+### Changed
+
+- The Claude Code plugin exposes provider, model and sensitive provider key options for
+  model-backed runs, in addition to the AdaptOrch service key.
+
 ## [adaptorch-mcp 0.6.1, adaptorch-cli 0.1.6] — 2026-11-03
 
 ### Fixed

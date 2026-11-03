@@ -1,87 +1,43 @@
-# B2C Claude Code Experience Notes
+# AdaptOrch for Claude Code
 
-This package should feel useful to individual Claude Code users before they learn the broader AdaptOrch platform. Optimize the first-run path around a small, predictable tool surface.
+The Claude Code plugin connects to the hosted AdaptOrch service with the public MCP
+client. It includes a skill for submitting requested tasks and inspecting run status,
+available artifacts and usage. The private engine stays on the hosted service.
 
-## Get your API key (first thing)
+## Install and configure
 
-1. Sign up at [adaptorch.com/app/signup](https://adaptorch.com/app/signup)
-2. Open [adaptorch.com/app/api-keys](https://adaptorch.com/app/api-keys) and generate a key (starts with `ado_`)
-3. Starter `$0` includes API key access, 50 admitted runs/month, and shadow mode
-
-```bash
-export ADAPTORCH_CONTROL_PLANE_TOKEN="ado_..."
-```
-
-### First-run story
-
-Signup → `/app/api-keys` → copy `ado_*` once → set `ADAPTORCH_CONTROL_PLANE_TOKEN` in the Claude Code MCP env → call `adaptorch_run` or `adaptorch_list_runs` → open `/app/runs` to see the same tenant run list on the dashboard.
-
-한국어: 가입 후 `/app/api-keys`에서 `ado_*`를 만들고 MCP 환경 변수에 넣으면 Claude Code 실행/목록 결과가 대시보드 `/app/runs`에 이어집니다.
-
-## Recommended default tool surface
-
-Expose all server tools, but document these five first:
-
-| Priority | Tool | Why it is felt quickly |
-| --- | --- | --- |
-| 1 | `adaptorch_route_topology` | Instant local routing feedback. Users see why a task should be singleton, pipeline, DAG, or ensemble before spending tokens. |
-| 2 | `adaptorch_run` | Turns a vague coding goal into an AdaptOrch-controlled run with synthesis/telemetry instead of a single brittle pass. |
-| 3 | `adaptorch_get_run` | Lets Claude Code poll status without asking the user to inspect dashboards. |
-| 4 | `adaptorch_get_artifacts` | Makes evidence and outputs retrievable inside the coding conversation. |
-| 5 | `adaptorch_plan_catalog` | Confirms the install is current and gives users a simple hosted/free-tier mental model. |
-
-Auto-approve only outputs that are safe for the client context. For trusted local clients, these local/read metadata tools are the safest defaults:
-
-```text
-adaptorch_route_topology
-adaptorch_server_metrics
-adaptorch_capabilities
-adaptorch_plan_catalog
-```
-
-Keep these manually approved in shared or production clients unless run payloads, artifacts, and traces are already sanitized:
-
-```text
-adaptorch_run
-adaptorch_cancel_run
-adaptorch_get_run
-adaptorch_get_artifacts
-adaptorch_list_runs
-adaptorch_get_traces
-```
-
-## Fastest perceived wins
-
-1. **Less planning uncertainty** — `adaptorch_route_topology` gives a concrete routing decision immediately without external calls.
-2. **Fewer failed long tasks** — `adaptorch_run` applies AdaptOrch's router/synthesis/verification path for tasks that would otherwise exceed one Claude Code pass.
-3. **Evidence in the chat** — `adaptorch_get_artifacts` makes results and proof easier to surface without context switching.
-4. **Safer supportability** — `adaptorch-mcp-doctor` and `adaptorch-mcp-smoke` turn install failures into copy-pasteable, redacted diagnostics.
-5. **Lower setup friction** — after PyPI publishing, `uvx adaptorch-mcp --help` gives an immediate no-clone install path.
-
-## B2C install copy
+Install [uv](https://docs.astral.sh/uv/), then add this repository's marketplace:
 
 ```bash
-uvx adaptorch-mcp --help
+claude plugin marketplace add dmae97/Adaptorch-MCP
+claude plugin install adaptorch@adaptorch
 ```
 
-For actual MCP use:
+Create an account and service API key at <https://adaptorch.com/app/api-keys>. In Claude
+Code, run `/plugin configure adaptorch@adaptorch` and enter the key in the configuration
+dialog. To submit a model-backed run, also configure the provider, exact model ID and
+provider API key. Run `/reload-plugins` after changing settings. The current Claude model
+is not automatically supplied to the remote service. See the
+[plugin README](../plugins/adaptorch/README.md) for details.
 
-```bash
-export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-uvx adaptorch-mcp --transport stdio --base-url https://adaptorch.com
-```
+Never paste a service key or provider key into chat, prompts or tool arguments. Do not
+submit private code or context unless the user has authorized sending it to AdaptOrch.
+Submissions can consume plan quota and provider tokens can have separate charges; see
+<https://adaptorch.com/pricing>.
 
-For verification:
+## First use
 
-```bash
-export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
-uvx --from adaptorch-mcp adaptorch-mcp-smoke --base-url https://adaptorch.com
-```
+1. Check the plugin and MCP connection with `/plugin` and `/mcp`.
+2. Ask to see AdaptOrch plan usage or recent runs. These do not submit a new run.
+3. When the user requests a task, submit it with `adaptorch_run` and check its status with
+   `adaptorch_get_run`. Retrieve available artifacts with `adaptorch_get_artifacts`.
 
-## Product message
+The actual advertised tool list and schemas are authoritative. Discovery without a
+service key confirms that the local client started; it does not prove hosted
+authentication, model execution or end-to-end correctness. Do not automatically retry a
+submission after a timeout: it may already have succeeded.
 
-> Add AdaptOrch to Claude Code when a task is too large, too ambiguous, or too expensive to run as a single pass. Route first, run with evidence, then pull artifacts back into the chat.
-
-## Known limitation
-
-The wrapper is only as current as the installed `adaptorch` dependency. For B2C installs, publish `adaptorch` core first or users must install it from GitHub.
+The plugin is independently distributed through this repository. Listing in Anthropic's
+directory requires a separate submission and review. See
+[agent platform integrations](agent-platform-integrations.md) for other hosts and
+distribution status.

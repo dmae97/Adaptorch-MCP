@@ -165,12 +165,20 @@ claude plugin marketplace add dmae97/Adaptorch-MCP
 claude plugin install adaptorch@adaptorch
 ```
 
-Claude Code asks for your API key when you enable the plugin; set or change it later with
-`/plugin configure adaptorch@adaptorch`. Without a key the tools
-still list, and each call returns a setup error that points to signup. The key goes to
-Claude Code's secure credential store, not to a settings file. The plugin runs the
-published `adaptorch-mcp` 0.6.x client over stdio in the `remote` profile. Details are
-in [plugins/adaptorch](plugins/adaptorch/).
+Configure the AdaptOrch service key using `/plugin configure adaptorch@adaptorch`. For
+model-backed runs, also configure a provider, model ID and provider key in the dialog.
+Sensitive fields are stored in Claude Code's credential store. The plugin runs the
+published `adaptorch-mcp` 0.6.x remote client over stdio. Details are in
+[plugins/adaptorch](plugins/adaptorch/).
+
+### Kimi Code, Grok Build and Grok Bot
+
+This repository also ships a Kimi Code plugin and a Grok Build plugin with the same public
+MCP client and an AdaptOrch skill. The Cursor plugin is the starting point for Grok Bot
+marketplace review. Setup, authentication and the separate listing status are documented
+in [agent platform integrations](docs/agent-platform-integrations.md). These are
+AdaptOrch-maintained integrations; hosting a marketplace in this repository does not
+imply listing in or endorsement by an upstream marketplace.
 
 ### 1. Hosted MCP — nothing to install (recommended)
 
