@@ -133,8 +133,10 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
 There are four ways in. Pick by what you are: a Claude Code user, an agent, a program, or a
 terminal.
 
-> **Release status (2026-10-30):** `adaptorch-mcp` 0.6.0 and `adaptorch-client` 0.1.6 are
-> published. `adaptorch-mcp` 0.6.0 is a remote client with no engine dependency.
+> **Release status (2026-11-03):** `adaptorch-mcp` 0.6.1, `adaptorch-cli` 0.1.6 and
+> `adaptorch-client` 0.1.6 are published. `adaptorch-mcp` 0.6.x is a remote client with
+> no engine dependency. It forwards MCP calls to `POST /v1/mcp`; adaptorch.com serves that
+> path since 2026-11-03 (before that, every 0.6.0 call failed with "Remote MCP request failed").
 > `adaptorch-mcp` 0.3.0–0.5.2 depend on the engine distribution and do not install
 > against the code-free `adaptorch` 0.2.0; use 0.6.0 or later.
 
@@ -240,7 +242,7 @@ is separate from a PyPI release; see the [source install and BYOK example](packa
 only on `adaptorch-client` and never installs or imports the private engine.
 
 ```bash
-uvx --python 3.12 --from adaptorch-mcp==0.6.0 adaptorch-mcp-client --help
+uvx --python 3.12 --from adaptorch-mcp==0.6.1 adaptorch-mcp-client --help
 ```
 
 ## Why Claude Code users feel it quickly
@@ -438,8 +440,8 @@ library this client is limited to.
 For `adaptorch-mcp`, the public wrapper resolves the control-plane URL in this
 order: explicit `--base-url`, then trimmed/validated
 `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then the hosted fallback
-`https://adaptorch.com`. `adaptorch-mcp-smoke` keeps a local-dev fallback of
-`http://127.0.0.1:8000` when no base URL is configured. Pass `--base-url`
+`https://adaptorch.com`. `adaptorch-mcp-smoke` uses the same order and fallback
+(before 0.6.1 it fell back to `http://127.0.0.1:8000`). Pass `--base-url`
 explicitly in checked-in MCP client configs for reproducible behavior.
 
 | Variable | Purpose | Notes |
@@ -509,7 +511,7 @@ adaptorch-mcp-doctor --json
 adaptorch-mcp-doctor --strict
 ```
 
-Run a stdio smoke test. The token is passed through the child environment, not process arguments. If no base URL is supplied, smoke targets `http://127.0.0.1:8000` for local development.
+Run a stdio smoke test. The token is passed through the child environment, not process arguments. If no base URL is supplied, smoke targets `https://adaptorch.com`; pass `--base-url http://127.0.0.1:8000` for a local control plane. The default timeout is 30 seconds.
 
 ```bash
 export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"

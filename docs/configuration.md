@@ -22,7 +22,7 @@ Base-url resolution differs by entrypoint:
 | Entrypoint | Resolution when `--base-url` is omitted | Default with no env |
 | --- | --- | --- |
 | `adaptorch-mcp` | `ADAPTORCH_CONTROL_PLANE_BASE_URL` after trimming/validation, then hosted fallback | `https://adaptorch.com` |
-| `adaptorch-mcp-smoke` | `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then local smoke target | `http://127.0.0.1:8000` |
+| `adaptorch-mcp-smoke` | `ADAPTORCH_CONTROL_PLANE_BASE_URL`, then hosted fallback | `https://adaptorch.com` |
 | `create_default_mcp_http_app()` | Delegates to the AdaptOrch engine and reads environment only | engine default |
 
 Pass `--base-url` explicitly in checked-in MCP client configs for reproducible behavior. Do not embed credentials in base URLs; use token environment variables instead.
@@ -232,7 +232,7 @@ export ADAPTORCH_CONTROL_PLANE_TOKEN="<your-token>"
 adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
-The command starts `adaptorch-mcp --transport stdio`, sends `initialize` and `tools/list`, then verifies the expected core tool subset. When neither `--base-url` nor `ADAPTORCH_CONTROL_PLANE_BASE_URL` is set, smoke intentionally targets `http://127.0.0.1:8000` for local development. Add repeatable `--expected-tool <name>` flags when validating a specific hosted/core release.
+The command starts `adaptorch-mcp --transport stdio`, sends `initialize` and `tools/list`, then verifies the expected core tool subset. When neither `--base-url` nor `ADAPTORCH_CONTROL_PLANE_BASE_URL` is set, smoke targets the hosted service `https://adaptorch.com`, like the wrapper; pass `--base-url http://127.0.0.1:8000` for a local control plane. Add repeatable `--expected-tool <name>` flags when validating a specific hosted/core release.
 
 ## Public Plan Catalog
 

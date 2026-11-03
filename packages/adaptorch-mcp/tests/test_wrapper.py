@@ -228,16 +228,6 @@ def test_cli_argv_none_with_explicit_flag_returns_none(monkeypatch: pytest.Monke
     assert _with_hosted_base_url_default(None) is None
 
 
-def test_stdio_smoke_base_url_default_is_localhost(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ADAPTORCH_CONTROL_PLANE_BASE_URL", raising=False)
-
-    from adaptorch_mcp.stdio_smoke import build_parser
-
-    args = build_parser().parse_args([])
-
-    assert args.base_url == "http://127.0.0.1:8000"
-
-
 def test_server_factory_delegates_to_adaptorch_http_app(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _install_fake_adaptorch(monkeypatch)
 
@@ -250,7 +240,7 @@ def test_server_factory_delegates_to_adaptorch_http_app(monkeypatch: pytest.Monk
 def test_package_exports_public_contract() -> None:
     import adaptorch_mcp
 
-    assert adaptorch_mcp.__version__ == "0.6.0"
+    assert adaptorch_mcp.__version__ == "0.6.1"
     assert callable(adaptorch_mcp.main)
     assert callable(adaptorch_mcp.collect_diagnostics)
     assert callable(adaptorch_mcp.create_default_mcp_http_app)

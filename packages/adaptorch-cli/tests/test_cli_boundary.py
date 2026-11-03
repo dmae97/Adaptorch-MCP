@@ -19,6 +19,23 @@ def test_module_help_exposes_required_command_groups(run_cli: CliRunner) -> None
     assert result.stderr == ""
 
 
+def test_run_submit_help_names_every_byok_input(run_cli: CliRunner) -> None:
+    """BYOK has no argv flags (keys never go on the command line); help must say where."""
+    result = run_cli(["run", "submit", "--help"])
+
+    assert result.returncode == 0
+    help_text = " ".join(result.stdout.split())
+    for name in (
+        "ADAPTORCH_PROVIDER",
+        "ADAPTORCH_PROVIDER_MODEL",
+        "ADAPTORCH_PROVIDER_API_KEY",
+        "config set provider.name",
+        "config set provider.model",
+        "config set provider.api_key --value-stdin",
+    ):
+        assert name in help_text
+    assert result.stderr == ""
+
 @pytest.mark.parametrize(
     "argv",
     [
