@@ -1,7 +1,7 @@
 {
   "name": "adaptorch",
   "displayName": "AdaptOrch",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Run multi-step coding tasks on the hosted AdaptOrch service from Claude Code and get replayable run receipts and evidence back in the conversation.",
   "author": {
     "name": "ClassicMate",
@@ -28,7 +28,10 @@
       ],
       "env": {
         "ADAPTORCH_CONTROL_PLANE_TOKEN": "${user_config.api_token}",
-        "ADAPTORCH_MCP_EXPOSURE_PROFILE": "remote"
+        "ADAPTORCH_MCP_EXPOSURE_PROFILE": "remote",
+        "ADAPTORCH_MCP_PROVIDER": "${user_config.provider}",
+        "ADAPTORCH_MCP_PROVIDER_MODEL": "${user_config.provider_model}",
+        "ADAPTORCH_MCP_PROVIDER_API_KEY": "${user_config.provider_key}"
       }
     }
   },
@@ -37,7 +40,27 @@
       "type": "string",
       "title": "AdaptOrch API key",
       "description": "Key from https://adaptorch.com/app/api-keys (starts with ado_). Leave empty to browse the tools before signing up; tool calls then return a setup error.",
-      "sensitive": true
+      "sensitive": true,
+      "default": ""
+    },
+    "provider": {
+      "type": "string",
+      "title": "Model provider",
+      "description": "Provider identifier from your AdaptOrch dashboard. Configure together with the model and provider key for model runs.",
+      "default": ""
+    },
+    "provider_model": {
+      "type": "string",
+      "title": "Provider model ID",
+      "description": "Exact provider model ID. Model tokens are billed separately by the provider.",
+      "default": ""
+    },
+    "provider_key": {
+      "type": "string",
+      "title": "Model-provider API key",
+      "description": "Provider key for model runs. Do not put it in a prompt or tool argument.",
+      "sensitive": true,
+      "default": ""
     }
   }
 }

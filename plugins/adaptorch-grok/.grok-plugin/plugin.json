@@ -1,0 +1,10 @@
+{
+  "name": "adaptorch",
+  "version": "0.1.0",
+  "description": "Use the hosted AdaptOrch MCP service and review run evidence.",
+  "author": {"name": "ClassicMate", "url": "https://adaptorch.com"},
+  "homepage": "https://adaptorch.com",
+  "repository": "https://github.com/dmae97/Adaptorch-MCP",
+  "license": "LicenseRef-Proprietary",
+  "keywords": ["mcp", "orchestration", "evidence"]
+}

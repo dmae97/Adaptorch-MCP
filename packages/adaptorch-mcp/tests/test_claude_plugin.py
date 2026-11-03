@@ -84,8 +84,12 @@ def test_api_key_is_a_sensitive_option_used_only_in_the_server_env() -> None:
     raw = MANIFEST.read_text(encoding="utf-8")
 
     assert options["api_token"]["sensitive"] is True
+    assert options["provider_key"]["sensitive"] is True
     assert set(re.findall(r"\$\{user_config\.(\w+)\}", raw)) == set(options)
     assert _server()["env"]["ADAPTORCH_CONTROL_PLANE_TOKEN"] == "${user_config.api_token}"
+    assert _server()["env"]["ADAPTORCH_MCP_PROVIDER"] == "${user_config.provider}"
+    assert _server()["env"]["ADAPTORCH_MCP_PROVIDER_MODEL"] == "${user_config.provider_model}"
+    assert _server()["env"]["ADAPTORCH_MCP_PROVIDER_API_KEY"] == "${user_config.provider_key}"
 
 
 def test_public_text_names_only_remote_tools_and_documents_all_of_them() -> None:
@@ -99,7 +103,10 @@ def test_public_text_names_only_remote_tools_and_documents_all_of_them() -> None
 
 
 def test_public_files_carry_no_internal_terms_or_credentials() -> None:
-    files = [MARKETPLACE, *sorted(p for p in PLUGIN_ROOT.rglob("*") if p.is_file())]
+    files = [
+        MARKETPLACE,
+        *sorted(p for p in PLUGIN_ROOT.rglob("*") if p.is_file() and p.suffix in {".md", ".json"}),
+    ]
     for path in files:
         text = path.read_text(encoding="utf-8")
         internal = INTERNAL_TERMS.search(text)

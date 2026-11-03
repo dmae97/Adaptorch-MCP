@@ -1,0 +1,33 @@
+{
+  "name": "adaptorch",
+  "version": "0.1.0",
+  "description": "Use the hosted AdaptOrch MCP service from Kimi Code.",
+  "author": "ClassicMate",
+  "homepage": "https://adaptorch.com",
+  "license": "LicenseRef-Proprietary",
+  "keywords": ["mcp", "orchestration", "evidence"],
+  "interface": {
+    "displayName": "AdaptOrch",
+    "shortDescription": "Submit tasks and inspect hosted run evidence",
+    "developerName": "ClassicMate",
+    "websiteURL": "https://adaptorch.com"
+  },
+  "skills": "./plugins/adaptorch-grok/skills/",
+  "mcpServers": {
+    "adaptorch": {
+      "command": "uvx",
+      "args": [
+        "--python",
+        "3.12",
+        "--from",
+        "adaptorch-mcp==0.6.1",
+        "adaptorch-mcp-client",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "ADAPTORCH_MCP_EXPOSURE_PROFILE": "remote"
+      }
+    }
+  }
+}
