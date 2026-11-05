@@ -226,9 +226,11 @@ pip install adaptorch-client
 ```
 
 `adaptorch-client` has no runtime dependencies and supports capabilities, identity,
-run submission/list/detail/cancellation, evidence, and artifact listings. The current
-source adds per-submission `ProviderCredential` for hosted BYOK. A repository push
-is separate from a PyPI release; see the [source install and BYOK example](packages/adaptorch-client/README.md).
+health/readiness, usage windows/daily/forecast, plan catalog, run traces and
+submission/list/detail/cancellation with pagination, evidence, and artifact listings.
+The current source adds per-submission `ProviderCredential` for hosted BYOK. A
+repository push is separate from a PyPI release; see the [source install and BYOK
+example](packages/adaptorch-client/README.md).
 
 ### 3. This package — remote MCP client
 

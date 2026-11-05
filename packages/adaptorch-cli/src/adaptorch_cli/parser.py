@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import re
 import sys
 from collections.abc import Sequence
@@ -28,6 +29,16 @@ def _positive_int(value: str) -> int:
     return number
 
 
+def _positive_float(value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be finite positive seconds") from None
+    if not math.isfinite(number) or number <= 0:
+        raise argparse.ArgumentTypeError("must be finite positive seconds")
+    return number
+
+
 def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     run = parent.add_parser("run", help="Manage runs")
     commands = run.add_subparsers(dest="run_command", required=True)
@@ -39,9 +50,14 @@ def _add_run_commands(parent: argparse._SubParsersAction[argparse.ArgumentParser
     list_parser = commands.add_parser("list", help="List runs")
     list_parser.add_argument("--status")
     list_parser.add_argument("--project-id")
+    list_parser.add_argument("--limit", type=_positive_int, help="Runs per page, 1-100")
+    list_parser.add_argument("--page", type=_positive_int, help="1-based page number")
 
     get = commands.add_parser("get", help="Get a run")
     get.add_argument("run_id")
+
+    traces = commands.add_parser("traces", help="Get execution traces for a run")
+    traces.add_argument("run_id")
 
     wait = commands.add_parser(
         "wait",
@@ -105,6 +121,12 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--output", choices=("json",), default="json")
+    parser.add_argument(
+        "--request-timeout",
+        type=_positive_float,
+        default=30.0,
+        help="Per-HTTP-request timeout in seconds (default: 30)",
+    )
     commands = parser.add_subparsers(dest="command", required=True)
 
     auth = commands.add_parser("auth", help="Manage authentication")
@@ -148,6 +170,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     commands.add_parser("whoami", help="Show the authenticated identity")
     commands.add_parser("capabilities", help="Show server capabilities")
+    commands.add_parser("health", help="Check public service liveness")
+    commands.add_parser("ready", help="Check public service readiness")
+    commands.add_parser("usage", help="Show the current tenant usage window")
+    commands.add_parser("usage-daily", help="Show daily tenant usage")
+    commands.add_parser("usage-forecast", help="Show the tenant usage forecast")
+    commands.add_parser("plans", help="Show the hosted plan catalog")
+    commands.add_parser(
+        "doctor",
+        help="Check liveness, readiness, capabilities, identity, usage and plans; runs nothing",
+    )
     _add_run_commands(commands)
 
     evidence = commands.add_parser("evidence", help="Inspect run evidence")

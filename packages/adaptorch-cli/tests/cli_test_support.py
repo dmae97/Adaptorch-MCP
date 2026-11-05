@@ -123,7 +123,10 @@ def _fail_if_requested():
 
 class AdaptOrchClient:
     def __init__(self, config):
-        _record("init", [config.api_url, config.api_key])
+        kwargs = {}
+        if config.timeout_seconds != 30.0:
+            kwargs["timeout_seconds"] = config.timeout_seconds
+        _record("init", [config.api_url, config.api_key], kwargs)
 
     def whoami(self):
         _fail_if_requested()
@@ -134,6 +137,36 @@ class AdaptOrchClient:
         _fail_if_requested()
         _record("capabilities")
         return ApiResult({"capabilities": ["runs", "evidence", "artifacts"]})
+
+    def health(self):
+        _fail_if_requested()
+        _record("health")
+        return ApiResult({"status": "ok"})
+
+    def ready(self):
+        _fail_if_requested()
+        _record("ready")
+        return ApiResult({"status": "ok", "product_ready": True})
+
+    def usage(self):
+        _fail_if_requested()
+        _record("usage")
+        return ApiResult({"plan_level": "starter", "remaining": 10})
+
+    def usage_daily(self):
+        _fail_if_requested()
+        _record("usage_daily")
+        return ApiResult({"days": []})
+
+    def usage_forecast(self):
+        _fail_if_requested()
+        _record("usage_forecast")
+        return ApiResult({"forecast": 2})
+
+    def plan_catalog(self):
+        _fail_if_requested()
+        _record("plan_catalog")
+        return ApiResult({"plans": {"pro": {"price_usd": 39}}})
 
     def submit_run(self, payload, idempotency_key, *, provider_credential=None):
         _fail_if_requested()
@@ -153,10 +186,20 @@ class AdaptOrchClient:
         )
         return ApiResult({"id": "run-1", "status": "QUEUED"})
 
-    def list_runs(self, status=None, project_id=None):
+    def list_runs(self, status=None, project_id=None, *, limit=None, page=None):
         _fail_if_requested()
-        _record("list_runs", [], {"status": status, "project_id": project_id})
+        kwargs = {"status": status, "project_id": project_id}
+        if limit is not None:
+            kwargs["limit"] = limit
+        if page is not None:
+            kwargs["page"] = page
+        _record("list_runs", [], kwargs)
         return ApiResult({"runs": [{"id": "run-1", "status": "QUEUED"}]})
+
+    def get_traces(self, run_id):
+        _fail_if_requested()
+        _record("get_traces", [run_id])
+        return ApiResult({"items": [], "total": 0})
 
     def get_run(self, run_id):
         _fail_if_requested()

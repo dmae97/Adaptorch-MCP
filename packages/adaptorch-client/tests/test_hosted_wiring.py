@@ -220,3 +220,33 @@ def test_sdk_polling_only_reads_the_engine_run(hosted: HostedFixture) -> None:
     assert [(request.method, request.path) for request in hosted.wire.requests] == [
         ("GET", f"/v1/runs/{record.run_id}")
     ] * 3
+
+
+def test_sdk_operational_reads_reach_actual_hosted_routes(hosted: HostedFixture) -> None:
+    record, _ = hosted.service.create_or_get_run(
+        payload=RUN_SPEC["payload"], tenant_id="sdk-fixture"
+    )
+
+    assert hosted.client.health().to_payload()["status"] == "ok"
+    assert hosted.client.ready().to_payload()["ready"] is True
+    assert hosted.client.usage().to_payload()["plan_level"] == "starter"
+    assert hosted.client.usage_daily().to_payload()
+    assert hosted.client.usage_forecast().to_payload()
+    assert "pro" in hosted.client.plan_catalog().to_payload()["plans"]
+    traces = hosted.client.get_traces(record.run_id).to_payload()
+    assert traces["total"] == len(traces["items"])
+
+
+def test_sdk_run_list_forwards_limit_and_page(hosted: HostedFixture) -> None:
+    for _ in range(2):
+        hosted.service.create_or_get_run(payload=RUN_SPEC["payload"], tenant_id="sdk-fixture")
+
+    first = hosted.client.list_runs(limit=1, page=1)
+    assert len(first.items) == 1
+    second = hosted.client.list_runs(limit=1, page=2)
+    assert len(second.items) == 1
+    assert first.items[0].run_id != second.items[0].run_id
+    assert "page=1" in hosted.wire.requests[-2].path
+    assert "page_size=1" in hosted.wire.requests[-2].path
+    assert "page=2" in hosted.wire.requests[-1].path
+    assert "page_size=1" in hosted.wire.requests[-1].path

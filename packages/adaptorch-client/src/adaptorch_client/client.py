@@ -9,7 +9,15 @@ from urllib.parse import quote, urlencode
 
 from adaptorch_client.config import ClientConfig
 from adaptorch_client.errors import AdaptOrchAPIError
-from adaptorch_client.models import CapabilitySet, JSONMapping, JSONValue, Principal, Run
+from adaptorch_client.models import (
+    CapabilitySet,
+    JSONMapping,
+    JSONValue,
+    PayloadResult,
+    Principal,
+    Run,
+    stored_copy,
+)
 from adaptorch_client.polling import PollPolicy, RunPollResult
 from adaptorch_client.polling import wait_for_run as poll_run
 from adaptorch_client.provider import ProviderCredential
@@ -67,6 +75,42 @@ class AdaptOrchClient:
         """Return the authenticated principal."""
         return Principal.from_payload(self._transport.request(RequestSpec("GET", "/v1/whoami")))
 
+    def health(self) -> PayloadResult:
+        """Return the public liveness document without starting any work."""
+        return PayloadResult(
+            stored_copy(self._transport.request(RequestSpec("GET", "/health")))
+        )
+
+    def ready(self) -> PayloadResult:
+        """Return the public readiness document without starting any work."""
+        return PayloadResult(
+            stored_copy(self._transport.request(RequestSpec("GET", "/ready")))
+        )
+
+    def usage(self) -> PayloadResult:
+        """Return the tenant's current usage window."""
+        return PayloadResult(
+            stored_copy(self._transport.request(RequestSpec("GET", "/v1/usage")))
+        )
+
+    def usage_daily(self) -> PayloadResult:
+        """Return daily usage for the authenticated tenant."""
+        return PayloadResult(
+            stored_copy(self._transport.request(RequestSpec("GET", "/v1/usage/daily")))
+        )
+
+    def usage_forecast(self) -> PayloadResult:
+        """Return the tenant's usage forecast."""
+        return PayloadResult(
+            stored_copy(self._transport.request(RequestSpec("GET", "/v1/usage/forecast")))
+        )
+
+    def plan_catalog(self) -> PayloadResult:
+        """Return the hosted plan catalog."""
+        return PayloadResult(
+            stored_copy(self._transport.request(RequestSpec("GET", "/v1/plans")))
+        )
+
     def submit_run(
         self,
         spec: Mapping[str, JSONValue],
@@ -92,16 +136,37 @@ class AdaptOrchClient:
         self,
         status: str | None = None,
         project_id: str | None = None,
+        *,
+        limit: int | None = None,
+        page: int | None = None,
     ) -> RunListResponse:
-        """List runs, optionally filtered by status and project."""
+        """List runs, optionally filtered and paginated."""
+        if limit is not None and (type(limit) is not int or not 1 <= limit <= 100):
+            raise ValueError("limit must be an integer from 1 through 100")
+        if page is not None and (type(page) is not int or page < 1):
+            raise ValueError("page must be a positive integer")
         filters: list[tuple[str, str]] = []
         if status is not None:
             filters.append(("status", status))
         if project_id is not None:
             filters.append(("project_id", project_id))
+        if page is not None:
+            filters.append(("page", str(page)))
+        if limit is not None:
+            filters.append(("page_size", str(limit)))
         query = f"?{urlencode(filters)}" if filters else ""
         return RunListResponse.from_payload(
             self._transport.request(RequestSpec("GET", f"/v1/runs{query}"))
+        )
+
+    def get_traces(self, run_id: str) -> PayloadResult:
+        """Return execution traces recorded for one run."""
+        return PayloadResult(
+            stored_copy(
+                self._transport.request(
+                    RequestSpec("GET", f"/v1/runs/{self._segment(run_id)}/traces")
+                )
+            )
         )
 
     def get_run(self, run_id: str) -> Run:

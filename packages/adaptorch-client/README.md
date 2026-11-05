@@ -55,8 +55,10 @@ print(run.run_id, run.status)
 
 `api_url` is the origin only; do not append `/v1`. The client sends tenant keys
 as `X-API-Key`, includes a UUID idempotency key on submissions, and exposes
-`capabilities()`, `whoami()`, run listing/detail/cancel, evidence, and artifacts.
-Provider headers are sent only on that submission, not retained for later reads or cancellation.
+`capabilities()`, `whoami()`, `health()`, `ready()`, `usage()`, `usage_daily()`,
+`usage_forecast()`, `plan_catalog()`, run traces and listing/detail/cancel with
+`limit`/`page`, evidence, and artifacts. Provider headers are sent only on that
+submission, not retained for later reads or cancellation.
 FastAPI `detail` errors retain their instructions and stable code while both keys are redacted.
 Artifact listings accept both legacy `items` and the hosted `artifacts` map. Map keys
 remain available as named `items` for compatibility; raw references are also exposed

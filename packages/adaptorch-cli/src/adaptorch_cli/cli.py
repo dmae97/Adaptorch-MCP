@@ -136,7 +136,7 @@ def _read_submit_payload(file_name: str, parser: argparse.ArgumentParser) -> JSO
     return value
 
 
-def _require_client(api_url: str) -> AdaptOrchClient:
+def _require_client(api_url: str, timeout_seconds: float = 30.0) -> AdaptOrchClient:
     api_key, _source = config_store.resolve_api_key()
     if not api_key:
         print(
@@ -144,7 +144,9 @@ def _require_client(api_url: str) -> AdaptOrchClient:
             file=sys.stderr,
         )
         raise SystemExit(3)
-    return AdaptOrchClient(ClientConfig(api_url=api_url, api_key=api_key))
+    return AdaptOrchClient(
+        ClientConfig(api_url=api_url, api_key=api_key, timeout_seconds=timeout_seconds)
+    )
 
 
 def _submission_credential() -> ProviderCredential | None:
@@ -206,7 +208,11 @@ def _auth_command(
         verified: bool | None = None
         if not args.no_verify:
             try:
-                whoami = AdaptOrchClient(ClientConfig(api_url=login_url, api_key=key)).whoami()
+                whoami = AdaptOrchClient(
+                    ClientConfig(
+                        api_url=login_url, api_key=key, timeout_seconds=args.request_timeout
+                    )
+                ).whoami()
                 verified = True
                 _ = whoami
             except AdaptOrchAPIError as error:
@@ -278,7 +284,7 @@ def _run_command(
             file_name: str = args.file
             request_id: str | None = args.request_id
             payload = _read_submit_payload(file_name, parser)
-            submit_result = _require_client(api_url).submit_run(
+            submit_result = _require_client(api_url, args.request_timeout).submit_run(
                 payload,
                 idempotency_key=request_id or str(uuid.uuid4()),
                 provider_credential=_submission_credential(),
@@ -287,14 +293,23 @@ def _run_command(
         case "list":
             status: str | None = args.status
             project_id: str | None = args.project_id
-            list_result = _require_client(api_url).list_runs(
+            list_result = _require_client(api_url, args.request_timeout).list_runs(
                 status=status,
                 project_id=project_id,
+                limit=args.limit,
+                page=args.page,
             )
             return _result_payload(list_result), False
         case "get":
             run_id: str = args.run_id
-            return _result_payload(_require_client(api_url).get_run(run_id)), True
+            return _result_payload(
+                _require_client(api_url, args.request_timeout).get_run(run_id)
+            ), True
+        case "traces":
+            traces_run_id: str = args.run_id
+            return _result_payload(
+                _require_client(api_url, args.request_timeout).get_traces(traces_run_id)
+            ), False
         case "wait":
             wait_run_id: str = args.run_id
             timeout_seconds: float = args.timeout
@@ -304,7 +319,7 @@ def _run_command(
             if not math.isfinite(interval_seconds) or interval_seconds <= 0:
                 parser.error("--interval must be finite positive seconds")
             max_polls: int | None = args.max_polls
-            wait_result = _require_client(api_url).wait_for_run(
+            wait_result = _require_client(api_url, args.request_timeout).wait_for_run(
                 wait_run_id,
                 policy=PollPolicy(
                     timeout_seconds=timeout_seconds,
@@ -327,7 +342,7 @@ def _run_command(
         case "cancel":
             cancel_run_id: str = args.run_id
             reason: str | None = args.reason
-            cancel_result = _require_client(api_url).cancel_run(
+            cancel_result = _require_client(api_url, args.request_timeout).cancel_run(
                 cancel_run_id,
                 reason=reason,
             )
@@ -351,7 +366,7 @@ def _run_report(
         parser.error("--locale applies to --format pdf only")
     if out.exists() or out.is_symlink():
         parser.error(f"--out {out} already exists; choose a new path")
-    report = _require_client(api_url).get_run_report(
+    report = _require_client(api_url, args.request_timeout).get_run_report(
         args.run_id, format=report_format, locale=locale
     )
     try:
@@ -377,14 +392,50 @@ def _execute(
         case "config":
             return _config_command(args, api_url, parser), False
         case "whoami":
-            return _result_payload(_require_client(api_url).whoami()), False
+            return _result_payload(_require_client(api_url, args.request_timeout).whoami()), False
         case "capabilities":
-            return _result_payload(_require_client(api_url).capabilities()), False
+            return _result_payload(
+                _require_client(api_url, args.request_timeout).capabilities()
+            ), False
+        case "health":
+            return _result_payload(_require_client(api_url, args.request_timeout).health()), False
+        case "ready":
+            return _result_payload(_require_client(api_url, args.request_timeout).ready()), False
+        case "usage":
+            return _result_payload(_require_client(api_url, args.request_timeout).usage()), False
+        case "usage-daily":
+            return _result_payload(
+                _require_client(api_url, args.request_timeout).usage_daily()
+            ), False
+        case "usage-forecast":
+            return _result_payload(
+                _require_client(api_url, args.request_timeout).usage_forecast()
+            ), False
+        case "plans":
+            return _result_payload(
+                _require_client(api_url, args.request_timeout).plan_catalog()
+            ), False
+        case "doctor":
+            client = _require_client(api_url, args.request_timeout)
+            return {
+                "status": "ok",
+                "api_url": api_url,
+                "checks": {
+                    "health": _result_payload(client.health()),
+                    "ready": _result_payload(client.ready()),
+                    "capabilities": _result_payload(client.capabilities()),
+                    "whoami": _result_payload(client.whoami()),
+                    "usage": _result_payload(client.usage()),
+                    "plans": _result_payload(client.plan_catalog()),
+                },
+            }, False
         case "run":
             return _run_command(args, api_url, parser)
         case "evidence":
             evidence_run_id: str = args.run_id
-            return _result_payload(_require_client(api_url).get_evidence(evidence_run_id)), False
+            return _result_payload(
+                _require_client(api_url, args.request_timeout).get_evidence(evidence_run_id)
+            ), False
         case "navigate":
             document = _read_json_value(args.evidence_pack, parser, "--evidence-pack")
             pack = document.get("evidence_pack") if isinstance(document, dict) else document
@@ -395,13 +446,15 @@ def _execute(
                 parser.error("--evidence-pack must hold a JSON array of evidence objects")
             question: str = args.question
             algorithm: str = args.algorithm
-            navigation = _require_client(api_url).navigate_evidence(
+            navigation = _require_client(api_url, args.request_timeout).navigate_evidence(
                 question, items, algorithm_version=algorithm
             )
             return _result_payload(navigation), False
         case "artifact":
             artifact_run_id: str = args.run_id
-            return _result_payload(_require_client(api_url).list_artifacts(artifact_run_id)), False
+            return _result_payload(
+                _require_client(api_url, args.request_timeout).list_artifacts(artifact_run_id)
+            ), False
         case _:
             parser.error("unknown command")
 

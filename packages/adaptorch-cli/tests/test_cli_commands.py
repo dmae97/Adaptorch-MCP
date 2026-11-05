@@ -59,6 +59,59 @@ def test_capabilities_prints_client_json(run_cli: CliRunner) -> None:
     assert result.stderr == ""
 
 
+def test_operational_read_commands_print_client_json(run_cli: CliRunner) -> None:
+    cases = [
+        (["health"], {"status": "ok"}),
+        (["ready"], {"status": "ok", "product_ready": True}),
+        (["usage"], {"plan_level": "starter", "remaining": 10}),
+        (["usage-daily"], {"days": []}),
+        (["usage-forecast"], {"forecast": 2}),
+        (["plans"], {"plans": {"pro": {"price_usd": 39}}}),
+        (["run", "traces", "run-1"], {"items": [], "total": 0}),
+    ]
+    for argv, expected in cases:
+        result = run_cli(["--output", "json", *argv])
+        assert result.returncode == 0, (argv, result.stderr)
+        assert _json_stdout(result.stdout) == expected
+        assert result.stderr == ""
+
+
+def test_doctor_checks_health_auth_and_usage_without_submitting(run_cli: CliRunner) -> None:
+    result = run_cli(["--output", "json", "doctor"])
+
+    assert result.returncode == 0
+    payload = _json_stdout(result.stdout)
+    assert payload["status"] == "ok"
+    assert payload["checks"]["health"]["status"] == "ok"
+    assert payload["checks"]["ready"]["product_ready"] is True
+    assert payload["checks"]["whoami"]["id"] == "user-1"
+    assert payload["checks"]["usage"]["plan_level"] == "starter"
+    assert "capabilities" in payload["checks"]
+    assert "plans" in payload["checks"]
+    assert "submit_run" not in result.client_log
+
+
+def test_run_list_forwards_limit_and_page(run_cli: CliRunner) -> None:
+    result = run_cli(["--output", "json", "run", "list", "--limit", "1", "--page", "2"])
+
+    assert result.returncode == 0
+    calls = [json.loads(line) for line in result.client_log.splitlines()]
+    assert calls[-1]["method"] == "list_runs"
+    assert calls[-1]["kwargs"]["limit"] == 1
+    assert calls[-1]["kwargs"]["page"] == 2
+
+
+def test_request_timeout_is_forwarded_and_validated(run_cli: CliRunner) -> None:
+    result = run_cli(["--request-timeout", "2.5", "whoami"])
+
+    assert result.returncode == 0
+    calls = [json.loads(line) for line in result.client_log.splitlines()]
+    assert calls[0]["kwargs"] == {"timeout_seconds": 2.5}
+    invalid = run_cli(["--request-timeout", "0", "whoami"])
+    assert invalid.returncode != 0
+    assert invalid.client_log == ""
+
+
 def test_run_submit_reads_json_file_and_forwards_request_id(
     run_cli: CliRunner,
     tmp_path: Path,

@@ -142,7 +142,7 @@ def test_wait_uses_real_sdk_polling_without_writing_or_resubmitting(
 
     client = AdaptOrchClient(ClientConfig("https://api.example.test", "ado_test"))
     monkeypatch.setenv("ADAPTORCH_CONFIG_DIR", str(tmp_path / "isolated-config"))
-    monkeypatch.setattr(cli, "_require_client", lambda _api_url: client)
+    monkeypatch.setattr(cli, "_require_client", lambda _api_url, _timeout_seconds=30.0: client)
     monkeypatch.setattr(HTTPTransport, "request", request)
     monkeypatch.setattr(client_module, "poll_run", poll)
 
@@ -205,7 +205,7 @@ def test_explicit_max_polls_still_bounds_the_wait(
 
     client = AdaptOrchClient(ClientConfig("https://api.example.test", "ado_test"))
     monkeypatch.setenv("ADAPTORCH_CONFIG_DIR", str(tmp_path / "isolated-config"))
-    monkeypatch.setattr(cli, "_require_client", lambda _api_url: client)
+    monkeypatch.setattr(cli, "_require_client", lambda _api_url, _timeout_seconds=30.0: client)
     monkeypatch.setattr(HTTPTransport, "request", request)
     monkeypatch.setattr(client_module, "poll_run", poll)
 

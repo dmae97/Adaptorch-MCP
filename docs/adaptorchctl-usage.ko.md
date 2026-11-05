@@ -136,6 +136,36 @@ adaptorchctl capabilities
 
 `auth status`는 키의 존재 여부만 보여 줍니다. 키의 유효성은 `whoami` 같은 인증된 요청으로 확인하세요.
 
+## 연결 진단과 운영 정보 조회
+
+다음 명령은 읽기 전용이며 실행을 제출하거나 모델을 호출하지 않습니다.
+
+```bash
+adaptorchctl doctor          # health, ready, capabilities, whoami, usage, plans를 순서대로 확인
+adaptorchctl health          # 공개 liveness
+adaptorchctl ready           # 공개 readiness
+adaptorchctl usage           # 현재 테넌트 사용량 창
+adaptorchctl usage-daily     # 일별 사용량
+adaptorchctl usage-forecast  # 사용량 전망
+adaptorchctl plans           # 호스팅 요금제 목록
+adaptorchctl run traces "$RUN_ID"
+```
+
+`doctor`는 여섯 검사가 모두 성공하면 `status=ok`와 각 응답을 한 JSON 객체로 출력합니다.
+하나라도 실패하면 기존 API 오류 종료 코드를 사용하므로 자동화에서도 실패를 성공으로
+처리하지 않습니다.
+
+각 HTTP 요청의 제한 시간은 기본 30초이며 `--request-timeout`으로 바꿀 수 있습니다.
+
+```bash
+adaptorchctl --request-timeout 10 whoami
+adaptorchctl --request-timeout 5 doctor
+```
+
+이 값은 개별 HTTP 요청의 제한 시간입니다. `run wait --timeout`의 전체 조회 기간과는
+다릅니다. 네트워크 timeout이 난 요청을 자동 재전송하지는 않으며, `run submit`의
+불확실한 결과를 중복 생성하지 않는 기존 계약을 유지합니다.
+
 ## 실행 제출
 
 호스팅 모델 실행에는 본인의 공급자 인증을 별도로 전달합니다. 다음 세 변수를 함께 설정하세요.
@@ -204,14 +234,18 @@ adaptorchctl run submit \
 adaptorchctl run list
 adaptorchctl run list --status running
 adaptorchctl run list --project-id "project-example"
+adaptorchctl run list --limit 20 --page 2
 
 RUN_ID="<submit-응답의-run-id>"
 adaptorchctl run get "$RUN_ID"
+adaptorchctl run traces "$RUN_ID"
 adaptorchctl run cancel "$RUN_ID"
 adaptorchctl run cancel "$RUN_ID" --reason "중복 제출"
 ```
 
-`--status`와 `--project-id`는 함께 사용할 수 있습니다. 취소는 요청이며, 서버 응답에서 최종 상태를 확인해야 합니다.
+`--status`와 `--project-id`는 함께 사용할 수 있습니다. `--limit`은 페이지당 1~100개,
+`--page`는 1부터 시작하는 페이지 번호입니다. 취소는 요청이며, 서버 응답에서 최종
+상태를 확인해야 합니다.
 
 ### 응답을 잃은 뒤 이어서 확인하기
 
@@ -262,7 +296,7 @@ adaptorchctl artifact list "$RUN_ID"
 이 클라이언트의 인증 헤더 선택은 Spec 007과 일치하지만, 실제 호스팅 서버의 모든 엔드포인트·상태·페이지네이션 호환성을 이미 검증했다는 뜻은 아닙니다.
 
 - `run submit`은 gateway의 `subtasks` 배열과 선택 `dependencies`를 전송하며, `201`과 대문자 `QUEUED` 상태를 수용합니다. `run cancel`은 `PUT`을 사용하며 전파 대기 시 `202 CANCELLING`, 확정 취소 시 `200 FAILED`와 `error_class=CANCELLED`를 받을 수 있습니다.
-- `run list`는 `status`와 `project_id`만 전송합니다. 응답의 `next_cursor`는 보존하지만 OpenAPI에 있는 `cursor`와 `limit` 입력은 아직 CLI/클라이언트에서 지원하지 않습니다.
+- `run list`는 `status`, `project_id`와 함께 `--limit`을 `page_size`, `--page`를 `page`로 전송합니다. 응답의 `next_cursor`는 보존하지만 OpenAPI의 `cursor` 입력은 아직 CLI와 SDK에서 지원하지 않습니다.
 - `Run` DTO는 `run_id`와 `status`를 필수로 처리하고, `kind`·`phase`·`created_at`·`policy_version`·`links`는 선택적으로 보존합니다. 서버별 추가 필드와 상태 의미의 호환성은 별도 통합 검증이 필요합니다.
 - 오류 DTO는 안전한 코드·메시지만 진단에 사용하며 `request_id`와 세부 오류 구조를 자동화 계약으로 노출하지 않습니다.
 

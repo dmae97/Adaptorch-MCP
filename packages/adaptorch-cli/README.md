@@ -31,6 +31,27 @@ A git push does not replace a previously published PyPI version.
 
 See [`../../docs/adaptorchctl-usage.ko.md`](../../docs/adaptorchctl-usage.ko.md) for usage.
 
+## Operational reads and connection diagnostics
+
+```bash
+adaptorchctl doctor
+adaptorchctl health
+adaptorchctl ready
+adaptorchctl usage
+adaptorchctl usage-daily
+adaptorchctl usage-forecast
+adaptorchctl plans
+adaptorchctl run traces RUN_ID
+adaptorchctl run list --limit 20 --page 2
+adaptorchctl --request-timeout 10 whoami
+```
+
+These commands never submit a run or call a model. `doctor` checks liveness,
+readiness, capabilities, identity, usage and plans on one client connection and
+returns `status=ok` only when every check succeeds. `--request-timeout` bounds each
+HTTP request independently of `run wait --timeout`; timed-out submissions are not
+retried automatically.
+
 ## Evidence navigation
 
 ```bash
