@@ -4,6 +4,22 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [adaptorch-cli and adaptorch-client] — Unreleased
+
+### Added — operational reads and connection controls
+
+- Add `adaptorchctl doctor`, `health`, `ready`, `usage`, `usage-daily`,
+  `usage-forecast`, `plans`, and `run traces RUN_ID`. These commands only read
+  existing service state; they never submit a run or call a model.
+- Add `run list --limit 1..100 --page N`, mapped to the hosted `page_size` and
+  `page` parameters, plus the matching SDK arguments.
+- Add global `--request-timeout` with finite positive validation. It bounds each
+  HTTP request independently of `run wait --timeout`; timed-out submissions are
+  still never resent automatically.
+- `doctor` checks liveness, readiness, capabilities, identity, usage and plans on
+  one SDK client and reports success only when all six reads succeed. Real hosted
+  fixture tests cover the new SDK routes and pagination without model execution.
+
 ## [adaptorch-client 0.1.7, adaptorch-cli 0.1.7, adaptorch-mcp 0.6.2] — 2026-11-15
 
 Published to PyPI from tags `adaptorch-client-v0.1.7`, `adaptorch-cli-v0.1.7` and
