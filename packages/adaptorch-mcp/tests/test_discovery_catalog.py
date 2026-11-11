@@ -135,3 +135,30 @@ def test_catalog_is_returned_as_a_copy() -> None:
 def test_http_transport_still_requires_the_upstream_token() -> None:
     with pytest.raises(ValueError, match="ADAPTORCH_CONTROL_PLANE_TOKEN is required"):
         thin_runtime.run_remote_main(["--transport", "http"], env={})
+
+
+_LIFECYCLE_TOOLS = ("adaptorch_run", "adaptorch_get_run", "adaptorch_get_artifacts")
+
+
+def _described_paths(schema: dict[str, Any], prefix: str = "") -> list[tuple[str, bool]]:
+    found: list[tuple[str, bool]] = []
+    for key, value in schema.get("properties", {}).items():
+        found.append((prefix + key, bool(str(value.get("description", "")).strip())))
+        if value.get("type") == "object":
+            found.extend(_described_paths(value, prefix + key + "."))
+    return found
+
+
+@pytest.mark.parametrize("name", _LIFECYCLE_TOOLS)
+def test_registry_sees_every_lifecycle_argument_described(name: str) -> None:
+    tool = next(t for t in discovery_catalog() if t["name"] == name)
+
+    assert [path for path, ok in _described_paths(tool["inputSchema"]) if not ok] == []
+    assert any(other in tool["description"] for other in _LIFECYCLE_TOOLS if other != name)
+
+
+def test_catalog_descriptions_only_name_arguments_the_catalog_offers() -> None:
+    get_run = next(t for t in discovery_catalog() if t["name"] == "adaptorch_get_run")
+
+    if "include_output" not in get_run["inputSchema"]["properties"]:
+        assert "include_output" not in get_run["description"]

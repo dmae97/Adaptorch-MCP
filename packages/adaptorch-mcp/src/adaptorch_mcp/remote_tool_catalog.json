@@ -4,7 +4,8 @@
     "engine_revision": "fe286c7e6545a1da5b19f2ecb16d38ea8bbd955b",
     "hosted_profile": "tenant /v1/mcp, evidence basis off, candidate verification off",
     "projection": "adaptorch_mcp.thin_remote tools/list projection",
-    "use": "unauthenticated stdio introspection only; configured clients list tools live"
+    "use": "unauthenticated stdio introspection only; configured clients list tools live",
+    "descriptions": "lifecycle tool and argument descriptions synced from engine commit 554dd1099 (dmae97/adaptorch#233); schemas unchanged"
   },
   "tools": [
     {
@@ -15,7 +16,7 @@
         "readOnlyHint": false,
         "title": "Run AdaptOrch task"
       },
-      "description": "Submit a task payload to AdaptOrch control-plane and optionally wait.",
+      "description": "Submit one task to the AdaptOrch control plane, which routes it through an execution topology, runs it with the configured model provider and synthesizes the outputs. Pass either prompt (with optional context) for a single task, or payload with a subtask DAG. By default the call waits up to timeout_seconds and returns the run summary: run_id, status and artifact references. If the wait ends first, collection_status is 'pending' and the run keeps going; read it with adaptorch_get_run instead of submitting again. Every submission creates a new run and counts against the plan's monthly run quota; model tokens bill to the caller's own provider account. Use adaptorch_get_artifacts for the files of a finished run.",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -28,14 +29,17 @@
                 "boolean"
               ]
             },
-            "type": "object"
+            "type": "object",
+            "description": "Optional flat key/value limits forwarded to the control plane with the run. Values must be numbers, strings or booleans; omit to use the plan defaults."
           },
           "connector_name": {
             "default": "mcp",
-            "type": "string"
+            "type": "string",
+            "description": "Connector that turns prompt and context into a task payload and is recorded as the run's origin. adaptorch_capabilities lists the available connectors."
           },
           "context": {
-            "type": "string"
+            "type": "string",
+            "description": "Optional background for prompt, such as file excerpts or constraints. Used only together with prompt."
           },
           "ensemble_members": {
             "description": "BYOK request-scoped ensemble fan-out: 2-5 'provider:model' members riding the process provider credential (ADAPTORCH_MCP_PROVIDER, ADAPTORCH_MCP_PROVIDER_MODEL, ADAPTORCH_MCP_PROVIDER_API_KEY). Quota: one run debits one unit regardless of member count; model token cost bills to the caller's own provider account.",
@@ -81,7 +85,8 @@
           },
           "poll_interval_seconds": {
             "default": 1.0,
-            "type": "number"
+            "type": "number",
+            "description": "Seconds between status reads while waiting, greater than 0."
           },
           "prefer_ensemble_singleton": {
             "default": null,
@@ -92,7 +97,8 @@
             ]
           },
           "prompt": {
-            "type": "string"
+            "type": "string",
+            "description": "Task instruction in plain language. Required unless payload is given; ignored when payload is present."
           },
           "synthesis_mode": {
             "default": "robust",
@@ -109,11 +115,13 @@
           },
           "timeout_seconds": {
             "default": 120.0,
-            "type": "number"
+            "type": "number",
+            "description": "Maximum seconds to wait, greater than 0. Ending the wait does not cancel the run."
           },
           "wait_for_terminal": {
             "default": true,
-            "type": "boolean"
+            "type": "boolean",
+            "description": "true waits for a terminal status (up to timeout_seconds); false returns right after submission with the run_id."
           }
         },
         "type": "object"
@@ -128,12 +136,13 @@
         "readOnlyHint": true,
         "title": "Get AdaptOrch run summary"
       },
-      "description": "Get run summary by run_id.",
+      "description": "Read the current summary of one existing run by run_id: status, timestamps, topology, synthesis mode used, artifact references and, when available, an advisory correctness_wall view. Read-only; safe to poll while a run is in progress or after adaptorch_run returned collection_status 'pending'. correctness_wall is observability, not a correctness proof. Use adaptorch_list_runs to find run IDs and adaptorch_get_artifacts for the files.",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
           "run_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Run ID returned by adaptorch_run or listed by adaptorch_list_runs."
           }
         },
         "required": [
@@ -550,12 +559,13 @@
         "readOnlyHint": true,
         "title": "Get AdaptOrch run artifacts"
       },
-      "description": "Get run artifacts by run_id.",
+      "description": "List the files a run produced, by run_id: a mapping from artifact name to a download URL. Read-only and safe to repeat. Call it after adaptorch_run or adaptorch_get_run reports status SUCCEEDED; a run that has not finished, or produced no files, has none to list. Artifacts are outputs to review, not proof that they are correct.",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
           "run_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Run ID returned by adaptorch_run or listed by adaptorch_list_runs."
           }
         },
         "required": [
