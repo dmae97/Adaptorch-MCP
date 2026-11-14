@@ -13,7 +13,12 @@ import pytest
 
 from adaptorch_mcp import __version__, thin_runtime
 from adaptorch_mcp.public_schema import project_remote_tool
-from adaptorch_mcp.thin_remote import REMOTE_TOOL_NAMES, RemoteMCPServer, discovery_catalog
+from adaptorch_mcp.thin_remote import (
+    REMOTE_TOOL_NAMES,
+    ROUTING_TOOL_NAMES,
+    RemoteMCPServer,
+    discovery_catalog,
+)
 
 PACKAGE_SRC = Path(__file__).resolve().parents[1] / "src"
 CLIENT_SRC = Path(__file__).resolve().parents[2] / "adaptorch-client" / "src"
@@ -69,7 +74,9 @@ def test_stdio_without_token_answers_introspection_from_the_pinned_catalog() -> 
     assert initialized["protocolVersion"] == "2025-06-18"
     assert initialized["serverInfo"] == {"name": "adaptorch-mcp", "version": __version__}
     assert initialized["capabilities"] == {"tools": {"listChanged": False}}
-    assert tuple(tool["name"] for tool in responses[1]["result"]["tools"]) == REMOTE_TOOL_NAMES
+    assert tuple(tool["name"] for tool in responses[1]["result"]["tools"]) == (
+        REMOTE_TOOL_NAMES + ROUTING_TOOL_NAMES
+    )
     assert responses[2]["result"] == {}
 
 
@@ -119,7 +126,7 @@ def test_discovery_initialize_offers_a_supported_protocol_for_unknown_requests()
 def test_pinned_catalog_is_the_public_projection_of_the_remote_tools() -> None:
     tools = discovery_catalog()
 
-    assert tuple(tool["name"] for tool in tools) == REMOTE_TOOL_NAMES
+    assert tuple(tool["name"] for tool in tools) == REMOTE_TOOL_NAMES + ROUTING_TOOL_NAMES
     for tool in tools:
         assert project_remote_tool(tool) == tool
     run_properties = tools[0]["inputSchema"]["properties"]

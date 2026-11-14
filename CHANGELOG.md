@@ -4,6 +4,18 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [Authenticated routing advice] — Unreleased
+
+- Add `adaptorchctl route`, `AdaptOrchClient.route_topology` and optional thin MCP
+  routing through the same authenticated hosted endpoint. Public packages remain
+  remote-only and never ship or import the private engine.
+- Validate bounded DAG input and non-authorizing PESCO evidence. Reuse the SDK's
+  typed cost-advice projection instead of duplicating it in the MCP wrapper.
+- Return a bounded protocol error for missing, malformed or mismatched discovery
+  resources instead of propagating decoding or filesystem exceptions.
+- Prepare client 0.1.7, CLI 0.1.7 and MCP 0.6.2; CLI and MCP require client 0.1.7.
+  Preserve the already integrated 0.6.1/0.1.6 smoke and BYOK-help fixes.
+
 ## [Agent platform integrations] — Unreleased
 
 ### Added

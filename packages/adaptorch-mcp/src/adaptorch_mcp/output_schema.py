@@ -6,6 +6,8 @@ from collections.abc import Callable, Mapping
 from typing import Any, Final
 from urllib.parse import urlsplit
 
+from adaptorch_client.errors import AdaptOrchAPIError
+from adaptorch_client.routing import project_pesco
 from adaptorch_mcp.candidate_output import project_verification_report
 from adaptorch_mcp.correctness_wall_output import project_correctness_wall
 from adaptorch_mcp.discovery_output import project_capabilities as _project_capabilities
@@ -20,7 +22,7 @@ from adaptorch_mcp.verification_diagnostic_output import (
     project_verification_diagnostics,
 )
 
-MAX_ROUTING_STAGES: Final = 64
+MAX_ROUTING_STAGES: Final = 256
 MAX_ROUTING_STAGE_WIDTH: Final = 256
 MAX_ROUTING_REASON_LENGTH: Final = 512
 _ROUTING_FEATURE_KEYS: Final = frozenset(
@@ -357,6 +359,11 @@ def _project_route_topology(value: Mapping[str, Any]) -> dict[str, Any] | None:
         if advisory is None:
             return None
         projected["orchestration_value"] = advisory
+    if "pesco" in value:
+        try:
+            projected["pesco"] = project_pesco(value["pesco"], topology)
+        except (AdaptOrchAPIError, TypeError, AttributeError):
+            return None
     return projected
 
 

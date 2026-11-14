@@ -13,7 +13,7 @@ members = [
 [[package]]
 name = "adaptorch"
 version = "0.1.2"
-source = { git = "https://github.com/dmae97/adaptorch.git?rev=a490658ceb6a3e1f7bfdc53d24249148860ef323#a490658ceb6a3e1f7bfdc53d24249148860ef323" }
+source = { git = "https://github.com/dmae97/adaptorch.git?rev=a8e07074a0e70ae6478b07eb90f90c1c94785814#a8e07074a0e70ae6478b07eb90f90c1c94785814" }
 dependencies = [
     { name = "httpx" },
     { name = "pillow" },
@@ -30,7 +30,7 @@ api = [
 
 [[package]]
 name = "adaptorch-cli"
-version = "0.1.6"
+version = "0.1.7"
 source = { editable = "packages/adaptorch-cli" }
 dependencies = [
     { name = "adaptorch-client" },
@@ -41,7 +41,7 @@ requires-dist = [{ name = "adaptorch-client", editable = "packages/adaptorch-cli
 
 [[package]]
 name = "adaptorch-client"
-version = "0.1.6"
+version = "0.1.7"
 source = { editable = "packages/adaptorch-client" }
 
 [package.optional-dependencies]
@@ -63,7 +63,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "adaptorch-mcp"
-version = "0.6.1"
+version = "0.6.2"
 source = { editable = "packages/adaptorch-mcp" }
 dependencies = [
     { name = "adaptorch-client" },
@@ -114,7 +114,7 @@ engine = [
 [package.metadata]
 
 [package.metadata.requires-dev]
-engine = [{ name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=a490658ceb6a3e1f7bfdc53d24249148860ef323" }]
+engine = [{ name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=a8e07074a0e70ae6478b07eb90f90c1c94785814" }]
 
 [[package]]
 name = "annotated-doc"

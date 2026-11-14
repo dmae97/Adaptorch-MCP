@@ -1,0 +1,36 @@
+{
+  "name": "adaptorch_route_topology",
+  "description": "Get authenticated topology and PESCO evidence advice from the hosted engine. No provider call, run creation or quota debit. This does not authorize execution.",
+  "annotations": {
+    "title": "Route AdaptOrch topology",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "subtasks": {"type": "array", "items": {"type": "object"}, "minItems": 1, "maxItems": 256},
+      "dependencies": {"type": "array", "items": {"type": "object"}, "maxItems": 4096},
+      "prefer_ensemble_singleton": {
+        "type": ["boolean", "null"], "default": null,
+        "description": "Price the same flag adaptorch_run accepts: route single-node DAGs to multi_model_ensemble and report what that replication costs before a run pays for it. true = explicit on, false = explicit off, null/omitted = auto policy."
+      },
+      "model": {
+        "type": "string",
+        "description": "Optional model id used for the USD cost estimate in orchestration_value. Unknown models report null."
+      },
+      "measured_quality_gain": {
+        "type": "number", "minimum": 0.0, "maximum": 1.0,
+        "description": "Accuracy gain the caller measured for the routed topology versus the baseline. Never inferred; without it replication topologies stay unproven."
+      },
+      "min_quality_gain": {
+        "type": "number", "minimum": 0.0, "maximum": 1.0,
+        "description": "Caller-owned acceptance bar the measured gain must reach to justify replication spend."
+      }
+    },
+    "required": ["subtasks"],
+    "additionalProperties": false
+  }
+}

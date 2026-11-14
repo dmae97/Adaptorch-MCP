@@ -29,6 +29,7 @@ from adaptorch_client.responses import (
     EvidenceReport,
     RunListResponse,
 )
+from adaptorch_client.routing import ROUTING_TOOL_NAME, TopologyAdvice, routing_arguments
 from adaptorch_client.transport import HTTPTransport, RequestSpec
 
 _IDEMPOTENCY_KEY_RE = re.compile(
@@ -201,6 +202,27 @@ class AdaptOrchClient:
         return EvidenceNavigation.from_payload(
             self._transport.request(RequestSpec("POST", "/v1/navigation/evidence", payload=payload))
         )
+
+    def route_topology(self, payload: Mapping[str, JSONValue]) -> TopologyAdvice:
+        """Ask the authenticated engine for bounded routing advice. Never starts a run."""
+        arguments = routing_arguments(payload)
+        response = self._transport.request(RequestSpec('POST', '/v1/mcp', payload={
+            'jsonrpc': '2.0', 'id': 'route-topology', 'method': 'tools/call',
+            'params': {'name': ROUTING_TOOL_NAME, 'arguments': arguments},
+        }))
+        result = response.get('result')
+        if (response.get('jsonrpc') != '2.0' or response.get('id') != 'route-topology'
+                or 'error' in response or not isinstance(result, dict)
+                or result.get('isError', False) is not False):
+            raise AdaptOrchAPIError('AdaptOrch routing request failed')
+        content = result.get('content')
+        if not isinstance(content, list) or len(content) != 1 or not isinstance(content[0], dict):
+            raise AdaptOrchAPIError('AdaptOrch returned invalid routing content')
+        item = content[0]
+        text = item.get('text')
+        if item.get('type') != 'text' or not isinstance(text, str):
+            raise AdaptOrchAPIError('AdaptOrch returned invalid routing content')
+        return TopologyAdvice.from_payload(HTTPTransport.decode_mapping(text.encode('utf-8')))
 
     def _resource(self, request: RequestSpec, run_id: str) -> JSONMapping:
         payload = self._transport.request(request)

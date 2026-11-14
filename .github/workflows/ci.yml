@@ -41,7 +41,7 @@ jobs:
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
             '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
             | env -u ADAPTORCH_CONTROL_PLANE_TOKEN uv run adaptorch-mcp --transport stdio > introspection.jsonl
-          uv run python -c 'import json; r=[json.loads(l) for l in open("introspection.jsonl")]; assert r[0]["result"]["serverInfo"]["name"]=="adaptorch-mcp"; assert len(r[1]["result"]["tools"])==9, r'
+          uv run python -c 'import json; from adaptorch_mcp.thin_remote import REMOTE_TOOL_NAMES, ROUTING_TOOL_NAMES; r=[json.loads(l) for l in open("introspection.jsonl")]; assert r[0]["result"]["serverInfo"]["name"]=="adaptorch-mcp"; assert tuple(t["name"] for t in r[1]["result"]["tools"])==REMOTE_TOOL_NAMES+ROUTING_TOOL_NAMES, r'
       - name: Build package
         run: uv run python -m build packages/adaptorch-mcp
       - name: Public wheel gate

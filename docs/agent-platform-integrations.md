@@ -101,7 +101,7 @@ grok inspect
 
 Review the package before granting trust. `grok inspect`, `/plugins` and `/mcps` can
 show the plugin, skill and MCP server. Restart Grok after changing environment variables.
-The published package is pinned to `adaptorch-mcp==0.6.1`; its `uvx` process is local,
+The published package is pinned to `adaptorch-mcp==0.6.2`; its `uvx` process is local,
 while task execution is hosted. See [plugin details](../plugins/adaptorch-grok/README.md).
 
 ## Grok Bot / Cursor

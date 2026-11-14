@@ -250,7 +250,7 @@ is separate from a PyPI release; see the [source install and BYOK example](packa
 only on `adaptorch-client` and never installs or imports the private engine.
 
 ```bash
-uvx --python 3.12 --from adaptorch-mcp==0.6.1 adaptorch-mcp-client --help
+uvx --python 3.12 --from adaptorch-mcp==0.6.2 adaptorch-mcp-client --help
 ```
 
 ## Why Claude Code users feel it quickly
