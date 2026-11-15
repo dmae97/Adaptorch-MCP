@@ -4,16 +4,12 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
-## [Opt-in audit transport] — Unreleased
+## [adaptorch-client 0.1.7, adaptorch-cli 0.1.7, adaptorch-mcp 0.6.2] — 2026-11-15
 
-- Preserve service-advertised `adaptorch_audit`, `adaptorch_get_audit` and
-  `adaptorch_get_audit_artifact` with pinned closed input/output DTO schemas,
-  bounded response validation, audit-ID binding and matching structured content.
-  Offline discovery remains unchanged. Audit tools never forward provider
-  credentials. No reviewer execution, deployment or package publication occurred.
-  See [audit transport contract](docs/audit-transport.md).
+Published to PyPI from tags `adaptorch-client-v0.1.7`, `adaptorch-cli-v0.1.7` and
+`adaptorch-mcp-v0.6.2` on `c22d418`. CLI and MCP require client 0.1.7.
 
-## [Authenticated routing advice] — Unreleased
+### Added — authenticated routing advice
 
 - Add `adaptorchctl route`, `AdaptOrchClient.route_topology` and optional thin MCP
   routing through the same authenticated hosted endpoint. Public packages remain
@@ -22,8 +18,20 @@ accuracy work is surfaced here as activation/configuration, not duplicated logic
   typed cost-advice projection instead of duplicating it in the MCP wrapper.
 - Return a bounded protocol error for missing, malformed or mismatched discovery
   resources instead of propagating decoding or filesystem exceptions.
-- Prepare client 0.1.7, CLI 0.1.7 and MCP 0.6.2; CLI and MCP require client 0.1.7.
-  Preserve the already integrated 0.6.1/0.1.6 smoke and BYOK-help fixes.
+- See [routing scope and security limits](docs/pesco-routing.md).
+
+### Added — opt-in audit transport (adaptorch-mcp)
+
+- Preserve service-advertised `adaptorch_audit`, `adaptorch_get_audit` and
+  `adaptorch_get_audit_artifact` with pinned closed input/output DTO schemas,
+  bounded response validation, audit-ID binding and matching structured content.
+  Offline discovery remains unchanged. Audit tools never forward provider
+  credentials and the wrapper runs no reviewer. The tools appear only when the
+  hosted service advertises them. See [audit transport contract](docs/audit-transport.md).
+
+### Unchanged
+
+- The 0.6.1/0.1.6 smoke default URL and CLI BYOK-help fixes are kept as released.
 
 ## [Agent platform integrations] — Unreleased
 
