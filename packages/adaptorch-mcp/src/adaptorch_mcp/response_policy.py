@@ -5,6 +5,7 @@ import math
 from collections.abc import Mapping
 from typing import Any, Final
 
+from adaptorch_mcp.audit_output import AUDIT_TOOL_NAMES
 from adaptorch_mcp.discovery_output import project_catalog, project_server_info
 from adaptorch_mcp.output_schema import project_tool_output
 from adaptorch_mcp.response_json import decode_response_text
@@ -272,6 +273,8 @@ def sanitize_tool_response(
     tool_name: str,
     expected_run_id: str | None = None,
     expected_verification_id: str | None = None,
+    expected_audit_id: str | None = None,
+    expected_audit_kind: str | None = None,
 ) -> dict[str, Any]:
     """Project a parent tool response onto its remote-safe public contract."""
     error = response.get("error")
@@ -306,6 +309,12 @@ def sanitize_tool_response(
         if projected is not None and expected_verification_id is not None:
             if projected.get("verification_id") != expected_verification_id:
                 return _unsupported_result(response)
+        if projected is not None and expected_audit_id is not None:
+            if projected.get('audit_id') != expected_audit_id:
+                return _unsupported_result(response)
+        if projected is not None and expected_audit_kind is not None:
+            if projected.get('kind') != expected_audit_kind:
+                return _unsupported_result(response)
     if projected is None:
         return _unsupported_result(response)
     sanitized_result: dict[str, Any] = {
@@ -317,7 +326,7 @@ def sanitize_tool_response(
         ],
         "isError": is_error,
     }
-    if tool_name == "adaptorch_get_run" and not is_error:
+    if tool_name in ('adaptorch_get_run', *AUDIT_TOOL_NAMES) and not is_error:
         sanitized_result["structuredContent"] = projected
     return {
         "jsonrpc": "2.0",

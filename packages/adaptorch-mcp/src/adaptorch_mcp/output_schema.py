@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 from adaptorch_client.errors import AdaptOrchAPIError
 from adaptorch_client.routing import project_pesco
+from adaptorch_mcp.audit_output import AUDIT_TOOL_NAMES, project_audit_output
 from adaptorch_mcp.candidate_output import project_verification_report
 from adaptorch_mcp.correctness_wall_output import project_correctness_wall
 from adaptorch_mcp.discovery_output import project_capabilities as _project_capabilities
@@ -457,5 +458,7 @@ _PROJECTORS: Final[dict[str, _Projector]] = {
 
 def project_tool_output(tool_name: str, value: Mapping[str, Any]) -> dict[str, Any] | None:
     """Project one decoded tool payload onto its explicit public schema."""
+    if tool_name in AUDIT_TOOL_NAMES:
+        return project_audit_output(tool_name, value)
     projector = _PROJECTORS.get(tool_name)
     return projector(value) if projector is not None else None

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Final
 
+from adaptorch_mcp.audit_output import AUDIT_TOOL_NAMES, audit_contract
 from adaptorch_mcp.correctness_wall_output import get_run_output_schema
 
 _BLOCKED_REMOTE_RUN_ARGUMENTS: Final = frozenset({"trace", "verification_commands"})
@@ -131,6 +132,13 @@ def _project_annotations(value: Any) -> dict[str, Any]:
 def project_remote_tool(tool: Mapping[str, Any]) -> dict[str, Any]:
     """Validate and project one parent tool descriptor for remote exposure."""
     name = tool.get("name")
+    if name in AUDIT_TOOL_NAMES:
+        contract = audit_contract(str(name))
+        if any(tool.get(key) != contract[key] for key in (
+            'inputSchema', 'outputSchema', 'annotations',
+        )):
+            raise ParentContractError('parent audit contract differs from the pinned DTO schemas')
+        return contract
     description = tool.get("description")
     schema = tool.get("inputSchema")
     if not isinstance(name, str) or not isinstance(description, str):
