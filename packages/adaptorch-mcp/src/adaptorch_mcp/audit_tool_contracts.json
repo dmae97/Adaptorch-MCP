@@ -1,0 +1,553 @@
+{
+  "tools": [
+    {
+      "name": "adaptorch_audit",
+      "description": "Queue an audit-only request; no patch, command execution or provider call in this tool.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "request_json": {
+            "maxLength": 2097152,
+            "minLength": 1,
+            "title": "Request Json",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_json",
+          "idempotency_key"
+        ],
+        "title": "StartAuditArgs",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "LedgerEvent": {
+            "additionalProperties": false,
+            "properties": {
+              "sequence": {
+                "minimum": 1,
+                "title": "Sequence",
+                "type": "integer"
+              },
+              "code": {
+                "enum": [
+                  "audit_requested",
+                  "audit_started",
+                  "audit_retry_scheduled",
+                  "audit_completed",
+                  "audit_failed"
+                ],
+                "title": "Code",
+                "type": "string"
+              },
+              "at": {
+                "minimum": 0,
+                "title": "At",
+                "type": "number"
+              }
+            },
+            "required": [
+              "sequence",
+              "code",
+              "at"
+            ],
+            "title": "LedgerEvent",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "audit.status.v1",
+            "default": "audit.status.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "audit_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Audit Id",
+            "type": "string"
+          },
+          "task_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "turn_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "request_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Request Sha256",
+            "type": "string"
+          },
+          "snapshot_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Sha256",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "validation_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "references_valid",
+                  "incomplete",
+                  "stale"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation State"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "audit_reviewer_timeout",
+                  "audit_reviewer_failed",
+                  "audit_output_invalid",
+                  "audit_attempts_exhausted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "created_at": {
+            "minimum": 0,
+            "title": "Created At",
+            "type": "number"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/$defs/LedgerEvent"
+            },
+            "maxItems": 16,
+            "title": "Events",
+            "type": "array"
+          },
+          "is_correctness_proof": {
+            "const": false,
+            "default": false,
+            "title": "Is Correctness Proof",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "audit_id",
+          "task_id",
+          "turn_id",
+          "status",
+          "request_sha256",
+          "snapshot_sha256",
+          "is_current",
+          "validation_state",
+          "error_code",
+          "created_at",
+          "finished_at",
+          "events"
+        ],
+        "title": "AuditSummary",
+        "type": "object"
+      },
+      "annotations": {
+        "title": "adaptorch_audit",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "adaptorch_get_audit",
+      "description": "Read tenant-scoped audit status and ledger. Completion is not correctness or approval.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Audit Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_id"
+        ],
+        "title": "GetAuditArgs",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "LedgerEvent": {
+            "additionalProperties": false,
+            "properties": {
+              "sequence": {
+                "minimum": 1,
+                "title": "Sequence",
+                "type": "integer"
+              },
+              "code": {
+                "enum": [
+                  "audit_requested",
+                  "audit_started",
+                  "audit_retry_scheduled",
+                  "audit_completed",
+                  "audit_failed"
+                ],
+                "title": "Code",
+                "type": "string"
+              },
+              "at": {
+                "minimum": 0,
+                "title": "At",
+                "type": "number"
+              }
+            },
+            "required": [
+              "sequence",
+              "code",
+              "at"
+            ],
+            "title": "LedgerEvent",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "audit.status.v1",
+            "default": "audit.status.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "audit_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Audit Id",
+            "type": "string"
+          },
+          "task_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "turn_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "request_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Request Sha256",
+            "type": "string"
+          },
+          "snapshot_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Sha256",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "validation_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "references_valid",
+                  "incomplete",
+                  "stale"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation State"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "audit_reviewer_timeout",
+                  "audit_reviewer_failed",
+                  "audit_output_invalid",
+                  "audit_attempts_exhausted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "created_at": {
+            "minimum": 0,
+            "title": "Created At",
+            "type": "number"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/$defs/LedgerEvent"
+            },
+            "maxItems": 16,
+            "title": "Events",
+            "type": "array"
+          },
+          "is_correctness_proof": {
+            "const": false,
+            "default": false,
+            "title": "Is Correctness Proof",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "audit_id",
+          "task_id",
+          "turn_id",
+          "status",
+          "request_sha256",
+          "snapshot_sha256",
+          "is_current",
+          "validation_state",
+          "error_code",
+          "created_at",
+          "finished_at",
+          "events"
+        ],
+        "title": "AuditSummary",
+        "type": "object"
+      },
+      "annotations": {
+        "title": "adaptorch_get_audit",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "adaptorch_get_audit_artifact",
+      "description": "Read one immutable audit artifact page, with a tenant-bound signed byte cursor.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Audit Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "request",
+              "candidates",
+              "validation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "page_bytes": {
+            "default": 4096,
+            "maximum": 16384,
+            "minimum": 4,
+            "title": "Page Bytes",
+            "type": "integer"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          }
+        },
+        "required": [
+          "audit_id",
+          "kind"
+        ],
+        "title": "GetAuditArtifactArgs",
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "audit.artifact-page.v1",
+            "default": "audit.artifact-page.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "audit_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "title": "Audit Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "request",
+              "candidates",
+              "validation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "snapshot_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Sha256",
+            "type": "string"
+          },
+          "artifact_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Artifact Sha256",
+            "type": "string"
+          },
+          "total_bytes": {
+            "minimum": 0,
+            "title": "Total Bytes",
+            "type": "integer"
+          },
+          "offset_bytes": {
+            "minimum": 0,
+            "title": "Offset Bytes",
+            "type": "integer"
+          },
+          "returned_bytes": {
+            "maximum": 16384,
+            "minimum": 0,
+            "title": "Returned Bytes",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 16384,
+            "title": "Text",
+            "type": "string"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "audit_id",
+          "kind",
+          "snapshot_sha256",
+          "artifact_sha256",
+          "total_bytes",
+          "offset_bytes",
+          "returned_bytes",
+          "text",
+          "has_more",
+          "next_cursor"
+        ],
+        "title": "ArtifactPage",
+        "type": "object"
+      },
+      "annotations": {
+        "title": "adaptorch_get_audit_artifact",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}

@@ -4,6 +4,15 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [Opt-in audit transport] — Unreleased
+
+- Preserve service-advertised `adaptorch_audit`, `adaptorch_get_audit` and
+  `adaptorch_get_audit_artifact` with pinned closed input/output DTO schemas,
+  bounded response validation, audit-ID binding and matching structured content.
+  Offline discovery remains unchanged. Audit tools never forward provider
+  credentials. No reviewer execution, deployment or package publication occurred.
+  See [audit transport contract](docs/audit-transport.md).
+
 ## [Authenticated routing advice] — Unreleased
 
 - Add `adaptorchctl route`, `AdaptOrchClient.route_topology` and optional thin MCP

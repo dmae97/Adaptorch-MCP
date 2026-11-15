@@ -15,6 +15,7 @@ from adaptorch_client.provider import ProviderCredential
 from adaptorch_client.routing import routing_arguments
 from adaptorch_client.transport import HTTPTransport, RequestSpec
 from adaptorch_mcp import __version__
+from adaptorch_mcp.audit_output import AUDIT_TOOL_NAMES, valid_audit_arguments
 from adaptorch_mcp.public_schema import ParentContractError, project_remote_tool
 from adaptorch_mcp.response_policy import sanitize_resource_response, sanitize_tool_response
 
@@ -31,7 +32,9 @@ REMOTE_TOOL_NAMES: Final = (
 )
 CANDIDATE_TOOL_NAMES: Final = ("adaptorch_verify_candidate", "adaptorch_get_verification_report")
 ROUTING_TOOL_NAMES: Final = ("adaptorch_route_topology",)
-_REMOTE_ACCEPTED_TOOLS: Final = REMOTE_TOOL_NAMES + CANDIDATE_TOOL_NAMES + ROUTING_TOOL_NAMES
+_REMOTE_ACCEPTED_TOOLS: Final = (
+    REMOTE_TOOL_NAMES + CANDIDATE_TOOL_NAMES + AUDIT_TOOL_NAMES + ROUTING_TOOL_NAMES
+)
 _REMOTE_RESOURCES: Final = frozenset({"adaptorch://server-info", "adaptorch://plans/cloud"})
 _FORWARD_METHODS: Final = frozenset(
     {
@@ -168,6 +171,10 @@ class RemoteMCPServer:
             return _error(message, -32601, "Method not found")
         if tool_name == "adaptorch_run" and not self._valid_run_arguments(message):
             return _error(message, -32602, "Invalid tool arguments")
+        if tool_name in AUDIT_TOOL_NAMES and not valid_audit_arguments(
+            str(tool_name), _arguments(message)
+        ):
+            return _error(message, -32602, 'Invalid tool arguments')
         if tool_name in ROUTING_TOOL_NAMES:
             try:
                 routing_arguments(_arguments(message))
@@ -243,6 +250,14 @@ class RemoteMCPServer:
     ) -> dict[str, Any]:
         method = message["method"]
         if method == "tools/call" and tool_name is not None:
+            if tool_name in AUDIT_TOOL_NAMES:
+                audit_id = _arguments(message).get('audit_id')
+                kind = _arguments(message).get('kind')
+                return sanitize_tool_response(
+                    response, tool_name=tool_name,
+                    expected_audit_id=audit_id if isinstance(audit_id, str) else None,
+                    expected_audit_kind=kind if isinstance(kind, str) else None,
+                )
             run_id = _arguments(message).get("run_id", _arguments(message).get("resume_run_id"))
             if tool_name in CANDIDATE_TOOL_NAMES:
                 report_id = _arguments(message).get("verification_id")

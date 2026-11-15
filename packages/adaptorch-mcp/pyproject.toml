@@ -47,7 +47,7 @@ adaptorch-mcp-smoke = "adaptorch_mcp.stdio_smoke:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-adaptorch_mcp = ["py.typed", "remote_tool_catalog.json", "route_tool_contract.json"]
+adaptorch_mcp = ["py.typed", "remote_tool_catalog.json", "audit_tool_contracts.json", "route_tool_contract.json"]
 
 [tool.pyright]
 pythonVersion = "3.11"
