@@ -105,6 +105,10 @@ provides-extras = ["http", "dev"]
 name = "adaptorch-mcp-monorepo"
 version = "0.1.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "adaptorch-client" },
+    { name = "adaptorch-mcp" },
+]
 
 [package.dev-dependencies]
 engine = [
@@ -112,6 +116,10 @@ engine = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "adaptorch-client", editable = "packages/adaptorch-client" },
+    { name = "adaptorch-mcp", editable = "packages/adaptorch-mcp" },
+]
 
 [package.metadata.requires-dev]
 engine = [{ name = "adaptorch", extras = ["api"], git = "https://github.com/dmae97/adaptorch.git?rev=7452bdf5c6bbde342c62bf022eb2e2d70b8233ac" }]
