@@ -169,6 +169,9 @@ def build_parser() -> argparse.ArgumentParser:
     show = evidence.add_subparsers(dest="evidence_command", required=True).add_parser("show")
     show.add_argument("run_id")
 
+    route = commands.add_parser("route", help="Get authenticated topology/PESCO advice")
+    route.add_argument("--file", required=True, help="DAG argument JSON object, or - for stdin")
+
     navigate = commands.add_parser(
         "navigate", help="Navigate a fixed evidence pack (read-only, no model call)"
     )

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptorch-mcp"
-version = "0.6.1"
+version = "0.6.2"
 description = "Installable MCP bridge for AdaptOrch"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
@@ -22,7 +22,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
 ]
-dependencies = ["adaptorch-client>=0.1.6,<0.2"]
+dependencies = ["adaptorch-client>=0.1.7,<0.2"]
 
 [project.optional-dependencies]
 http = ["fastapi>=0.112", "uvicorn[standard]>=0.30"]
@@ -47,7 +47,7 @@ adaptorch-mcp-smoke = "adaptorch_mcp.stdio_smoke:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-adaptorch_mcp = ["py.typed", "remote_tool_catalog.json"]
+adaptorch_mcp = ["py.typed", "remote_tool_catalog.json", "route_tool_contract.json"]
 
 [tool.pyright]
 pythonVersion = "3.11"

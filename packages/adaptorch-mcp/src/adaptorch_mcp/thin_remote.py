@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from copy import deepcopy
 from functools import cache
@@ -13,6 +12,7 @@ from typing import Any, Final, Protocol, cast
 from adaptorch_client.config import ClientConfig
 from adaptorch_client.errors import AdaptOrchAPIError
 from adaptorch_client.provider import ProviderCredential
+from adaptorch_client.routing import routing_arguments
 from adaptorch_client.transport import HTTPTransport, RequestSpec
 from adaptorch_mcp import __version__
 from adaptorch_mcp.public_schema import ParentContractError, project_remote_tool
@@ -30,7 +30,8 @@ REMOTE_TOOL_NAMES: Final = (
     "adaptorch_plan_catalog",
 )
 CANDIDATE_TOOL_NAMES: Final = ("adaptorch_verify_candidate", "adaptorch_get_verification_report")
-_REMOTE_ACCEPTED_TOOLS: Final = REMOTE_TOOL_NAMES + CANDIDATE_TOOL_NAMES
+ROUTING_TOOL_NAMES: Final = ("adaptorch_route_topology",)
+_REMOTE_ACCEPTED_TOOLS: Final = REMOTE_TOOL_NAMES + CANDIDATE_TOOL_NAMES + ROUTING_TOOL_NAMES
 _REMOTE_RESOURCES: Final = frozenset({"adaptorch://server-info", "adaptorch://plans/cloud"})
 _FORWARD_METHODS: Final = frozenset(
     {
@@ -59,16 +60,34 @@ _DISCOVERY_EMPTY_LISTS: Final = {
 
 @cache
 def _load_catalog() -> tuple[dict[str, Any], ...]:
-    text = files("adaptorch_mcp").joinpath("remote_tool_catalog.json").read_text("utf-8")
-    tools = json.loads(text)["tools"]
-    if tuple(tool["name"] for tool in tools) != REMOTE_TOOL_NAMES:
+    try:
+        text = files("adaptorch_mcp").joinpath("remote_tool_catalog.json").read_text("utf-8")
+        payload = HTTPTransport.decode_mapping(text.encode("utf-8"))
+    except (OSError, UnicodeError, AdaptOrchAPIError) as exc:
+        raise ParentContractError("public discovery catalog is unavailable") from exc
+    tools = payload.get("tools")
+    if not isinstance(tools, list):
+        raise ParentContractError("public discovery catalog tools must be an array")
+    projected: list[dict[str, Any]] = []
+    for tool in tools:
+        if not isinstance(tool, dict):
+            raise ParentContractError("public discovery catalog tool must be an object")
+        projected.append(project_remote_tool(tool))
+    if tuple(tool["name"] for tool in projected) != REMOTE_TOOL_NAMES:
         raise ParentContractError("discovery catalog differs from the remote tool set")
-    return tuple(tools)
+    return tuple(projected)
 
 
 def discovery_catalog() -> list[dict[str, Any]]:
     """Return the pinned public tool list served before credentials are configured."""
-    return deepcopy(list(_load_catalog()))
+    try:
+        text = files("adaptorch_mcp").joinpath("route_tool_contract.json").read_text("utf-8")
+        route = HTTPTransport.decode_mapping(text.encode("utf-8"))
+    except (OSError, UnicodeError, AdaptOrchAPIError) as exc:
+        raise ParentContractError("public routing catalog is unavailable") from exc
+    if route.get("name") not in ROUTING_TOOL_NAMES:
+        raise ParentContractError("routing catalog differs from the remote tool set")
+    return deepcopy([*_load_catalog(), project_remote_tool(route)])
 
 
 class RemoteTransport(Protocol):
@@ -149,12 +168,20 @@ class RemoteMCPServer:
             return _error(message, -32601, "Method not found")
         if tool_name == "adaptorch_run" and not self._valid_run_arguments(message):
             return _error(message, -32602, "Invalid tool arguments")
+        if tool_name in ROUTING_TOOL_NAMES:
+            try:
+                routing_arguments(_arguments(message))
+            except ValueError:
+                return _error(message, -32602, "Invalid routing arguments")
         if method == "resources/read":
             uri = _params(message).get("uri")
             if uri not in _REMOTE_RESOURCES:
                 return _error(message, -32601, "Method not found")
         if self._transport is None:
-            return self._discover(message)
+            try:
+                return self._discover(message)
+            except ParentContractError:
+                return _error(message, -32603, "Discovery catalog unavailable")
         try:
             response = self._forward(message, tool_name=tool_name)
         except (AdaptOrchAPIError, ParentContractError, TypeError, ValueError):

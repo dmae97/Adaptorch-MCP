@@ -24,7 +24,7 @@ Use `adaptorch-mcp-client` to select this remote client explicitly. The
 One-shot with `uvx`, without an engine checkout:
 
 ```bash
-uvx --from "adaptorch-mcp==0.6.1" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.2" adaptorch-mcp-client --help
 ```
 
 For contributors inside this monorepo:

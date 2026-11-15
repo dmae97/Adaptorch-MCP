@@ -24,6 +24,7 @@ from adaptorch_client.responses import (
     EvidenceReport,
     RunListResponse,
 )
+from adaptorch_client.routing import TopologyAdvice
 
 __all__ = [
     "NAVIGATION_ALGORITHMS",
@@ -49,6 +50,7 @@ __all__ = [
     "RunReport",
     "RunReportFormat",
     "RunReportLocale",
+    "TopologyAdvice",
     "VerificationDiagnostic",
     "validate_api_url",
 ]

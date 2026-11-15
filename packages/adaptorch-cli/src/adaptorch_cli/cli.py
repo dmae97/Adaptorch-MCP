@@ -385,6 +385,9 @@ def _execute(
         case "evidence":
             evidence_run_id: str = args.run_id
             return _result_payload(_require_client(api_url).get_evidence(evidence_run_id)), False
+        case "route":
+            arguments = _read_submit_payload(args.file, parser)
+            return _result_payload(_require_client(api_url).route_topology(arguments)), False
         case "navigate":
             document = _read_json_value(args.evidence_pack, parser, "--evidence-pack")
             pack = document.get("evidence_pack") if isinstance(document, dict) else document
