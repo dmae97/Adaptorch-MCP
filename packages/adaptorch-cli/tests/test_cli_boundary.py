@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -218,6 +219,30 @@ def test_client_errors_map_to_stable_exit_codes(
     assert result.stdout == ""
     assert result.stderr
     assert "env-test-key" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("fake_error", "names_request_id"),
+    [("transport", True), ("api", True), ("rate_limit", False), ("auth", False)],
+)
+def test_uncertain_submit_names_the_request_id_to_retry_with(
+    run_cli: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_error: str,
+    names_request_id: bool,
+) -> None:
+    """A lost reply may already be a charged run; a retry under a new key is a second one."""
+    monkeypatch.setenv("FAKE_CLIENT_ERROR", fake_error)
+
+    result = run_cli(["--output", "json", "run", "submit", "--file", "-"], '{"goal":"x"}\n')
+
+    assert result.returncode != 0
+    assert result.stdout == ""
+    match = re.search(
+        r"--request-id ([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\b",
+        result.stderr,
+    )
+    assert (match is not None) is names_request_id
 
 
 @pytest.mark.parametrize("status", ["FAILED", "failed"])
