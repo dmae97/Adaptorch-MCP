@@ -278,11 +278,22 @@ def _run_command(
             file_name: str = args.file
             request_id: str | None = args.request_id
             payload = _read_submit_payload(file_name, parser)
-            submit_result = _require_client(api_url).submit_run(
-                payload,
-                idempotency_key=request_id or str(uuid.uuid4()),
-                provider_credential=_submission_credential(),
-            )
+            idempotency_key = request_id or str(uuid.uuid4())
+            try:
+                submit_result = _require_client(api_url).submit_run(
+                    payload,
+                    idempotency_key=idempotency_key,
+                    provider_credential=_submission_credential(),
+                )
+            except AdaptOrchAPIError as error:
+                if _api_exit_code(error) == 7:
+                    # The run may exist and be charged; a retry under a new key is a second run.
+                    print(
+                        "outcome unknown: check `run list`, or retry the same JSON with "
+                        f"--request-id {idempotency_key}",
+                        file=sys.stderr,
+                    )
+                raise
             return _result_payload(submit_result), False
         case "list":
             status: str | None = args.status

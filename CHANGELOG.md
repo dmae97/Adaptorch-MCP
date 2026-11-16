@@ -4,6 +4,14 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [adaptorch-cli] — Unreleased
+
+### Fixed
+
+- `adaptorchctl run submit` names its request ID on stderr when the outcome is unknown
+  (no HTTP response or a server error, exit 7). A retry without that ID was a new run
+  and a second quota charge; the generated ID was never shown.
+
 ## [adaptorch-client 0.1.7, adaptorch-cli 0.1.7, adaptorch-mcp 0.6.2] — 2026-11-15
 
 Published to PyPI from tags `adaptorch-client-v0.1.7`, `adaptorch-cli-v0.1.7` and
