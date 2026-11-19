@@ -37,7 +37,7 @@
 
 **AdaptOrch MCP** is the remote-only MCP adapter for [AdaptOrch](https://adaptorch.com). From Claude Code or another MCP client it submits work to the hosted control plane and returns available run status, bounded observations and artifact references. The private engine owns routing and execution on the server; it is not installed by this package. Trace access requires the explicit `full` profile; this adapter does not expose the research-only inference-tape replay API.
 
-Use it when your coding agent says a patch works and you want the receipt before you merge, or when a task is too large, too ambiguous, or too expensive to trust to one single-pass response.
+Use it when your coding agent says a patch works and you want the receipt before you merge, or when a task is too large, too ambiguous, or too expensive to trust to one single-pass response. The [AI-generated patch verification guide](https://adaptorch.com/ai-generated-patch-verification/) shows how to use evidence when reviewing a proposed change.
 
 ```text
 Claude Code → AdaptOrch MCP → route topology → run with synthesis → retrieve artifacts
@@ -115,7 +115,7 @@ benchmark/eval or operator controls, not quickstart defaults.
 
 ## Research paper
 
-AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
+AdaptOrch MCP follows the AdaptOrch research line. The [official AdaptOrch research page](https://adaptorch.com/research/) summarizes the paper and explains how it relates to the hosted service. Read the paper on arXiv:
 
 - Abstract page: [arxiv.org/abs/2602.16873](https://arxiv.org/abs/2602.16873)
 - HTML paper: [arxiv.org/html/2602.16873v1](https://arxiv.org/html/2602.16873v1)
@@ -130,7 +130,7 @@ AdaptOrch MCP follows the AdaptOrch research line. Read the paper on arXiv:
 
 ## Install
 
-There are four ways in. Pick by what you are: a Claude Code user, an agent, a program, or a
+The [official client reference](https://adaptorch.com/clients/) lists the public MCP, CLI and Python SDK clients. There are four ways in. Pick by what you are: a Claude Code user, an agent, a program, or a
 terminal.
 
 > **Release status (2026-11-03):** `adaptorch-mcp` 0.6.1, `adaptorch-cli` 0.1.6 and
