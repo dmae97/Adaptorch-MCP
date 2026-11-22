@@ -125,6 +125,31 @@ def test_byok_is_scoped_to_run_and_unknown_tools_do_not_leave_the_process() -> N
     assert len(transport.specs) == before
 
 
+def test_recheck_forwards_byok_and_projects_only_receipt_fields() -> None:
+    class Transport(_Transport):
+        def request(self, spec: RequestSpec) -> dict[str, Any]:
+            response = super().request(spec)
+            response['result']['content'][0]['text'] = json.dumps({
+                'verdict': 'unknown', 'input_tokens': None, 'output_tokens': None,
+                'elapsed_ms': 10, 'private': 'must not escape',
+            })
+            return response
+
+    transport = Transport()
+    key = ProviderCredential('openai', 'fixture', 'dummy')
+    server = RemoteMCPServer(transport, provider_credential=key)
+    args = {'claim': 'A', 'quotes': ['A']}
+    result = _call(server, 'tools/call', name='adaptorch_recheck_claim', **args)
+    assert transport.specs[-1].provider_credential is key
+    assert 'dummy' not in str(transport.specs[-1].payload)
+    assert json.loads(result['result']['content'][0]['text']) == {
+        'verdict': 'unknown', 'input_tokens': None, 'output_tokens': None, 'elapsed_ms': 10,
+    }
+    assert _call(server, 'tools/call', name='adaptorch_recheck_claim', api_key='bad',
+                 **args)['error']['code'] == -32602
+    assert len(transport.specs) == 1
+
+
 def test_initialize_hides_upstream_server_identity() -> None:
     server = RemoteMCPServer(_Transport())
     response = _call(server, "initialize")

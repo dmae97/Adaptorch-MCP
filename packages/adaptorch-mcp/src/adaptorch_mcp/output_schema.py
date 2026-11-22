@@ -439,9 +439,23 @@ def _project_usage(value: Mapping[str, Any]) -> dict[str, Any] | None:
     return _project_scalars(value, keys)
 
 
+def _project_claim(value: Mapping[str, Any]) -> dict[str, Any] | None:
+    verdict = value.get('verdict')
+    if verdict not in ('supported', 'partial', 'unsupported', 'unknown'):
+        return None
+    fields = ('elapsed_ms', 'input_tokens', 'output_tokens')
+    for key in fields:
+        n = value.get(key)
+        if key != 'elapsed_ms' and key in value and n is None:
+            continue
+        if type(n) is not int or n < 0:
+            return None
+    return {'verdict': verdict, **{key: value[key] for key in fields}}
+
 _Projector = Callable[[Mapping[str, Any]], dict[str, Any] | None]
 _PROJECTORS: Final[dict[str, _Projector]] = {
     "adaptorch_run": _project_run,
+    'adaptorch_recheck_claim': _project_claim,
     "adaptorch_get_run": _project_get_run,
     "adaptorch_get_artifacts": _project_artifacts,
     "adaptorch_list_runs": _project_run_list,

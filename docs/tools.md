@@ -1,5 +1,12 @@
 # MCP Tool Surface
 
+`adaptorch_recheck_claim` is available when advertised by the authenticated control plane.
+Pass `{"claim":"Records are kept three years.","quotes":["Keep records for three years."]}`.
+Configure BYOK as for `adaptorch_run`; never pass a provider key in tool arguments.
+Each admitted attempt uses one monthly unit, even if the provider fails or returns no valid
+verdict. No platform-key fallback or automatic retry. The verdict covers only the supplied
+quotes. `elapsed_ms` is the checker duration; unavailable token counts are `null`.
+
 Run output optionally includes `verification_diagnostics` paired with
 `verification_diagnostics_schema_version: "verification.diagnostics/v1"`.
 Closed objects carry `code`, `source`, `scope`, and optional `tool` restricted to
