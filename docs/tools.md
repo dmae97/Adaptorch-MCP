@@ -1,5 +1,20 @@
 # MCP Tool Surface
 
+`adaptorch_recheck_claim` is available when advertised by the authenticated control plane.
+Pass `{"claim":"Records are kept three years.","quotes":["Keep records for three years."]}`.
+Configure BYOK as for `adaptorch_run`; never pass a provider key in tool arguments.
+Each admitted attempt uses one monthly unit, even if the provider fails or returns no valid
+verdict. No platform-key fallback or automatic retry. The verdict covers only the supplied
+quotes. `elapsed_ms` is the checker duration; unavailable token counts are `null`.
+
+`adaptorch_get_run` accepts optional `include_output: true` (default `false`) to return
+the saved `run-output.v1` payload (`answer`, per-subtask `subtasks[]` with `truncated`,
+`display_truncated`, and `returned_bytes`, bounded `generation` observations using
+`run-generation.v1` states `limit_observed` / `stop_observed` / `unknown`, and
+model-reported `thought` with `is_evidence: false`). Generation observations separate
+provider token-limit stops from 64 KiB display clipping and never act as a correctness
+verdict. Malformed optional `output` payloads project as `null` without hiding run status.
+
 Run output optionally includes `verification_diagnostics` paired with
 `verification_diagnostics_schema_version: "verification.diagnostics/v1"`.
 Closed objects carry `code`, `source`, `scope`, and optional `tool` restricted to
@@ -18,7 +33,7 @@ engine/maintainer surface, not tools enabled by the public thin client.
 | Tool | Type | Purpose |
 | --- | --- | --- |
 | `adaptorch_run` | write | Submit an AdaptOrch task payload and optionally wait for terminal status. |
-| `adaptorch_get_run` | read | Fetch a run summary plus an optional bounded Correctness Wall view by `run_id`. |
+| `adaptorch_get_run` | read | Fetch a run summary, optional bounded Correctness Wall view, and optional `run-output.v1` / `run-generation.v1` output (`include_output=true`) by `run_id`. |
 | `adaptorch_get_artifacts` | read | Public artifacts only; raw artifacts currently return `not_published`. |
 | `adaptorch_list_runs` | read | List recent control-plane runs. |
 | `adaptorch_get_traces` | read/full only | Fetch execution traces for a run. |
@@ -27,7 +42,7 @@ engine/maintainer surface, not tools enabled by the public thin client.
 | `adaptorch_server_metrics` | read/local | Read redacted MCP server metrics. |
 | `adaptorch_capabilities` | read/local | Read synthesis modes, topologies, extractors, verifier/VERA vocabularies, connectors, server features, and plan catalog. |
 | `adaptorch_usage` | read | Read the calling tenant's usage window: plan level, period, used, limit, remaining, percentage. |
-| `adaptorch_plan_catalog` | read/local | Read hosted plan catalog: Starter $0, Pro $39, Team $149. |
+| `adaptorch_plan_catalog` | read/local | Read hosted plan catalog (Pro `$39`/mo, Team `$149`/mo; 3-day free trial, annual discount). |
 
 ## Optional existing-candidate verification
 

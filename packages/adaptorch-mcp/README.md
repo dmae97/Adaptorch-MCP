@@ -7,14 +7,36 @@ Only closed codes, source, scope and four allowlisted tool names survive remote
 projection. Logs remain redacted; malformed optional metadata is dropped while
 the original result survives.
 
-Installable **remote-only** Python client for the AdaptOrch MCP service.
+Installable **remote-only** Model Context Protocol (MCP) server and Python client for [AdaptOrch](https://adaptorch.com) — bringing DAG topology routing, multi-model synthesis, `run-output.v1` / `run-generation.v1` generation-limit observations, and verifiable execution receipts to Claude Code, Cursor, Codex, Gemini CLI, Windsurf, Kimi Code, and Grok.
 
 The package forwards a restricted MCP surface to the hosted control plane over authenticated JSON-RPC. It does not install or execute the private AdaptOrch engine. Routing, synthesis, policy and execution remain on the server. The public `remote` exposure profile keeps local topology and trace oracles out of the MCP surface.
+
+## Benchmarks (measured)
+
+### GPT LUNA (`gpt-6-luna`) — Math accuracy vs 3x majority vote (`n = 351` paired units)
+
+| Benchmark | n | OFF (1 call) | VOTE x3 | AdaptOrch ON | ON - OFF | ON - VOTE | OFF tok/Q | VOTE tok/Q | ON tok/Q |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| AIME 2025 | 111 | 57.7% | 58.6% | **73.9%** | +16.2 pp | +15.3 pp | 1,110 | 3,308 | **3,129** |
+| AIME 2026 | 120 | 65.8% | 67.5% | **78.3%** | +12.5 pp | +10.8 pp | 1,095 | 3,182 | **3,076** |
+| HMMT Feb 2025 | 120 | 43.3% | 45.8% | **56.7%** | +13.3 pp | +10.8 pp | 1,188 | 3,719 | **3,468** |
+| **Pooled** | **351** | **55.6%** | **57.3%** | **69.5%** | **+14.0 pp** | **+12.3 pp** | **1,132** | **3,405** | **3,227** |
+
+Per-problem sign tests (90 problems): ON vs OFF **35–4** (`p = 3.35e-07`); ON vs VOTE x3 **33–8** (`p = 0.000112`), using **5.2% fewer tokens than VOTE x3**. Scope: `gpt-6-luna` (requested model ID, Codex OAuth, default sampling); 351/360 matched units (9 excluded for missing direct samples; no majority on 131 complete VOTE units); ON includes recovered no-answer timeouts; not an official leaderboard result.
+
+### Three.js WebGL scenes — OFF (1 call) vs AdaptOrch ON (9 scenes)
+
+| Metric | OFF (1 direct call) | AdaptOrch ON (`draft -> review -> final`) |
+| --- | --- | --- |
+| Zero-error renders | **7 / 9** | **9 / 9** |
+| Output tokens / wall time | 135,557 tok / 4,823 s | 359,102 tok (2.65x) / 13,409 s (2.78x) |
+
+OFF failed on `threejs-voxel-world` (GLSL reserved word `patch` shader crash) and `threejs-rubik-cstech` (`THREE is not defined` build script instead of HTML); AdaptOrch ON rendered **9/9 scenes with 0 browser errors** (headless Chrome + SwiftShader software WebGL, 1 run per prompt; not a blind quality evaluation). Full 9-scene table in the [repository README](https://github.com/dmae97/Adaptorch-MCP#measured-benchmarks).
 
 ## Install
 
 ```bash
-pip install --upgrade "adaptorch-mcp>=0.6,<0.7"
+pip install --upgrade "adaptorch-mcp>=0.6.3,<0.7"
 adaptorch-mcp-client --help
 ```
 
@@ -24,7 +46,7 @@ Use `adaptorch-mcp-client` to select this remote client explicitly. The
 One-shot with `uvx`, without an engine checkout:
 
 ```bash
-uvx --from "adaptorch-mcp==0.6.2" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.3" adaptorch-mcp-client --help
 ```
 
 For contributors inside this monorepo:
@@ -154,14 +176,15 @@ and MCP `prefer_ensemble_singleton`.
 | Tool | Purpose |
 | --- | --- |
 | `adaptorch_run` | Submit an AdaptOrch task payload and optionally wait. |
-| `adaptorch_get_run` | Read a run summary and its optional bounded Correctness Wall view by `run_id`. |
+| `adaptorch_get_run` | Read a run summary, optional bounded Correctness Wall view, and optional `run-output.v1` / `run-generation.v1` output (`include_output=true`) by `run_id`. |
 | `adaptorch_get_artifacts` | Read artifact metadata for a run. |
 | `adaptorch_list_runs` | List recent runs. |
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
+| `adaptorch_recheck_claim` | Opt-in BYOK claim recheck against supplied quotes when advertised by the authenticated control plane. |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
-| `adaptorch_capabilities` | Read synthesis modes, topologies, extractors, verifier/VERA vocabularies, connectors, and server features. |
+| `adaptorch_capabilities` | Read synthesis modes, topologies, extractors, verifier/VERA vocabularies, connectors, server features, and plan catalog. |
 | `adaptorch_usage` | Read the calling tenant's usage window (plan level, period, used, limit, remaining, percentage). |
-| `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
+| `adaptorch_plan_catalog` | Read hosted plan catalog (Pro `$39`/mo, Team `$149`/mo; 3-day free trial, annual discount). |
 
 `adaptorch_get_traces` and `adaptorch_route_topology` are available only when `ADAPTORCH_MCP_EXPOSURE_PROFILE=full`. In the default profile, run diagnostics and telemetry are redacted, run-resource templates are hidden, completions are disabled, and server events are not broadcast to SSE subscribers.
 
