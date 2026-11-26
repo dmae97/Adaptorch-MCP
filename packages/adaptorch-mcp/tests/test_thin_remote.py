@@ -125,6 +125,173 @@ def test_byok_is_scoped_to_run_and_unknown_tools_do_not_leave_the_process() -> N
     assert len(transport.specs) == before
 
 
+def test_recheck_forwards_byok_and_projects_only_receipt_fields() -> None:
+    class Transport(_Transport):
+        def request(self, spec: RequestSpec) -> dict[str, Any]:
+            response = super().request(spec)
+            response["result"]["content"][0]["text"] = json.dumps(
+                {
+                    "verdict": "unknown",
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "elapsed_ms": 10,
+                    "private": "must not escape",
+                }
+            )
+            return response
+
+    transport = Transport()
+    key = ProviderCredential("openai", "fixture", "dummy")
+    server = RemoteMCPServer(transport, provider_credential=key)
+    args = {"claim": "A", "quotes": ["A"]}
+    result = _call(server, "tools/call", name="adaptorch_recheck_claim", **args)
+    assert transport.specs[-1].provider_credential is key
+    assert "dummy" not in str(transport.specs[-1].payload)
+    assert json.loads(result["result"]["content"][0]["text"]) == {
+        "verdict": "unknown",
+        "input_tokens": None,
+        "output_tokens": None,
+        "elapsed_ms": 10,
+    }
+    assert (
+        _call(server, "tools/call", name="adaptorch_recheck_claim", api_key="bad", **args)[
+            "error"
+        ]["code"]
+        == -32602
+    )
+    assert (
+        _call(server, "tools/call", name="adaptorch_recheck_claim", claim="A", quotes=[])[
+            "error"
+        ]["code"]
+        == -32602
+    )
+    assert len(transport.specs) == 1
+
+
+def test_get_run_projects_run_output_v1_and_generation_observations() -> None:
+    output_payload = {
+        "schema_version": "run-output.v1",
+        "run_id": "run-out-1",
+        "status": "SUCCEEDED",
+        "model": "gpt-6-luna",
+        "answer": {
+            "state": "RECORDED",
+            "text": "42",
+            "source": "raw_results.final_output",
+            "bytes": 2,
+            "sha256": "abc123",
+        },
+        "subtasks": [
+            {
+                "id": "s1",
+                "text": "step output",
+                "bytes": 11,
+                "truncated": False,
+                "display_truncated": False,
+                "returned_bytes": 11,
+            }
+        ],
+        "generation": {
+            "schema_version": "run-generation.v1",
+            "scope": "observed_usage_events",
+            "state": "limit_observed",
+            "settlement_events": 2,
+            "limit_events": 1,
+            "stop_events": 1,
+            "unknown_events": 0,
+        },
+        "thought": {
+            "state": "RECORDED",
+            "visibility": "model_reported",
+            "is_evidence": False,
+            "segments": [],
+            "dropped_segments": 0,
+            "notice": "Model-reported reasoning.",
+        },
+        "ai_generated": True,
+        "internal_secret": "must_not_escape",
+    }
+
+    class OutputTransport(_Transport):
+        def request(self, spec: RequestSpec) -> dict[str, Any]:
+            response = super().request(spec)
+            response["result"]["content"][0]["text"] = json.dumps(
+                {"run_id": "run-out-1", "status": "SUCCEEDED", "output": output_payload}
+            )
+            return response
+
+    server = RemoteMCPServer(OutputTransport())
+    result = _call(
+        server, "tools/call", name="adaptorch_get_run", run_id="run-out-1", include_output=True
+    )
+    body = json.loads(result["result"]["content"][0]["text"])
+    assert body["output"]["generation"]["state"] == "limit_observed"
+    assert body["output"]["subtasks"][0]["display_truncated"] is False
+    assert body["output"]["subtasks"][0]["returned_bytes"] == 11
+    assert "internal_secret" not in body["output"]
+    assert result["result"]["structuredContent"] == body
+
+    # Malformed thought claiming is_evidence=True drops optional output without losing run summary.
+    bad_output = {**output_payload, "thought": {**output_payload["thought"], "is_evidence": True}}
+
+    class BadOutputTransport(_Transport):
+        def request(self, spec: RequestSpec) -> dict[str, Any]:
+            response = super().request(spec)
+            response["result"]["content"][0]["text"] = json.dumps(
+                {"run_id": "run-out-1", "status": "SUCCEEDED", "output": bad_output}
+            )
+            return response
+
+    bad_result = _call(
+        RemoteMCPServer(BadOutputTransport()),
+        "tools/call",
+        name="adaptorch_get_run",
+        run_id="run-out-1",
+        include_output=True,
+    )
+    bad_body = json.loads(bad_result["result"]["content"][0]["text"])
+    assert bad_body["status"] == "SUCCEEDED"
+    assert bad_body["output"] is None
+
+
+def test_plan_catalog_preserves_annual_price_and_trial_days() -> None:
+    class CatalogTransport(_Transport):
+        def request(self, spec: RequestSpec) -> dict[str, Any]:
+            response = super().request(spec)
+            response["result"]["content"][0]["text"] = json.dumps(
+                {
+                    "schemaVersion": "adaptorch.cloud_plan_catalog.v1",
+                    "catalogVersion": "2026-11-24.starter-retired",
+                    "billingCycle": "monthly",
+                    "currency": "USD",
+                    "sourceOfTruth": ["src/adaptorch/plan_catalog.py"],
+                    "plans": [
+                        {
+                            "level": "pro",
+                            "name": "Pro",
+                            "positioning": "Active routing control",
+                            "monthly_price_usd": 39,
+                            "annual_price_usd": 397.8,
+                            "trial_days": 3,
+                            "monthly_calls": 200,
+                            "features": ["200 calls monthly"],
+                            "cta": "Start free trial",
+                            "internal_flag": True,
+                        }
+                    ],
+                    "notes": ["Open-source/self-host use remains free."],
+                }
+            )
+            return response
+
+    result = _call(RemoteMCPServer(CatalogTransport()), "tools/call", name="adaptorch_plan_catalog")
+    body = json.loads(result["result"]["content"][0]["text"])
+    plan = body["plans"][0]
+    assert plan["annual_price_usd"] == 397.8
+    assert plan["trial_days"] == 3
+    assert "internal_flag" not in plan
+
+
 def test_initialize_hides_upstream_server_identity() -> None:
     server = RemoteMCPServer(_Transport())
     response = _call(server, "initialize")

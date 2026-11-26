@@ -4,6 +4,35 @@ All notable changes to the AdaptOrch MCP wrapper are documented here. The wrappe
 delegates runtime behavior to the canonical `adaptorch` engine, so engine-level
 accuracy work is surfaced here as activation/configuration, not duplicated logic.
 
+## [adaptorch-mcp 0.6.3] — 2026-11-27
+
+### Added — engine algorithm wiring (`run-output.v1`, `run-generation.v1`, claim recheck, catalog parity)
+
+- Wire closed-schema projection and advertised `outputSchema` for optional
+  `adaptorch_get_run(..., include_output=True)` responses (`run-output.v1`), including
+  `run-generation.v1` bounded generation observations (`limit_observed`, `stop_observed`,
+  `unknown`), per-subtask display clipping fields (`display_truncated`, `returned_bytes`),
+  and model-reported `thought` with strict `is_evidence: false` enforcement. Malformed
+  optional `output` payloads drop to `null` without losing the run summary.
+- Wire opt-in `adaptorch_recheck_claim` forwarding when advertised by the authenticated
+  control plane, with closed argument validation (`claim`, `quotes`), submission-only BYOK
+  header forwarding, and closed receipt projection (`verdict`, `elapsed_ms`,
+  `input_tokens`, `output_tokens`). Offline discovery remains unchanged at nine core tools
+  plus authenticated routing.
+- Project `annual_price_usd` and `trial_days` in `adaptorch_plan_catalog` /
+  `adaptorch_capabilities` / `adaptorch://plans/cloud` while preserving backwards
+  compatibility with older catalog responses.
+- Sync offline discovery catalog (`remote_tool_catalog.json`) and Cursor/Grok/Kimi plugin
+  pins to `adaptorch-mcp==0.6.3`.
+
+### Documentation & SEO
+
+- Add measured `gpt-6-luna` 3-arm math benchmark comparison (`OFF` vs `VOTE x3` vs `ON`,
+  n=351 paired units) and Three.js 9-scene `OFF` vs `ON` render comparison tables with full
+  methodology and claim boundaries to root and package READMEs.
+- Upgrade GitHub/PyPI metadata, keywords, classifiers, heading hierarchy, and answer-first
+  FAQ sections for search and AI-answer discoverability.
+
 ## [adaptorch-client 0.1.7, adaptorch-cli 0.1.7, adaptorch-mcp 0.6.2] — 2026-11-15
 
 Published to PyPI from tags `adaptorch-client-v0.1.7`, `adaptorch-cli-v0.1.7` and

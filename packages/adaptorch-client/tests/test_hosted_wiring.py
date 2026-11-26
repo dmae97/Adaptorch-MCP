@@ -54,7 +54,7 @@ def hosted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[HostedFi
         local_admin_bootstrap=False,
     )
     cloud = CloudAuthService()
-    key, _ = cloud.create_api_key(tenant_id="sdk-fixture", plan_level="starter")
+    key, _ = cloud.create_api_key(tenant_id="sdk-fixture", plan_level="pro")
     app = create_control_plane_app(
         service=service, auth_token="test-admin", cloud_auth_service=cloud
     )

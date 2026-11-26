@@ -6,7 +6,7 @@
         "--python",
         "3.12",
         "--from",
-        "adaptorch-mcp==0.6.2",
+        "adaptorch-mcp==0.6.3",
         "adaptorch-mcp-client",
         "--transport",
         "stdio"

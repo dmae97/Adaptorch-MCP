@@ -85,7 +85,7 @@ def test_actual_verifier_flows_through_every_public_surface_without_changing_fai
         mark_abandoned_on_startup=False,
     )
     cloud = CloudAuthService()
-    key, _ = cloud.create_api_key(tenant_id="synthetic-tenant", plan_level="starter")
+    key, _ = cloud.create_api_key(tenant_id="synthetic-tenant", plan_level="pro")
     record = service.create_run(
         payload={"subtasks": [{"id": "synthetic", "description": "not executed"}]},
         tenant_id="synthetic-tenant",

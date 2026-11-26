@@ -1,11 +1,11 @@
 {
   "schema": "adaptorch-mcp.discovery-catalog/v1",
   "source": {
+    "descriptions": "lifecycle tool and argument descriptions synced with adaptorch engine (include_output + run-output.v1 / run-generation.v1 + Pro/Team catalog)",
     "engine_revision": "fe286c7e6545a1da5b19f2ecb16d38ea8bbd955b",
     "hosted_profile": "tenant /v1/mcp, evidence basis off, candidate verification off",
     "projection": "adaptorch_mcp.thin_remote tools/list projection",
-    "use": "unauthenticated stdio introspection only; configured clients list tools live",
-    "descriptions": "lifecycle tool and argument descriptions synced from engine commit 554dd1099 (dmae97/adaptorch#233); schemas unchanged"
+    "use": "unauthenticated stdio introspection only; configured clients list tools live"
   },
   "tools": [
     {
@@ -29,17 +29,17 @@
                 "boolean"
               ]
             },
-            "type": "object",
-            "description": "Optional flat key/value limits forwarded to the control plane with the run. Values must be numbers, strings or booleans; omit to use the plan defaults."
+            "description": "Optional flat key/value limits forwarded to the control plane with the run. Values must be numbers, strings or booleans; omit to use the plan defaults.",
+            "type": "object"
           },
           "connector_name": {
             "default": "mcp",
-            "type": "string",
-            "description": "Connector that turns prompt and context into a task payload and is recorded as the run's origin. adaptorch_capabilities lists the available connectors."
+            "description": "Connector that turns prompt and context into a task payload and is recorded as the run's origin. adaptorch_capabilities lists the available connectors.",
+            "type": "string"
           },
           "context": {
-            "type": "string",
-            "description": "Optional background for prompt, such as file excerpts or constraints. Used only together with prompt."
+            "description": "Optional background for prompt, such as file excerpts or constraints. Used only together with prompt.",
+            "type": "string"
           },
           "ensemble_members": {
             "description": "BYOK request-scoped ensemble fan-out: 2-5 'provider:model' members riding the process provider credential (ADAPTORCH_MCP_PROVIDER, ADAPTORCH_MCP_PROVIDER_MODEL, ADAPTORCH_MCP_PROVIDER_API_KEY). Quota: one run debits one unit regardless of member count; model token cost bills to the caller's own provider account.",
@@ -85,8 +85,8 @@
           },
           "poll_interval_seconds": {
             "default": 1.0,
-            "type": "number",
-            "description": "Seconds between status reads while waiting, greater than 0."
+            "description": "Seconds between status reads while waiting, greater than 0.",
+            "type": "number"
           },
           "prefer_ensemble_singleton": {
             "default": null,
@@ -97,8 +97,8 @@
             ]
           },
           "prompt": {
-            "type": "string",
-            "description": "Task instruction in plain language. Required unless payload is given; ignored when payload is present."
+            "description": "Task instruction in plain language. Required unless payload is given; ignored when payload is present.",
+            "type": "string"
           },
           "synthesis_mode": {
             "default": "robust",
@@ -115,13 +115,13 @@
           },
           "timeout_seconds": {
             "default": 120.0,
-            "type": "number",
-            "description": "Maximum seconds to wait, greater than 0. Ending the wait does not cancel the run."
+            "description": "Maximum seconds to wait, greater than 0. Ending the wait does not cancel the run.",
+            "type": "number"
           },
           "wait_for_terminal": {
             "default": true,
-            "type": "boolean",
-            "description": "true waits for a terminal status (up to timeout_seconds); false returns right after submission with the run_id."
+            "description": "true waits for a terminal status (up to timeout_seconds); false returns right after submission with the run_id.",
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -136,13 +136,18 @@
         "readOnlyHint": true,
         "title": "Get AdaptOrch run summary"
       },
-      "description": "Read the current summary of one existing run by run_id: status, timestamps, topology, synthesis mode used, artifact references and, when available, an advisory correctness_wall view. Read-only; safe to poll while a run is in progress or after adaptorch_run returned collection_status 'pending'. correctness_wall is observability, not a correctness proof. Use adaptorch_list_runs to find run IDs and adaptorch_get_artifacts for the files.",
+      "description": "Read the current summary of one existing run by run_id: status, timestamps, topology, synthesis mode used, artifact references and, when available, an advisory correctness_wall view. Read-only; safe to poll while a run is in progress or after adaptorch_run returned collection_status 'pending'. Set include_output to also return the answer, per-subtask outputs, bounded generation observations (run-generation.v1), and, on paid plans, the primary model's reported reasoning (run-output.v1). correctness_wall is observability, not a correctness proof. Use adaptorch_list_runs to find run IDs and adaptorch_get_artifacts for the files.",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "include_output": {
+            "default": false,
+            "description": "Also fetch the run's output (run-output.v1, including run-generation.v1 observations). Off by default to keep the response small.",
+            "type": "boolean"
+          },
           "run_id": {
-            "type": "string",
-            "description": "Run ID returned by adaptorch_run or listed by adaptorch_list_runs."
+            "description": "Run ID returned by adaptorch_run or listed by adaptorch_list_runs.",
+            "type": "string"
           }
         },
         "required": [
@@ -407,6 +412,256 @@
               "null"
             ]
           },
+          "output": {
+            "additionalProperties": false,
+            "properties": {
+              "ai_generated": {
+                "const": true
+              },
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "bytes": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "sha256": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "source": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "state",
+                  "text",
+                  "source"
+                ],
+                "type": "object"
+              },
+              "generation": {
+                "additionalProperties": false,
+                "properties": {
+                  "limit_events": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "schema_version": {
+                    "const": "run-generation.v1",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "const": "observed_usage_events",
+                    "type": "string"
+                  },
+                  "settlement_events": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "state": {
+                    "enum": [
+                      "limit_observed",
+                      "stop_observed",
+                      "unknown"
+                    ],
+                    "type": "string"
+                  },
+                  "stop_events": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "unknown_events": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "scope",
+                  "state",
+                  "settlement_events",
+                  "limit_events",
+                  "stop_events",
+                  "unknown_events"
+                ],
+                "type": "object"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "run_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "schema_version": {
+                "const": "run-output.v1",
+                "type": "string"
+              },
+              "status": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "subtasks": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "bytes": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "display_truncated": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "returned_bytes": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "text",
+                    "bytes",
+                    "truncated"
+                  ],
+                  "type": "object"
+                },
+                "maxItems": 256,
+                "type": "array"
+              },
+              "thought": {
+                "additionalProperties": false,
+                "properties": {
+                  "dropped_segments": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "is_evidence": {
+                    "const": false
+                  },
+                  "notice": {
+                    "type": "string"
+                  },
+                  "segments": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bytes": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "model": {
+                          "type": "string"
+                        },
+                        "provider": {
+                          "type": "string"
+                        },
+                        "reasoning_tokens": {
+                          "minimum": 0,
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "redactions": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "role": {
+                          "type": "string"
+                        },
+                        "source_field": {
+                          "type": "string"
+                        },
+                        "subtask_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "subtask_id",
+                        "role",
+                        "provider",
+                        "model",
+                        "source_field",
+                        "text",
+                        "bytes",
+                        "truncated",
+                        "redactions",
+                        "reasoning_tokens"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 256,
+                    "type": "array"
+                  },
+                  "state": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "const": "model_reported",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "visibility",
+                  "is_evidence",
+                  "segments",
+                  "dropped_segments",
+                  "notice"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "schema_version",
+              "run_id",
+              "status",
+              "model",
+              "answer",
+              "subtasks",
+              "thought",
+              "ai_generated"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "request_idempotency_key": {
             "type": [
               "string",
@@ -564,8 +819,8 @@
         "additionalProperties": false,
         "properties": {
           "run_id": {
-            "type": "string",
-            "description": "Run ID returned by adaptorch_run or listed by adaptorch_list_runs."
+            "description": "Run ID returned by adaptorch_run or listed by adaptorch_list_runs.",
+            "type": "string"
           }
         },
         "required": [
@@ -680,7 +935,7 @@
         "readOnlyHint": true,
         "title": "Read AdaptOrch cloud plan catalog"
       },
-      "description": "Return the current AdaptOrch hosted cloud plan catalog: Starter $0, Pro $39, Team $149.",
+      "description": "Return the current AdaptOrch hosted cloud plan catalog (Pro $39, Team $149; 3-day free trial, annual billing available).",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {},

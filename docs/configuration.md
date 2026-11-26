@@ -242,4 +242,4 @@ AdaptOrch MCP exposes the hosted cloud plan catalog via:
 - Resource: `adaptorch://plans/cloud`
 - Capability field: `cloud_plan_catalog`
 
-Current catalog: Starter `$0`, Pro `$39`, Team `$149`.
+Current catalog: Pro `$39`/mo (200 runs), Team `$149`/mo (1,000 runs); 3-day free trial and annual billing discount.

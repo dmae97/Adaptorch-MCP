@@ -27,15 +27,15 @@
 </p>
 
 <p align="center">
-  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white">
-  <img alt="MCP" src="https://img.shields.io/badge/MCP-stdio%20%7C%20HTTP-22d3ee?style=flat-square">
+  <a href="https://pypi.org/project/adaptorch-mcp/"><img alt="PyPI adaptorch-mcp 0.6.3" src="https://img.shields.io/badge/PyPI-adaptorch--mcp%200.6.3-0f766e?style=flat-square&logo=pypi&logoColor=white"></a>
+  <img alt="Python 3.11 and 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?style=flat-square&logo=python&logoColor=white">
+  <img alt="MCP stdio and HTTP" src="https://img.shields.io/badge/MCP-stdio%20%7C%20HTTP-22d3ee?style=flat-square">
   <img alt="License Proprietary" src="https://img.shields.io/badge/license-Proprietary-94a3b8?style=flat-square">
-  <img alt="Distribution migration pending" src="https://img.shields.io/badge/distribution-migration%20pending-yellow?style=flat-square">
   <a href="https://adaptorch.com"><img alt="Live on adaptorch.com" src="https://img.shields.io/badge/live-adaptorch.com-00d26a?style=flat-square"></a>
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
 </p>
 
-**AdaptOrch MCP** is the remote-only MCP adapter for [AdaptOrch](https://adaptorch.com). From Claude Code or another MCP client it submits work to the hosted control plane and returns available run status, bounded observations and artifact references. The private engine owns routing and execution on the server; it is not installed by this package. Trace access requires the explicit `full` profile; this adapter does not expose the research-only inference-tape replay API.
+**AdaptOrch MCP** (`adaptorch-mcp` 0.6.3) is the remote-only Model Context Protocol (MCP) server for [AdaptOrch](https://adaptorch.com) — bringing **DAG topology routing**, **multi-model LLM output synthesis**, **bounded generation observations (`run-generation.v1`)**, and **verifiable execution receipts** directly into Claude Code, Cursor, Codex, Gemini CLI, Windsurf, Kimi Code, and Grok. The private engine owns routing and execution on the server; it is not installed by this package. Trace access requires the explicit `full` profile; this adapter does not expose the research-only inference-tape replay API.
 
 Use it when your coding agent says a patch works and you want the receipt before you merge, or when a task is too large, too ambiguous, or too expensive to trust to one single-pass response. The [AI-generated patch verification guide](https://adaptorch.com/ai-generated-patch-verification/) shows how to use evidence when reviewing a proposed change.
 
@@ -246,24 +246,74 @@ is separate from a PyPI release; see the [source install and BYOK example](packa
 
 ### 3. This package — remote MCP client
 
-`adaptorch-mcp` 0.6.0 is a remote client over the hosted endpoint above; it depends
+`adaptorch-mcp` 0.6.3 is a remote client over the hosted endpoint above; it depends
 only on `adaptorch-client` and never installs or imports the private engine.
 
 ```bash
-uvx --python 3.12 --from adaptorch-mcp==0.6.2 adaptorch-mcp-client --help
+uvx --python 3.12 --from adaptorch-mcp==0.6.3 adaptorch-mcp-client --help
 ```
 
-## Why Claude Code users feel it quickly
+## Why Claude Code and coding-agent teams use AdaptOrch MCP
+
+AdaptOrch MCP turns a single opaque model call into an inspectable routed run with closed-schema receipts, generation-limit visibility, and artifact references.
 
 | First-run win | Tool | What changes in the chat |
 | --- | --- | --- |
-| Less proof ambiguity | `adaptorch_get_run` | Claude can inspect a bounded Correctness Wall view without exposing selector internals or treating `PASS` as a proof. |
-| Multi-step execution | `adaptorch_run` | Delegate the task to the engine's routing and synthesis path, then inspect its reported outcome. |
+| Less proof ambiguity | `adaptorch_get_run` | Inspect a bounded Correctness Wall view plus optional `run-output.v1` / `run-generation.v1` generation-limit observations (`include_output=true`) without exposing selector internals or treating `PASS` as a proof. |
+| Multi-step execution | `adaptorch_run` | Delegate a prompt or subtask DAG to the engine's topology routing and synthesis path, then inspect its reported outcome. |
+| Quote-bound claim recheck | `adaptorch_recheck_claim` | Opt-in BYOK claim recheck against only the supplied quotes when advertised by the authenticated control plane. |
 | Artifact discovery | `adaptorch_get_artifacts` | Retrieve available artifact references without treating them as a correctness proof. |
-| Safer setup support | `adaptorch-mcp-doctor` | Users can paste redacted diagnostics without leaking tokens. |
-| Fast install loop | `adaptorch-mcp-smoke` | Local MCP wiring is verified with `initialize` + `tools/list`. |
+| Safer setup support | `adaptorch-mcp-doctor` | Paste redacted diagnostics without leaking tokens. |
+| Fast install loop | `adaptorch-mcp-smoke` | Verify local MCP wiring with `initialize` + `tools/list`. |
 
-## Measured: a directional paired result, with failed gates
+## Measured benchmarks
+
+### 1. GPT LUNA (`gpt-6-luna`) — Math accuracy vs 3x majority vote
+
+AdaptOrch ON reaches **69.5% pooled accuracy** across AIME 2025, AIME 2026, and HMMT Feb 2025 (`n = 351` paired units), outperforming both single-call OFF (**+14.0 pp**) and 3x majority voting (**+12.3 pp**) while using **5.2% fewer tokens than 3x voting** (`3,227` vs `3,405 tok/Q`).
+
+<p align="center">
+  <a href="https://adaptorch.com"><img src="assets/benchmark-gpt-luna-three-arm.png" alt="AdaptOrch GPT LUNA three-arm math benchmark comparison across AIME 2025, AIME 2026, and HMMT Feb 2025: OFF 55.6%, VOTE x3 57.3%, AdaptOrch ON 69.5% with fewer tokens than voting" width="100%"></a>
+</p>
+
+| Benchmark | Type | n | OFF (1 call) | VOTE x3 (3 calls + majority) | AdaptOrch ON (ensemble of 3 + vote) | ON - OFF | ON - VOTE | OFF tok/Q | VOTE tok/Q | ON tok/Q |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| AIME 2025 | Math | 111 | 57.7% | 58.6% | **73.9%** | +16.2 pp | +15.3 pp | 1,110 | 3,308 | **3,129** |
+| AIME 2026 | Math | 120 | 65.8% | 67.5% | **78.3%** | +12.5 pp | +10.8 pp | 1,095 | 3,182 | **3,076** |
+| HMMT Feb 2025 | Math | 120 | 43.3% | 45.8% | **56.7%** | +13.3 pp | +10.8 pp | 1,188 | 3,719 | **3,468** |
+| **All benchmarks (Pooled)** | **Pooled** | **351** | **55.6%** | **57.3%** | **69.5%** | **+14.0 pp** | **+12.3 pp** | **1,132** | **3,405** | **3,227** |
+
+- **Per-problem wins (90 problems):** ON vs OFF — ON better **35**, OFF better **4** (`sign test p = 3.35e-07`, unit McNemar `p = 2.63e-09`). ON vs VOTE x3 — ON better **33**, VOTE better **8** (`sign test p = 0.000112`, unit McNemar `p = 8.91e-07`).
+- **Wilson 95% CI (n = 351):** OFF `50.3%–60.7%`, VOTE x3 `52.0%–62.3%`, ON `64.5%–74.1%`. On all `n = 360` complete ON/OFF units, OFF is `55.8%` vs ON `69.7%` (`+13.9 pp`, McNemar `p = 1.55e-09`, `1,129` vs `3,221 tok/Q`).
+
+> Scope (2026-11-23): `gpt-6-luna` (requested model ID, Codex OAuth, default sampling; provider did not attest the served model), 90 problems x 4 runs planned. `VOTE x3` runs 3 fresh direct calls per unit requiring 2 equivalent final answers (no majority on 131 complete units; 9/360 units excluded from all arms for missing direct samples). OFF and ON are historical runs; ON includes recovered no-answer timeouts with both attempts' tokens counted. Not an official leaderboard result.
+
+### 2. Three.js WebGL scenes — OFF (1 direct call) vs AdaptOrch ON
+
+Across 9 interactive Three.js 3D scenes featured on [adaptorch.com](https://adaptorch.com), AdaptOrch ON (`draft -> review -> final`, `sequential` routing + `robust` synthesis) achieved **9/9 zero-error WebGL renders** versus **7/9 for single-call OFF** at `2.65x` output tokens and `2.78x` call time.
+
+| Metric | OFF (1 direct call) | AdaptOrch ON (`draft -> review -> final`) |
+| --- | --- | --- |
+| Zero-error browser renders | **7 / 9** | **9 / 9** |
+| Model calls | 9 | 27 |
+| Total output tokens | 135,557 | 359,102 (2.65x) |
+| Total call wall time | 4,823 s | 13,409 s (2.78x) |
+
+| Scene | OFF errors | ON errors | OFF out tok | ON out tok | Observed OFF vs ON outcome |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `threejs-voxel-world` (landing featured) | **1** | **0** | 15,075 | 52,376 | OFF sky shader failed to compile (`patch` GLSL reserved word); ON rendered full sky, clouds, lake, compass, and terrain minimap |
+| `threejs-black-hole` (landing featured) | 0 | 0 | 14,190 | 44,587 | OFF basic accretion ring with 3 minimal footer buttons; ON review caught 7 defects with stronger Doppler lensing and speed/Doppler HUD |
+| `threejs-medieval-village` (landing featured) | 0 | 0 | 30,354 | 71,396 | OFF flat circular pond and clipped shoreline; ON review caught 9 defects with winding reflective river, bridge, and dusk mist |
+| `threejs-rubik-cstech` | **2** | **0** | 10,860 | 30,055 | OFF returned a build script instead of HTML (`THREE is not defined`, 0 canvases); ON rendered valid interactive WebGL canvas |
+| `threejs-rubik-iaen` | 0 | 0 | 16,279 | 41,565 | Both 0 errors (1 canvas); OFF still loading at 15 s, confirmed rendered at 60 s |
+| `threejs-self-building-city` | 0 | 0 | 14,471 | 35,636 | Both 0 errors; OFF still loading at 15 s (confirmed rendered at 60 s); ON ready with 1 canvas |
+| `threejs-planet-scene` | 0 | 0 | 14,015 | 34,678 | Both 0 errors (1 canvas) |
+| `threejs-solar-system` | 0 | 0 | 6,534 | 19,188 | Both 0 errors (1 canvas) |
+| `threejs-spiral-galaxy` | 0 | 0 | 13,779 | 29,621 | Both 0 errors (2 canvases) |
+
+> Scope (2026-11-24): Local AdaptOrch engine (`run_task`, 3-node `draft -> review -> final`, `sequential` + `robust`, 0 reroutes, 9/9 `OK`); headless Chrome + SwiftShader software WebGL (screenshots at 45 s on [adaptorch.com](https://adaptorch.com), 15 s/60 s checks in source records), 1 run per prompt. Not a blind quality evaluation and not an official leaderboard result.
+
+### 3. Synthetic paired ledger regression (directional, failed gates)
 
 <p align="center">
   <a href="https://adaptorch.com"><img src="assets/benchmark-paired-banner.svg" alt="AdaptOrch measured paired run — baseline 86.7% vs verified 100.0% on 30 shared ledger tasks, +13.3pp, 95% CI [+3.3, +26.7]" width="100%"></a>
@@ -289,8 +339,7 @@ The aggregate verdict and predefined family gate **did not pass**. The public
 > third-party benchmark.
 
 Run your own workload through the hosted kernel at
-**[adaptorch.com](https://adaptorch.com)** — the $0 Starter plan includes an API key
-and 50 admitted runs/month. BYOK provider usage is billed separately;
+**[adaptorch.com](https://adaptorch.com)** — Pro (`$39`/mo, 200 runs) and Team (`$149`/mo, 1,000 runs) include a 3-day free trial and annual billing discount. BYOK provider usage is billed separately;
 confirm current limits in the [plan catalog](https://adaptorch.com/v1/plans).
 
 ## Scenario benchmark projection
@@ -536,16 +585,17 @@ validating a specific hosted/core release.
 | Tool | Purpose |
 | --- | --- |
 | `adaptorch_run` | Submit an AdaptOrch task payload and optionally wait. |
-| `adaptorch_get_run` | Read a run summary and its optional bounded Correctness Wall view by `run_id`. |
+| `adaptorch_get_run` | Read a run summary, optional bounded Correctness Wall view, and optional `run-output.v1` / `run-generation.v1` output (`include_output=true`) by `run_id`. |
 | `adaptorch_get_artifacts` | Read artifact metadata for a run. |
 | `adaptorch_list_runs` | List recent runs. |
 | `adaptorch_get_traces` | Read execution traces (`full` profile only). |
 | `adaptorch_cancel_run` | Request run cancellation (write/destructive; keep manually approved). |
-| `adaptorch_route_topology` | Locally route a DAG through AdaptOrch's topology router (`full` profile only). |
+| `adaptorch_route_topology` | Route a DAG through AdaptOrch's topology router and price the routed topology against the baseline (authenticated hosted advice in thin remote; local oracle in `full` profile only). |
+| `adaptorch_recheck_claim` | Opt-in BYOK claim recheck against only the supplied quotes when advertised by the authenticated control plane. |
 | `adaptorch_server_metrics` | Read redacted MCP server metrics. |
-| `adaptorch_capabilities` | Read synthesis modes, topologies, extractors, verifier/VERA vocabularies, connectors, and server features. |
+| `adaptorch_capabilities` | Read synthesis modes, topologies, extractors, verifier/VERA vocabularies, connectors, server features, and plan catalog. |
 | `adaptorch_usage` | Read the calling tenant's usage window (plan level, period, used, limit, remaining, percentage). |
-| `adaptorch_plan_catalog` | Read hosted plan catalog: Starter `$0`, Pro `$39`, Team `$149`. |
+| `adaptorch_plan_catalog` | Read hosted plan catalog (Pro `$39`/mo, Team `$149`/mo; 3-day free trial, annual discount). |
 
 The default `remote` profile exposes the nine tools other than `adaptorch_get_traces` and `adaptorch_route_topology`. The engine's read-only `adaptorch_navigate_evidence` (fixed evidence-pack navigation, `algorithm_version` defaulting to `graph_v5`) is likewise `full`-profile only. `adaptorch_get_run` publishes a closed `outputSchema` and safe `structuredContent`; its optional `correctness_wall` is advisory observability, not a correctness proof, selector decision, or apply authorization.
 
@@ -591,6 +641,29 @@ approval. Only then follow `docs/publishing.md` for the applicable public packag
 ## Security
 
 Never commit `.env`, API keys, bearer tokens, private keys, or MCP client tokens. See `SECURITY.md`.
+
+
+## Frequently asked questions
+
+### What is AdaptOrch MCP?
+
+AdaptOrch MCP (`adaptorch-mcp`) is a remote-only Python Model Context Protocol (MCP) server that connects AI coding clients (Claude Code, Cursor, Codex, Gemini CLI, Windsurf, Kimi Code, Grok) to the hosted AdaptOrch control plane for DAG topology routing, multi-model synthesis, and verifiable execution receipts.
+
+### Does `adaptorch-mcp` install or run the private AdaptOrch engine locally?
+
+No. Since version `0.6.0`, `adaptorch-mcp` depends only on the standard-library `adaptorch-client` SDK and forwards validated JSON-RPC calls to `POST /v1/mcp` over HTTPS without bundling or importing private engine code.
+
+### How does `include_output=true` distinguish token-limit truncation from display clipping?
+
+`adaptorch_get_run(..., include_output=True)` returns `run-output.v1` with a separate `generation` block (`run-generation.v1`: `limit_observed`, `stop_observed`, or `unknown`) alongside per-subtask `display_truncated` and `returned_bytes`, so 64 KiB display clipping is never confused with provider `length`/`max_tokens` stops.
+
+### How are BYOK provider credentials handled?
+
+Provider keys are kept in the local MCP process environment, omitted from MCP tool schemas and JSON request bodies, redacted from errors, and forwarded only as run-submission headers on billable `adaptorch_run` and `adaptorch_recheck_claim` calls.
+
+## Support and issues
+
+Report bugs, integration questions, or MCP client compatibility notes in [GitHub Issues](https://github.com/dmae97/Adaptorch-MCP/issues), check [adaptorch.com/mcp-docs](https://adaptorch.com/mcp-docs), or run `adaptorch-mcp-doctor --json` to generate redacted diagnostics before filing a ticket.
 
 ## License
 

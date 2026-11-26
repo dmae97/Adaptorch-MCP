@@ -4,7 +4,7 @@
 
 ```bash
 pip install adaptorch-mcp
-uvx --from "adaptorch-mcp==0.6.2" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.3" adaptorch-mcp-client --help
 ```
 
 ## Package dependency order
@@ -54,8 +54,8 @@ artifact:
 
 ```bash
 uv run --no-sync python -m build packages/adaptorch-mcp --outdir dist
-sha256sum dist/adaptorch_mcp-0.6.2-py3-none-any.whl
-uv tool install --force dist/adaptorch_mcp-0.6.2-py3-none-any.whl
+sha256sum dist/adaptorch_mcp-0.6.3-py3-none-any.whl
+uv tool install --force dist/adaptorch_mcp-0.6.3-py3-none-any.whl
 ```
 
 Run `adaptorch-mcp-smoke` afterward and require the default remote surface to contain exactly nine tools. Do not use a deleted temporary source directory as the uv receipt origin.
@@ -86,7 +86,7 @@ The preferred public release path is GitHub Actions Trusted Publishing:
 1. Create the PyPI project `adaptorch-mcp`.
 2. In PyPI, add a trusted publisher for this repository.
 3. Require the GitHub `pypi` environment.
-4. Tag a release like `adaptorch-mcp-v0.6.2`.
+4. Tag a release like `adaptorch-mcp-v0.6.3`.
 5. Let `.github/workflows/publish.yml` build and publish without storing a PyPI API token.
 
 ## One workflow, four packages
@@ -113,10 +113,10 @@ uv run python scripts/check_public_wheels.py --package adaptorch adaptorch-clien
 ## Post-publish smoke
 
 ```bash
-uvx --from "adaptorch-mcp==0.6.2" adaptorch-mcp-client --help
-uvx --from "adaptorch-mcp==0.6.2" adaptorch-mcp-doctor --json
+uvx --from "adaptorch-mcp==0.6.3" adaptorch-mcp-client --help
+uvx --from "adaptorch-mcp==0.6.3" adaptorch-mcp-doctor --json
 ADAPTORCH_CONTROL_PLANE_TOKEN="<token>" \
-  uvx --from "adaptorch-mcp==0.6.2" adaptorch-mcp-smoke --base-url https://adaptorch.com
+  uvx --from "adaptorch-mcp==0.6.3" adaptorch-mcp-smoke --base-url https://adaptorch.com
 ```
 
 Expected MCP tools include `adaptorch_plan_catalog`. For HTTP, also verify `/mcp/health`, `initialize`, and `tools/list` with a client-facing `ADAPTORCH_MCP_HTTP_AUTH_TOKEN`.
