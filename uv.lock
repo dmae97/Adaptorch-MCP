@@ -63,7 +63,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "adaptorch-mcp"
-version = "0.6.2"
+version = "0.6.3"
 source = { editable = "packages/adaptorch-mcp" }
 dependencies = [
     { name = "adaptorch-client" },

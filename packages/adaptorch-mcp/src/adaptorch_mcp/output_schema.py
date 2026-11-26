@@ -17,7 +17,7 @@ from adaptorch_mcp.discovery_output import project_server_info as project_server
 from adaptorch_mcp.first_run_receipt_output import project_first_run_receipt
 from adaptorch_mcp.orchestration_value_output import project_orchestration_value
 from adaptorch_mcp.projection_values import project_scalars as _project_scalars
-from adaptorch_mcp.run_output import project_run_scalars
+from adaptorch_mcp.run_output import project_run_output, project_run_scalars
 from adaptorch_mcp.verification_diagnostic_output import (
     VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION,
     project_verification_diagnostics,
@@ -314,6 +314,8 @@ def _project_get_run(value: Mapping[str, Any]) -> dict[str, Any] | None:
         return None
     if "correctness_wall" in value:
         projected["correctness_wall"] = project_correctness_wall(value["correctness_wall"])
+    if "output" in value:
+        projected["output"] = project_run_output(value["output"])
     return projected
 
 
@@ -439,9 +441,24 @@ def _project_usage(value: Mapping[str, Any]) -> dict[str, Any] | None:
     return _project_scalars(value, keys)
 
 
+def _project_claim(value: Mapping[str, Any]) -> dict[str, Any] | None:
+    verdict = value.get("verdict")
+    if verdict not in ("supported", "partial", "unsupported", "unknown"):
+        return None
+    fields = ("elapsed_ms", "input_tokens", "output_tokens")
+    for key in fields:
+        n = value.get(key)
+        if key != "elapsed_ms" and key in value and n is None:
+            continue
+        if type(n) is not int or n < 0:
+            return None
+    return {"verdict": verdict, **{key: value[key] for key in fields}}
+
+
 _Projector = Callable[[Mapping[str, Any]], dict[str, Any] | None]
 _PROJECTORS: Final[dict[str, _Projector]] = {
     "adaptorch_run": _project_run,
+    "adaptorch_recheck_claim": _project_claim,
     "adaptorch_get_run": _project_get_run,
     "adaptorch_get_artifacts": _project_artifacts,
     "adaptorch_list_runs": _project_run_list,

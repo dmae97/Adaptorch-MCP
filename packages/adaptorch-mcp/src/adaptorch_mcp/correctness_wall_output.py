@@ -5,7 +5,7 @@ from typing import Any, Final
 
 from adaptorch_mcp.first_run_receipt_output import first_run_receipt_output_schema
 from adaptorch_mcp.run_output import RUN_SCALAR_KEYS as RUN_SCALAR_KEYS
-from adaptorch_mcp.run_output import run_scalar_schema
+from adaptorch_mcp.run_output import run_output_payload_schema, run_scalar_schema
 from adaptorch_mcp.verification_diagnostic_output import (
     VERIFICATION_DIAGNOSTICS_SCHEMA_VERSION,
     verification_diagnostics_schema,
@@ -133,6 +133,7 @@ def get_run_output_schema() -> dict[str, Any]:
     }
     properties["correctness_wall"] = correctness_wall_output_schema()
     properties["first_run_receipt"] = first_run_receipt_output_schema()
+    properties["output"] = run_output_payload_schema()
     return {
         "type": "object",
         "additionalProperties": False,

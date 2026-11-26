@@ -32,8 +32,13 @@ REMOTE_TOOL_NAMES: Final = (
 )
 CANDIDATE_TOOL_NAMES: Final = ("adaptorch_verify_candidate", "adaptorch_get_verification_report")
 ROUTING_TOOL_NAMES: Final = ("adaptorch_route_topology",)
+RECHECK_TOOL: Final = "adaptorch_recheck_claim"
 _REMOTE_ACCEPTED_TOOLS: Final = (
-    REMOTE_TOOL_NAMES + CANDIDATE_TOOL_NAMES + AUDIT_TOOL_NAMES + ROUTING_TOOL_NAMES
+    REMOTE_TOOL_NAMES
+    + CANDIDATE_TOOL_NAMES
+    + AUDIT_TOOL_NAMES
+    + ROUTING_TOOL_NAMES
+    + (RECHECK_TOOL,)
 )
 _REMOTE_RESOURCES: Final = frozenset({"adaptorch://server-info", "adaptorch://plans/cloud"})
 _FORWARD_METHODS: Final = frozenset(
@@ -169,6 +174,19 @@ class RemoteMCPServer:
         tool_name = self._tool_name(message) if method == "tools/call" else None
         if method == "tools/call" and tool_name not in _REMOTE_ACCEPTED_TOOLS:
             return _error(message, -32601, "Method not found")
+        if tool_name == RECHECK_TOOL:
+            args = _arguments(message)
+            if (
+                set(args) != {"claim", "quotes"}
+                or not isinstance(args["claim"], str)
+                or not args["claim"].strip()
+                or not (
+                    isinstance(args["quotes"], list)
+                    and 1 <= len(args["quotes"]) <= 8
+                    and all(isinstance(q, str) and bool(q.strip()) for q in args["quotes"])
+                )
+            ):
+                return _error(message, -32602, "Invalid tool arguments")
         if tool_name == "adaptorch_run" and not self._valid_run_arguments(message):
             return _error(message, -32602, "Invalid tool arguments")
         if tool_name in AUDIT_TOOL_NAMES and not valid_audit_arguments(
@@ -228,7 +246,8 @@ class RemoteMCPServer:
     ) -> dict[str, Any]:
         if self._transport is None:
             raise ParentContractError("discovery mode has no remote transport")
-        credential = self._provider_credential if tool_name == "adaptorch_run" else None
+        billable = tool_name in ("adaptorch_run", RECHECK_TOOL)
+        credential = self._provider_credential if billable else None
         response = self._transport.request(
             RequestSpec(
                 "POST",

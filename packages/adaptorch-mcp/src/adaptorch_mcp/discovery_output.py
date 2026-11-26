@@ -8,7 +8,17 @@ from typing import Any, Final
 from adaptorch_mcp.projection_values import project_scalars, project_string_list
 
 _PLAN_SCALAR_KEYS: Final = frozenset(
-    {"level", "name", "positioning", "monthly_price_usd", "monthly_calls", "badge", "cta"}
+    {
+        "level",
+        "name",
+        "positioning",
+        "monthly_price_usd",
+        "annual_price_usd",
+        "trial_days",
+        "monthly_calls",
+        "badge",
+        "cta",
+    }
 )
 
 

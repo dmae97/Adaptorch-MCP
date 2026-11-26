@@ -52,7 +52,7 @@ def test_sdk_and_mcp_reach_plan_without_migrating_credentials(
     monkeypatch.setenv("ADAPTORCH_HOSTED", "true")
     monkeypatch.setattr(providers, "_CLIENT_POOL", {})
     cloud = CloudAuthService()
-    tenant_key, _ = cloud.create_api_key(tenant_id="plan-test", plan_level="starter")
+    tenant_key, _ = cloud.create_api_key(tenant_id="plan-test", plan_level="pro")
     service = ControlPlaneService(artifact_root=tmp_path / "artifacts", local_admin_bootstrap=False)
     app = create_control_plane_app(
         service=service,

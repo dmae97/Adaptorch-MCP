@@ -4,14 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptorch-mcp"
-version = "0.6.2"
-description = "Installable MCP bridge for AdaptOrch"
+version = "0.6.3"
+description = "Remote-only Model Context Protocol (MCP) server for AdaptOrch — DAG task routing, multi-model synthesis, and verifiable execution receipts"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE"]
 authors = [{ name = "ClassicMate" }]
-keywords = ["mcp", "model-context-protocol", "adaptorch", "agent-orchestration"]
+keywords = [
+  "mcp",
+  "model-context-protocol",
+  "adaptorch",
+  "agent-orchestration",
+  "multi-agent",
+  "dag-routing",
+  "llm-synthesis",
+  "claude-code",
+  "cursor",
+  "codex",
+  "ai-code-review",
+  "ai-verification",
+  "evidence-receipts",
+  "byok",
+]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -19,7 +34,9 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Quality Assurance",
   "Typing :: Typed",
 ]
 dependencies = ["adaptorch-client>=0.1.7,<0.2"]
@@ -34,8 +51,10 @@ dev = [
 [project.urls]
 Homepage = "https://adaptorch.com"
 Repository = "https://github.com/dmae97/Adaptorch-MCP"
-Issues = "https://github.com/dmae97/Adaptorch-MCP/issues"
 Documentation = "https://adaptorch.com/mcp-docs"
+Changelog = "https://github.com/dmae97/Adaptorch-MCP/blob/main/CHANGELOG.md"
+Paper = "https://arxiv.org/abs/2602.16873"
+Issues = "https://github.com/dmae97/Adaptorch-MCP/issues"
 
 [project.scripts]
 adaptorch-mcp = "adaptorch_mcp.cli:main"
