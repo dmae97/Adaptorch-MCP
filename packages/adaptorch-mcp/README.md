@@ -13,7 +13,11 @@ The package forwards a restricted MCP surface to the hosted control plane over a
 
 ## Benchmarks (measured)
 
+Interactive Three.js OFF vs ON drag-wipe comparator and live benchmark data: **[adaptorch.com/#proof](https://adaptorch.com/#proof)** · **[adaptorch.com/#onoff-bench](https://adaptorch.com/#onoff-bench)**.
+
 ### GPT LUNA (`gpt-6-luna`) — Math accuracy vs 3x majority vote (`n = 351` paired units)
+
+![AdaptOrch.com measured proof dashboard](https://raw.githubusercontent.com/dmae97/Adaptorch-MCP/main/assets/onoff-bench-h2h.svg)
 
 | Benchmark | n | OFF (1 call) | VOTE x3 | AdaptOrch ON | ON - OFF | ON - VOTE | OFF tok/Q | VOTE tok/Q | ON tok/Q |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -31,7 +35,7 @@ Per-problem sign tests (90 problems): ON vs OFF **35–4** (`p = 3.35e-07`); ON 
 | Zero-error renders | **7 / 9** | **9 / 9** |
 | Output tokens / wall time | 135,557 tok / 4,823 s | 359,102 tok (2.65x) / 13,409 s (2.78x) |
 
-OFF failed on `threejs-voxel-world` (GLSL reserved word `patch` shader crash) and `threejs-rubik-cstech` (`THREE is not defined` build script instead of HTML); AdaptOrch ON rendered **9/9 scenes with 0 browser errors** (headless Chrome + SwiftShader software WebGL, 1 run per prompt; not a blind quality evaluation). Full 9-scene table in the [repository README](https://github.com/dmae97/Adaptorch-MCP#measured-benchmarks).
+OFF failed on `threejs-voxel-world` (GLSL reserved word `patch` shader crash) and `threejs-rubik-cstech` (`THREE is not defined` build script instead of HTML); AdaptOrch ON rendered **9/9 scenes with 0 browser errors** (headless Chrome + SwiftShader software WebGL, 1 run per prompt; not a blind quality evaluation). Side-by-side OFF vs ON screenshots and full 9-scene table in the [repository README](https://github.com/dmae97/Adaptorch-MCP#2-threejs-webgl-scenes--off-1-direct-call-vs-adaptorch-on) and live at [adaptorch.com/#proof](https://adaptorch.com/#proof).
 
 ## Install
 
