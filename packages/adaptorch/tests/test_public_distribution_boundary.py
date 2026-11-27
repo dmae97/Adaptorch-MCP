@@ -43,7 +43,11 @@ def test_public_gate_rejects_core_dependency_or_relocated_code(
     assert "PASS" not in result.stdout
 
 
-def _gate(tmp_path: Path, distribution: str, files: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def _gate(
+    tmp_path: Path,
+    distribution: str,
+    files: dict[str, str],
+) -> subprocess.CompletedProcess[str]:
     wheel = tmp_path / "candidate.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
         for name, source in files.items():
@@ -72,7 +76,13 @@ def test_public_gate_rejects_module_level_engine_import(tmp_path: Path) -> None:
 
 
 def test_public_gate_allows_guarded_function_level_engine_probe(tmp_path: Path) -> None:
-    probe = "def probe():\n    try:\n        import adaptorch.hosted_hint\n    except ImportError:\n        return None\n"
+    probe = (
+        "def probe():\n"
+        "    try:\n"
+        "        import adaptorch.hosted_hint\n"
+        "    except ImportError:\n"
+        "        return None\n"
+    )
     result = _gate(tmp_path, "adaptorch-mcp", {"adaptorch_mcp/doctor.py": probe})
 
     assert result.returncode == 0, result.stdout + result.stderr

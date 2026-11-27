@@ -25,6 +25,7 @@ _PROVIDER_KEY_ENVS = {
     "workbuddy": "WORKBUDDY_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
     "commandcode": "COMMANDCODE_API_KEY",
+    "devin": "DEVIN_SESSION_TOKEN",
 }
 
 

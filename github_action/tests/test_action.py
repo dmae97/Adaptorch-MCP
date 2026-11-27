@@ -135,11 +135,25 @@ class ActionTest(unittest.TestCase):
         headers = {key.lower(): value for key, value in self.server.requests[0][2].items()}
         self.assertEqual(headers["idempotency-key"], IDEMPOTENCY)
         self.assertEqual(headers["x-provider-key"], PROVIDER_KEY)
-        self.assertEqual(json.loads(self.server.requests[0][3])["global_context"], "Private context")
+        self.assertEqual(
+            json.loads(self.server.requests[0][3])["global_context"],
+            "Private context",
+        )
         for _, _, headers, _ in self.server.requests[1:]:
             self.assertFalse(any(key.lower().startswith("x-provider") for key in headers))
-        visible = process.stdout + process.stderr + self.summary.read_text() + self.output.read_text()
-        for secret in (TOKEN, PROVIDER_KEY, "Private task contents", "Private context", "private output"):
+        visible = (
+            process.stdout
+            + process.stderr
+            + self.summary.read_text()
+            + self.output.read_text()
+        )
+        for secret in (
+            TOKEN,
+            PROVIDER_KEY,
+            "Private task contents",
+            "Private context",
+            "private output",
+        ):
             self.assertNotIn(secret, visible)
 
     def test_required_verification_does_not_treat_execution_as_pass(self) -> None:

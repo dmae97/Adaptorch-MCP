@@ -173,7 +173,7 @@ def test_auto_provider_docs_name_exactly_the_engine_key_variables() -> None:
     engine_key_envs = set(DEFAULT_API_KEY_ENV.values())
     assert set(auto_provider_key_envs()) == engine_key_envs
 
-    provider_key_pattern = re.compile(r"\b[A-Z][A-Z0-9_]*_API_KEY\b")
+    provider_key_pattern = re.compile(r"\b[A-Z][A-Z0-9_]*_(?:API_KEY|SESSION_TOKEN)\b")
     for path in (
         REPO_ROOT / "README.md",
         PACKAGE_ROOT / "README.md",
