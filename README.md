@@ -33,6 +33,7 @@
   <img alt="License Proprietary" src="https://img.shields.io/badge/license-Proprietary-94a3b8?style=flat-square">
   <a href="https://adaptorch.com"><img alt="Live on adaptorch.com" src="https://img.shields.io/badge/live-adaptorch.com-00d26a?style=flat-square"></a>
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
+  <a href="https://glama.ai/mcp/connectors/io.github.dmae97/adaptorch-mcp"><img alt="AdaptOrch MCP connector on Glama" src="https://glama.ai/mcp/connectors/io.github.dmae97/adaptorch-mcp/badges/score.svg"></a>
 </p>
 
 **AdaptOrch MCP** (`adaptorch-mcp` 0.6.3) is the remote-only Model Context Protocol (MCP) server for [AdaptOrch](https://adaptorch.com) — bringing **DAG topology routing**, **multi-model LLM output synthesis**, **bounded generation observations (`run-generation.v1`)**, and **verifiable execution receipts** directly into Claude Code, Cursor, Codex, Gemini CLI, Windsurf, Kimi Code, and Grok. The private engine owns routing and execution on the server; it is not installed by this package. Trace access requires the explicit `full` profile; this adapter does not expose the research-only inference-tape replay API.
