@@ -22,7 +22,7 @@ members = [
 ]
 
 [tool.uv.sources]
-adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "7452bdf5c6bbde342c62bf022eb2e2d70b8233ac" }
+adaptorch = { git = "https://github.com/dmae97/adaptorch.git", rev = "547beb035c8730125fc90fa1a5d585c928b2ea31" }
 adaptorch-client = { workspace = true }
 
 [tool.ruff]
