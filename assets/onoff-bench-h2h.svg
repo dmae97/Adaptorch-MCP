@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="580" viewBox="0 0 1200 580" role="img" aria-label="AdaptOrch ON vs OFF and VOTE x3 benchmark summary from adaptorch.com: 69.5 percent pooled math accuracy (+14.0pt vs OFF, +12.3pt vs VOTE x3), 3227 tokens per question (-5.2 percent vs VOTE x3), per-problem wins 35 vs 4 and 33 vs 8, and 9/9 Three.js zero-error renders vs 7/9 OFF">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141425"/>
+      <stop offset="1" stop-color="#1a1a2e"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#2a2a45" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="580" fill="url(#bg)"/>
+  <rect width="1200" height="580" fill="url(#grid)" opacity="0.5"/>
+  <rect x="6" y="6" width="1188" height="568" fill="none" stroke="#00d26a" stroke-opacity="0.35" stroke-width="2" rx="14"/>
+
+  <!-- Header -->
+  <text x="44" y="54" font-family="ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#00d26a">ADAPTORCH.COM · MEASURED PROOF · gpt-6-luna (n=351) &amp; THREE.JS (9 SCENES)</text>
+  <text x="44" y="84" font-family="ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace" font-size="24" font-weight="700" fill="#EDE6D6">Outperforms single-call OFF &amp; 3x majority vote — with fewer tokens than voting</text>
+
+  <!-- CTA pill -->
+  <a href="https://adaptorch.com/#onoff-bench">
+    <rect x="942" y="34" width="214" height="42" rx="21" fill="#00d26a"/>
+    <text x="971" y="60" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="16" font-weight="700" fill="#101021">adaptorch.com &#8594;</text>
+  </a>
+
+  <!-- 4 KPI Cards -->
+  <g font-family="ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace">
+    <!-- Card 1 -->
+    <rect x="44" y="106" width="268" height="106" rx="10" fill="#101021" fill-opacity="0.82" stroke="#f97316" stroke-opacity="0.65"/>
+    <text x="62" y="148" font-size="34" font-weight="700" fill="#f97316">69.5%</text>
+    <rect x="190" y="124" width="108" height="24" rx="12" fill="#00d26a" fill-opacity="0.16" stroke="#00d26a" stroke-opacity="0.6"/>
+    <text x="200" y="140" font-size="12" font-weight="700" fill="#00d26a">+14.0pt OFF</text>
+    <text x="62" y="176" font-size="13" fill="#EDE6D6">Pooled math accuracy</text>
+    <text x="62" y="196" font-size="11" fill="#8f8fb0">OFF 55.6% &#8594; VOTE 57.3% &#8594; ON 69.5%</text>
+
+    <!-- Card 2 -->
+    <rect x="326" y="106" width="268" height="106" rx="10" fill="#101021" fill-opacity="0.82" stroke="#3a3a58"/>
+    <text x="344" y="148" font-size="34" font-weight="700" fill="#00d26a">+12.3pt</text>
+    <rect x="492" y="124" width="88" height="24" rx="12" fill="#ffffff" fill-opacity="0.06" stroke="#5b5b80"/>
+    <text x="502" y="140" font-size="12" fill="#d0d0ea">vs VOTE x3</text>
+    <text x="344" y="176" font-size="13" fill="#EDE6D6">Gain over 3x majority vote</text>
+    <text x="344" y="196" font-size="11" fill="#8f8fb0">33 ON better vs 8 VOTE · p=0.000112</text>
+
+    <!-- Card 3 -->
+    <rect x="608" y="106" width="268" height="106" rx="10" fill="#101021" fill-opacity="0.82" stroke="#3a3a58"/>
+    <text x="626" y="148" font-size="32" font-weight="700" fill="#EDE6D6">3,227</text>
+    <rect x="742" y="124" width="120" height="24" rx="12" fill="#00d26a" fill-opacity="0.16" stroke="#00d26a" stroke-opacity="0.6"/>
+    <text x="752" y="140" font-size="12" font-weight="700" fill="#00d26a">-5.2% vs VOTE</text>
+    <text x="626" y="176" font-size="13" fill="#EDE6D6">Tokens / question (tok/q)</text>
+    <text x="626" y="196" font-size="11" fill="#8f8fb0">ON 3,227 vs VOTE x3 3,405 (-178)</text>
+
+    <!-- Card 4 -->
+    <rect x="890" y="106" width="266" height="106" rx="10" fill="#101021" fill-opacity="0.82" stroke="#00d26a" stroke-opacity="0.5"/>
+    <text x="908" y="148" font-size="34" font-weight="700" fill="#00d26a">9 / 9</text>
+    <rect x="1028" y="124" width="110" height="24" rx="12" fill="#f59e0b" fill-opacity="0.16" stroke="#f59e0b" stroke-opacity="0.6"/>
+    <text x="1044" y="140" font-size="12" font-weight="700" fill="#fbbf24">OFF 7 / 9</text>
+    <text x="908" y="176" font-size="13" fill="#EDE6D6">Three.js zero-error renders</text>
+    <text x="908" y="196" font-size="11" fill="#8f8fb0">Claude Opus 5.5 max · 2.65x out tok</text>
+  </g>
+
+  <!-- Left Panel: Horizontal Accuracy Bar Chart -->
+  <rect x="44" y="230" width="712" height="296" rx="10" fill="#101021" fill-opacity="0.82" stroke="#3a3a58"/>
+  <g font-family="ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace">
+    <text x="64" y="258" font-size="14" font-weight="700" fill="#EDE6D6">Accuracy by benchmark (OFF vs VOTE x3 vs AdaptOrch ON)</text>
+    <!-- Legend -->
+    <rect x="470" y="246" width="12" height="12" rx="2" fill="#525270"/>
+    <text x="488" y="257" font-size="11" fill="#9aa0c0">OFF</text>
+    <rect x="530" y="246" width="12" height="12" rx="2" fill="#60a5fa"/>
+    <text x="548" y="257" font-size="11" fill="#9aa0c0">VOTE x3</text>
+    <rect x="618" y="246" width="12" height="12" rx="2" fill="#00d26a"/>
+    <text x="636" y="257" font-size="11" fill="#00d26a">AdaptOrch ON</text>
+
+    <!-- Row 1: AIME 2025 (width scale: 100% = 420px) -->
+    <text x="64" y="294" font-size="13" font-weight="700" fill="#EDE6D6">AIME 2025</text>
+    <text x="64" y="311" font-size="11" fill="#8f8fb0">Math · n=111</text>
+    <rect x="196" y="276" width="420" height="10" rx="5" fill="#1f1f36"/>
+    <rect x="196" y="276" width="242" height="10" rx="5" fill="#525270"/>
+    <text x="626" y="285" font-size="11" fill="#9aa0c0">57.7%</text>
+    <rect x="196" y="291" width="420" height="10" rx="5" fill="#1f1f36"/>
+    <rect x="196" y="291" width="246" height="10" rx="5" fill="#60a5fa"/>
+    <text x="626" y="300" font-size="11" fill="#93c5fd">58.6%</text>
+    <rect x="196" y="306" width="420" height="12" rx="6" fill="#1f1f36"/>
+    <rect x="196" y="306" width="310" height="12" rx="6" fill="#00d26a"/>
+    <text x="626" y="316" font-size="12" font-weight="700" fill="#00d26a">73.9% (+16.2)</text>
+
+    <!-- Row 2: AIME 2026 -->
+    <text x="64" y="356" font-size="13" font-weight="700" fill="#EDE6D6">AIME 2026</text>
+    <text x="64" y="373" font-size="11" fill="#8f8fb0">Math · n=120</text>
+    <rect x="196" y="338" width="420" height="10" rx="5" fill="#1f1f36"/>
+    <rect x="196" y="338" width="276" height="10" rx="5" fill="#525270"/>
+    <text x="626" y="347" font-size="11" fill="#9aa0c0">65.8%</text>
+    <rect x="196" y="353" width="420" height="10" rx="5" fill="#1f1f36"/>
+    <rect x="196" y="353" width="284" height="10" rx="5" fill="#60a5fa"/>
+    <text x="626" y="362" font-size="11" fill="#93c5fd">67.5%</text>
+    <rect x="196" y="368" width="420" height="12" rx="6" fill="#1f1f36"/>
+    <rect x="196" y="368" width="329" height="12" rx="6" fill="#00d26a"/>
+    <text x="626" y="378" font-size="12" font-weight="700" fill="#00d26a">78.3% (+12.5)</text>
+
+    <!-- Row 3: HMMT Feb 2025 -->
+    <text x="64" y="418" font-size="13" font-weight="700" fill="#EDE6D6">HMMT Feb 2025</text>
+    <text x="64" y="435" font-size="11" fill="#8f8fb0">Math · n=120</text>
+    <rect x="196" y="400" width="420" height="10" rx="5" fill="#1f1f36"/>
+    <rect x="196" y="400" width="182" height="10" rx="5" fill="#525270"/>
+    <text x="626" y="409" font-size="11" fill="#9aa0c0">43.3%</text>
+    <rect x="196" y="415" width="420" height="10" rx="5" fill="#1f1f36"/>
+    <rect x="196" y="415" width="192" height="10" rx="5" fill="#60a5fa"/>
+    <text x="626" y="424" font-size="11" fill="#93c5fd">45.8%</text>
+    <rect x="196" y="430" width="420" height="12" rx="6" fill="#1f1f36"/>
+    <rect x="196" y="430" width="238" height="12" rx="6" fill="#00d26a"/>
+    <text x="626" y="440" font-size="12" font-weight="700" fill="#00d26a">56.7% (+13.3)</text>
+
+    <!-- Row 4: Pooled -->
+    <line x1="64" y1="455" x2="736" y2="455" stroke="#2c2c4a" stroke-width="1"/>
+    <text x="64" y="482" font-size="13" font-weight="700" fill="#f97316">ALL POOLED</text>
+    <text x="64" y="499" font-size="11" fill="#8f8fb0">n=351 paired</text>
+    <rect x="196" y="465" width="420" height="10" rx="5" fill="#1f1f36"/>
+    <rect x="196" y="465" width="234" height="10" rx="5" fill="#525270"/>
+    <text x="626" y="474" font-size="11" fill="#9aa0c0">55.6%</text>
+    <rect x="196" y="480" width="420" height="10" rx="5" fill="#1f1f36"/>
+    <rect x="196" y="480" width="241" height="10" rx="5" fill="#60a5fa"/>
+    <text x="626" y="489" font-size="11" fill="#93c5fd">57.3%</text>
+    <rect x="196" y="495" width="420" height="13" rx="6" fill="#1f1f36"/>
+    <rect x="196" y="495" width="292" height="13" rx="6" fill="#f97316"/>
+    <text x="626" y="506" font-size="12" font-weight="700" fill="#f97316">69.5% (+14.0)</text>
+  </g>
+
+  <!-- Right Panel: Head-to-Head Win Bars -->
+  <rect x="774" y="230" width="382" height="296" rx="10" fill="#101021" fill-opacity="0.82" stroke="#3a3a58"/>
+  <g font-family="ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace">
+    <text x="794" y="258" font-size="14" font-weight="700" fill="#EDE6D6">Per-problem head-to-head (90 tasks)</text>
+
+    <!-- ON vs OFF -->
+    <text x="794" y="294" font-size="13" font-weight="700" fill="#EDE6D6">ON vs OFF (1 direct call)</text>
+    <text x="794" y="313" font-size="11" fill="#9aa0c0">sign test p = 3.35e-07 · 89.7% win rate</text>
+    <rect x="794" y="324" width="340" height="20" rx="10" fill="#2b2b46"/>
+    <rect x="794" y="324" width="305" height="20" rx="10" fill="#00d26a"/>
+    <text x="794" y="362" font-size="12" font-weight="700" fill="#00d26a">ON better: 35</text>
+    <text x="1028" y="362" font-size="12" fill="#9aa0c0">OFF better: 4</text>
+
+    <!-- ON vs VOTE x3 -->
+    <line x1="794" y1="382" x2="1134" y2="382" stroke="#2c2c4a" stroke-width="1"/>
+    <text x="794" y="410" font-size="13" font-weight="700" fill="#EDE6D6">ON vs VOTE x3 (majority)</text>
+    <text x="794" y="429" font-size="11" fill="#9aa0c0">sign test p = 0.000112 · 80.5% win rate</text>
+    <rect x="794" y="440" width="340" height="20" rx="10" fill="#2b2b46"/>
+    <rect x="794" y="440" width="274" height="20" rx="10" fill="#f97316"/>
+    <text x="794" y="478" font-size="12" font-weight="700" fill="#f97316">ON better: 33</text>
+    <text x="1020" y="478" font-size="12" fill="#9aa0c0">VOTE better: 8</text>
+
+    <text x="794" y="510" font-size="11" fill="#8f8fb0">See interactive wipe + data at adaptorch.com/#proof</text>
+  </g>
+
+  <!-- Footnote -->
+  <text x="44" y="556" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" fill="#70709a">Scope: gpt-6-luna (requested), Codex OAuth, default sampling · 351/360 matched units; Three.js headless Chrome software WebGL at 45 s (1 run/prompt). Not an official leaderboard result.</text>
+</svg>

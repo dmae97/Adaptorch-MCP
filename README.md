@@ -7,6 +7,10 @@
 <p align="center">
   <a href="https://adaptorch.com"><strong>adaptorch.com</strong></a>
   ·
+  <a href="https://adaptorch.com/#proof"><strong>Live Three.js OFF vs ON Demo</strong></a>
+  ·
+  <a href="https://adaptorch.com/#onoff-bench"><strong>Benchmarks</strong></a>
+  ·
   <a href="docs/adaptorchctl-usage.ko.md">adaptorchctl 한국어 가이드</a>
   ·
   <a href="docs/configuration.md">Configuration</a>
@@ -19,7 +23,7 @@
   ·
   <a href="https://github.com/marketplace/actions/adaptorch-run-and-evidence">GitHub Marketplace</a>
   ·
-  [Remote service boundary](docs/remote-service-distribution.md)
+  <a href="docs/remote-service-distribution.md">Remote service boundary</a>
   ·
   <a href="docs/publishing.md">Publishing</a>
   ·
@@ -33,6 +37,7 @@
   <img alt="License Proprietary" src="https://img.shields.io/badge/license-Proprietary-94a3b8?style=flat-square">
   <a href="https://adaptorch.com"><img alt="Live on adaptorch.com" src="https://img.shields.io/badge/live-adaptorch.com-00d26a?style=flat-square"></a>
   <a href="https://arxiv.org/abs/2602.16873"><img alt="arXiv 2602.16873" src="https://img.shields.io/badge/arXiv-2602.16873-b31b1b?style=flat-square&logo=arxiv&logoColor=white"></a>
+  <a href="https://glama.ai/mcp/servers/dmae97/Adaptorch-MCP"><img alt="dmae97/Adaptorch-MCP MCP server on Glama" src="https://glama.ai/mcp/servers/dmae97/Adaptorch-MCP/badges/score.svg"></a>
   <a href="https://glama.ai/mcp/connectors/io.github.dmae97/adaptorch-mcp"><img alt="AdaptOrch MCP connector on Glama" src="https://glama.ai/mcp/connectors/io.github.dmae97/adaptorch-mcp/badges/score.svg"></a>
 </p>
 
@@ -274,7 +279,11 @@ AdaptOrch MCP turns a single opaque model call into an inspectable routed run wi
 AdaptOrch ON reaches **69.5% pooled accuracy** across AIME 2025, AIME 2026, and HMMT Feb 2025 (`n = 351` paired units), outperforming both single-call OFF (**+14.0 pp**) and 3x majority voting (**+12.3 pp**) while using **5.2% fewer tokens than 3x voting** (`3,227` vs `3,405 tok/Q`).
 
 <p align="center">
-  <a href="https://adaptorch.com"><img src="assets/benchmark-gpt-luna-three-arm.png" alt="AdaptOrch GPT LUNA three-arm math benchmark comparison across AIME 2025, AIME 2026, and HMMT Feb 2025: OFF 55.6%, VOTE x3 57.3%, AdaptOrch ON 69.5% with fewer tokens than voting" width="100%"></a>
+  <a href="https://adaptorch.com/#onoff-bench"><img src="assets/onoff-bench-h2h.svg" alt="AdaptOrch.com measured proof dashboard: 69.5% pooled math accuracy (+14.0pt vs OFF, +12.3pt vs VOTE x3), 3,227 tok/q (-5.2% vs VOTE x3), per-problem wins 35 vs 4 and 33 vs 8, and 9/9 Three.js zero-error renders" width="100%"></a>
+</p>
+
+<p align="center">
+  <a href="https://adaptorch.com/#onoff-bench"><img src="assets/benchmark-gpt-luna-three-arm.png" alt="AdaptOrch GPT LUNA three-arm math benchmark comparison across AIME 2025, AIME 2026, and HMMT Feb 2025: OFF 55.6%, VOTE x3 57.3%, AdaptOrch ON 69.5% with fewer tokens than voting" width="100%"></a>
 </p>
 
 | Benchmark | Type | n | OFF (1 call) | VOTE x3 (3 calls + majority) | AdaptOrch ON (ensemble of 3 + vote) | ON - OFF | ON - VOTE | OFF tok/Q | VOTE tok/Q | ON tok/Q |
@@ -291,7 +300,73 @@ AdaptOrch ON reaches **69.5% pooled accuracy** across AIME 2025, AIME 2026, and 
 
 ### 2. Three.js WebGL scenes — OFF (1 direct call) vs AdaptOrch ON
 
-Across 9 interactive Three.js 3D scenes featured on [adaptorch.com](https://adaptorch.com), AdaptOrch ON (`draft -> review -> final`, `sequential` routing + `robust` synthesis) achieved **9/9 zero-error WebGL renders** versus **7/9 for single-call OFF** at `2.65x` output tokens and `2.78x` call time.
+Same prompt, same model (`Claude Opus 5.5` max effort), one run each. Across 9 interactive Three.js 3D scenes featured on **[adaptorch.com/#proof](https://adaptorch.com/#proof)**, AdaptOrch ON (`draft -> review -> final`, `sequential` routing + `robust` synthesis) achieved **9/9 zero-error WebGL renders** versus **7/9 for single-call OFF** at `2.65x` output tokens and `2.78x` call time.
+
+> Try the interactive drag-wipe and side-by-side scene comparator live on **[adaptorch.com/#proof](https://adaptorch.com/#proof)** (or connect via MCP at **[adaptorch.com/mcp-docs](https://adaptorch.com/mcp-docs)**).
+
+#### Visual OFF vs ON comparison (captured from [adaptorch.com/#proof](https://adaptorch.com/#proof))
+
+<table>
+  <thead>
+    <tr>
+      <th width="16%">Scene</th>
+      <th width="42%">OFF — 1 direct call</th>
+      <th width="42%">AdaptOrch ON — draft &#8594; review &#8594; final</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>01. Voxel World</strong><br/><code>threejs-voxel-world</code><br/><em>Sky crash &#8594; Full world</em></td>
+      <td>
+        <a href="https://adaptorch.com/#proof"><img src="assets/onoff/voxel-world-off.webp" alt="OFF: voxel world page after its sky shader failed to compile" width="100%"></a><br/>
+        <strong>1 WebGL error</strong> · 15,075 tok<br/>
+        Sky shader failed to compile (<code>patch</code> is a GLSL reserved word); blocked spawn, no minimap.
+      </td>
+      <td>
+        <a href="https://adaptorch.com/#proof"><img src="assets/onoff/voxel-world-on.webp" alt="ON: voxel world page with sky, clouds, lake, compass and terrain minimap" width="100%"></a><br/>
+        <strong>0 browser errors</strong> · 52,376 tok<br/>
+        Sky &amp; clouds compiled, solar cycle, sunlit lake, open terrain, compass and live minimap.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>02. Black Hole</strong><br/><code>threejs-black-hole</code><br/><em>Basic disk &#8594; Doppler HUD</em></td>
+      <td>
+        <a href="https://adaptorch.com/#proof"><img src="assets/onoff/black-hole-off.webp" alt="OFF: black hole page with basic disk and minimal controls" width="100%"></a><br/>
+        <strong>0 errors</strong> · 14,190 tok<br/>
+        Muted lensing, basic accretion ring with 3 minimal footer buttons; no speed slider or Doppler toggle.
+      </td>
+      <td>
+        <a href="https://adaptorch.com/#proof"><img src="assets/onoff/black-hole-on.webp" alt="ON: black hole page with Doppler beaming, lensing streaks and speed controls" width="100%"></a><br/>
+        <strong>0 errors · 7 review fixes</strong> · 44,587 tok<br/>
+        Relativistic Doppler beaming, curved starfield, speed slider, telemetry console and Doppler toggle.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>03. Medieval Village</strong><br/><code>threejs-medieval-village</code><br/><em>Flat pond &#8594; River &amp; bridge</em></td>
+      <td>
+        <a href="https://adaptorch.com/#proof"><img src="assets/onoff/medieval-village-off.webp" alt="OFF: medieval village page with flat circular pond" width="100%"></a><br/>
+        <strong>0 errors</strong> · 30,354 tok<br/>
+        Flat circular pond with hard clipped shoreline and overexposed lantern bloom.
+      </td>
+      <td>
+        <a href="https://adaptorch.com/#proof"><img src="assets/onoff/medieval-village-on.webp" alt="ON: medieval village page with winding reflective river and wooden bridge" width="100%"></a><br/>
+        <strong>0 errors · 9 review fixes</strong> · 71,396 tok<br/>
+        Winding reflective river, wooden bridge, golden dusk mist, chimney smoke and fireflies.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>04. Planet Scene</strong><br/><code>threejs-planet-scene</code><br/><em>OFF vs ON render</em></td>
+      <td>
+        <a href="https://adaptorch.com/#proof"><img src="assets/onoff/planet-scene-off.webp" alt="OFF: Three.js planet scene from 1 direct call" width="100%"></a><br/>
+        <strong>0 errors</strong> · 14,015 tok (1 canvas)
+      </td>
+      <td>
+        <a href="https://adaptorch.com/#proof"><img src="assets/onoff/planet-scene-on.webp" alt="ON: Three.js planet scene after AdaptOrch draft-review-final" width="100%"></a><br/>
+        <strong>0 errors</strong> · 34,678 tok (1 canvas)
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 | Metric | OFF (1 direct call) | AdaptOrch ON (`draft -> review -> final`) |
 | --- | --- | --- |
@@ -312,7 +387,7 @@ Across 9 interactive Three.js 3D scenes featured on [adaptorch.com](https://adap
 | `threejs-solar-system` | 0 | 0 | 6,534 | 19,188 | Both 0 errors (1 canvas) |
 | `threejs-spiral-galaxy` | 0 | 0 | 13,779 | 29,621 | Both 0 errors (2 canvases) |
 
-> Scope (2026-11-24): Local AdaptOrch engine (`run_task`, 3-node `draft -> review -> final`, `sequential` + `robust`, 0 reroutes, 9/9 `OK`); headless Chrome + SwiftShader software WebGL (screenshots at 45 s on [adaptorch.com](https://adaptorch.com), 15 s/60 s checks in source records), 1 run per prompt. Not a blind quality evaluation and not an official leaderboard result.
+> Scope (2026-11-24): Local AdaptOrch engine (`run_task`, 3-node `draft -> review -> final`, `sequential` + `robust`, 0 reroutes, 9/9 `OK`); headless Chrome + SwiftShader software WebGL (screenshots at 45 s on [adaptorch.com/#proof](https://adaptorch.com/#proof), 15 s/60 s checks in source records), 1 run per prompt. Not a blind quality evaluation and not an official leaderboard result.
 
 ### 3. Synthetic paired ledger regression (directional, failed gates)
 
